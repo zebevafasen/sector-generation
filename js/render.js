@@ -387,7 +387,7 @@ export function updateInfoPanel(id) {
 
                 let html = `<div class="flex justify-between font-semibold text-sky-100"><span class="inline-flex items-center gap-2">${bodyIcon}${body.name}</span> <span class="text-xs text-slate-500 font-normal">${normalizedType}</span></div>`;
                 if (normalizedType !== 'Artificial' && !/belt|field/i.test(normalizedType) && body.habitable) {
-                    html += '<div class="text-[11px] mt-1 pl-5"><span class="inline-block px-1.5 py-0.5 rounded border text-emerald-300 border-emerald-600/60 bg-emerald-900/25">Habitable</span></div>';
+                    html += '<div class="text-[11px] mt-1 pl-5"><span class="inline-block px-1.5 py-0.5 rounded border text-emerald-300 border-emerald-600/60 bg-emerald-900/25">Inhabitated</span></div>';
                 }
                 li.innerHTML = html;
 
