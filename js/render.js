@@ -50,6 +50,38 @@ function getBodyIconMarkup(type) {
     return `<span class="inline-block w-3 h-3 rounded-full bg-slate-300 ring-1 ring-white/25 shrink-0"></span>`;
 }
 
+function resetBodyDetailsPanel() {
+    const empty = document.getElementById('infoBodyDetailsEmpty');
+    const content = document.getElementById('infoBodyDetailsContent');
+    const name = document.getElementById('infoBodyDetailsName');
+    const type = document.getElementById('infoBodyDetailsType');
+    const placeholder = document.getElementById('infoBodyDetailsPlaceholder');
+
+    if (empty) {
+        empty.classList.remove('hidden');
+        empty.innerText = 'Select a planet, belt, or station to inspect.';
+    }
+    if (content) content.classList.add('hidden');
+    if (name) name.innerText = 'Body';
+    if (type) type.innerText = 'Type';
+    if (placeholder) placeholder.innerText = 'Detailed stats coming soon.';
+}
+
+function showBodyDetailsPanel(body) {
+    const empty = document.getElementById('infoBodyDetailsEmpty');
+    const content = document.getElementById('infoBodyDetailsContent');
+    const name = document.getElementById('infoBodyDetailsName');
+    const type = document.getElementById('infoBodyDetailsType');
+    const placeholder = document.getElementById('infoBodyDetailsPlaceholder');
+    const normalizedType = normalizeBodyType(body.type);
+
+    if (empty) empty.classList.add('hidden');
+    if (content) content.classList.remove('hidden');
+    if (name) name.innerText = body.name;
+    if (type) type.innerText = normalizedType;
+    if (placeholder) placeholder.innerText = 'Detailed stats coming soon.';
+}
+
 export function ensureStarGradient(svg, starClass) {
     const key = (starClass || 'default').toLowerCase().replace(/[^a-z0-9]+/g, '-');
     if (STAR_GRADIENT_CACHE[key]) return STAR_GRADIENT_CACHE[key];
@@ -276,6 +308,7 @@ export function updateInfoPanel(id) {
     const planetList = document.getElementById('infoPlanetList');
     const beltList = document.getElementById('infoBeltList');
     const stationList = document.getElementById('infoStationList');
+    let selectedBodyEl = null;
 
     if (system) {
         sysDetails.classList.remove('hidden');
@@ -314,10 +347,13 @@ export function updateInfoPanel(id) {
             planetList.innerHTML = '';
             beltList.innerHTML = '';
             stationList.innerHTML = '';
+            resetBodyDetailsPanel();
 
             const renderBody = (body) => {
                 const li = document.createElement('li');
-                li.className = 'bg-slate-800/50 p-2 rounded border border-slate-700/50 flex flex-col';
+                li.className = 'bg-slate-800/50 p-2 rounded border border-slate-700/50 flex flex-col cursor-pointer transition-colors hover:border-sky-600/60';
+                li.setAttribute('role', 'button');
+                li.setAttribute('tabindex', '0');
 
                 const normalizedType = normalizeBodyType(body.type);
                 const bodyIcon = getBodyIconMarkup(normalizedType);
@@ -327,6 +363,23 @@ export function updateInfoPanel(id) {
                     html += '<div class="text-[11px] mt-1 pl-5"><span class="inline-block px-1.5 py-0.5 rounded border text-emerald-300 border-emerald-600/60 bg-emerald-900/25">Habitable</span></div>';
                 }
                 li.innerHTML = html;
+
+                const selectBody = () => {
+                    if (selectedBodyEl) {
+                        selectedBodyEl.classList.remove('ring-1', 'ring-sky-500/70', 'border-sky-500/70');
+                    }
+                    li.classList.add('ring-1', 'ring-sky-500/70', 'border-sky-500/70');
+                    selectedBodyEl = li;
+                    showBodyDetailsPanel(body);
+                };
+
+                li.addEventListener('click', selectBody);
+                li.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        selectBody();
+                    }
+                });
                 return li;
             };
 
@@ -364,6 +417,7 @@ export function updateInfoPanel(id) {
         if (planetList) planetList.innerHTML = '';
         if (beltList) beltList.innerHTML = '';
         if (stationList) stationList.innerHTML = '';
+        resetBodyDetailsPanel();
     }
 }
 
@@ -384,4 +438,6 @@ export function clearInfoPanel() {
 
     const starAgeLabel = document.getElementById('infoStarAge');
     if (starAgeLabel) starAgeLabel.innerText = 'Age: --';
+
+    resetBodyDetailsPanel();
 }
