@@ -1,5 +1,5 @@
 import { state } from './config.js';
-import { clearInfoPanel, drawGrid, selectHex, updateInfoPanel } from './render.js';
+import { clearInfoPanel, drawGrid, redrawHex, selectHex, updateInfoPanel } from './render.js';
 
 export function clearSelectionInfo() {
     state.selectedHexId = null;
@@ -37,4 +37,23 @@ export function refreshHexInfo(hexId, preselectedBodyIndex = null) {
         return;
     }
     updateInfoPanel(hexId, preselectedBodyIndex);
+}
+
+export function redrawHexAndReselect(hexId, preselectedBodyIndex = null) {
+    if (!hexId) return;
+    const nextGroup = redrawHex(hexId);
+    if (!nextGroup) return;
+
+    if (!state.sectors[hexId]) {
+        if (state.selectedHexId === hexId) {
+            state.selectedHexId = null;
+            clearInfoPanel();
+        }
+        return;
+    }
+
+    selectHex(hexId, nextGroup);
+    if (Number.isInteger(preselectedBodyIndex) && preselectedBodyIndex >= 0) {
+        updateInfoPanel(hexId, preselectedBodyIndex);
+    }
 }

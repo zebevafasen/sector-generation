@@ -332,7 +332,10 @@ function sanitizeRouteEndpoints(refs) {
     if (route.startHexId && !state.sectors[route.startHexId]) route.startHexId = null;
     if (route.endHexId && !state.sectors[route.endHexId]) route.endHexId = null;
     const endpointsChanged = beforeStart !== route.startHexId || beforeEnd !== route.endHexId;
-    recalculateRoute(refs, { redraw: endpointsChanged });
+    recalculateRoute(refs, { redraw: true });
+    if (endpointsChanged && !route.startHexId && !route.endHexId) {
+        showStatusMessage('Route endpoints were cleared because their systems no longer exist.', 'info');
+    }
 }
 
 export function setupRoutePlanner() {

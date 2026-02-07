@@ -30,7 +30,7 @@ import {
 import { autoSaveSectorState, buildSectorPayload } from './storage.js';
 import { readGenerationConfigFromUi } from './sector-config.js';
 import { ensureSystemStarFields } from './star-system.js';
-import { redrawGridAndReselect, refreshHexInfo, clearSelectionInfo } from './ui-sync.js';
+import { redrawGridAndReselect, redrawHexAndReselect, refreshHexInfo, clearSelectionInfo } from './ui-sync.js';
 import { deepClone, isHexIdInBounds, parseHexId, romanize, shuffleArray, sortHexIds } from './utils.js';
 
 function normalizeGenerationConfig(config) {
@@ -485,7 +485,7 @@ export function addSystemAtHex(hexId) {
     });
     reportSystemInvariantIssues(state.sectors[hexId], 'add-system');
 
-    redrawGridAndReselect(config.width, config.height, { selectedHexId: hexId });
+    redrawHexAndReselect(hexId);
     sanitizePinnedHexes(config.width, config.height);
     refreshSectorSnapshot(config, config.width, config.height, 'Add System');
     updateSectorStatus(config.width * config.height, Object.keys(state.sectors).length);
@@ -502,10 +502,9 @@ export function deleteSelectedSystem() {
     const config = getGenerationConfigSnapshot();
     delete state.sectors[selectedHexId];
     state.pinnedHexIds = (state.pinnedHexIds || []).filter(id => id !== selectedHexId);
-    state.selectedHexId = null;
-    state.selectedBodyIndex = null;
+    clearSelectionInfo();
 
-    redrawGridAndReselect(config.width, config.height);
+    redrawHexAndReselect(selectedHexId);
     sanitizePinnedHexes(config.width, config.height);
     refreshSectorSnapshot(config, config.width, config.height, 'Delete System');
     updateSectorStatus(config.width * config.height, Object.keys(state.sectors).length);
@@ -678,7 +677,7 @@ export function rerollSelectedSystem() {
     });
     reportSystemInvariantIssues(state.sectors[selectedHexId], 'reroll-selected');
 
-    redrawGridAndReselect(config.width, config.height, { selectedHexId });
+    redrawHexAndReselect(selectedHexId);
     sanitizePinnedHexes(config.width, config.height);
     refreshSectorSnapshot(config, config.width, config.height, 'Reroll System');
     showStatusMessage(`Rerolled system ${selectedHexId} with seed ${seedUsed}.`, 'success');
