@@ -744,6 +744,8 @@ function renderSystemBodyLists(refs, system, id, preselectedBodyIndex) {
                     emitEvent(EVENTS.REQUEST_DELETE_SELECTED_BODY);
                 });
             }
+            const detailsPanel = document.getElementById('infoBodyDetailsPanel');
+            if (detailsPanel) positionBodyDetailsPanel(detailsPanel, li);
         };
 
         li.addEventListener('click', selectBody);
