@@ -43,6 +43,84 @@ function redrawAndReselect(hexId, preselectedBodyIndex = null) {
     }
 }
 
+function getHexCenter(col, row) {
+    const xOffset = (row % 2 === 1) ? (HEX_WIDTH / 2) : 0;
+    return {
+        x: (col * HEX_WIDTH) + xOffset + (HEX_WIDTH / 2),
+        y: (row * (HEX_HEIGHT * 0.75)) + (HEX_HEIGHT / 2)
+    };
+}
+
+function renderRouteOverlay(viewport) {
+    const route = state.routePlanner || {};
+    const path = Array.isArray(route.pathHexIds) ? route.pathHexIds : [];
+    if (path.length < 2) return;
+
+    const centers = path
+        .map((hexId) => {
+            const [cRaw, rRaw] = String(hexId).split('-');
+            const c = parseInt(cRaw, 10);
+            const r = parseInt(rRaw, 10);
+            if (!Number.isInteger(c) || !Number.isInteger(r)) return null;
+            const center = getHexCenter(c, r);
+            return center;
+        })
+        .filter(Boolean);
+
+    if (centers.length < 2) return;
+
+    const offsetToward = (from, toward, distancePx) => {
+        const dx = toward.x - from.x;
+        const dy = toward.y - from.y;
+        const length = Math.hypot(dx, dy);
+        if (!Number.isFinite(length) || length === 0) return from;
+        const scale = Math.min(1, distancePx / length);
+        return {
+            x: from.x + dx * scale,
+            y: from.y + dy * scale
+        };
+    };
+
+    const offsetPx = 13;
+    const startCenter = centers[0];
+    const nextCenter = centers[1] || startCenter;
+    const endCenter = centers[centers.length - 1];
+    const prevCenter = centers[centers.length - 2] || endCenter;
+    const startMarkerPos = offsetToward(startCenter, nextCenter, offsetPx);
+    const endMarkerPos = offsetToward(endCenter, prevCenter, offsetPx);
+
+    const adjustedLinePoints = centers.map((center, index) => {
+        if (index === 0) return `${startMarkerPos.x},${startMarkerPos.y}`;
+        if (index === centers.length - 1) return `${endMarkerPos.x},${endMarkerPos.y}`;
+        return `${center.x},${center.y}`;
+    });
+
+    const pathLine = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+    pathLine.setAttribute('points', adjustedLinePoints.join(' '));
+    pathLine.setAttribute('fill', 'none');
+    pathLine.setAttribute('stroke', '#38bdf8');
+    pathLine.setAttribute('stroke-width', '3');
+    pathLine.setAttribute('stroke-linecap', 'round');
+    pathLine.setAttribute('stroke-linejoin', 'round');
+    pathLine.setAttribute('stroke-opacity', '0.9');
+    pathLine.style.filter = 'drop-shadow(0 0 4px rgba(56, 189, 248, 0.8))';
+    viewport.appendChild(pathLine);
+
+    [
+        { pos: startMarkerPos, fill: '#22c55e' },
+        { pos: endMarkerPos, fill: '#f43f5e' }
+    ].forEach((markerData) => {
+        const marker = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        marker.setAttribute('cx', String(markerData.pos.x));
+        marker.setAttribute('cy', String(markerData.pos.y));
+        marker.setAttribute('r', '5');
+        marker.setAttribute('fill', markerData.fill);
+        marker.setAttribute('stroke', '#e2e8f0');
+        marker.setAttribute('stroke-width', '1');
+        viewport.appendChild(marker);
+    });
+}
+
 function resetBodyDetailsPanel() {
     const panel = document.getElementById('infoBodyDetailsPanel');
     const empty = document.getElementById('infoBodyDetailsEmpty');
@@ -422,6 +500,7 @@ export function drawGrid(cols, rows, options = {}) {
             const isPinned = !!(system && state.pinnedHexIds && state.pinnedHexIds.includes(hexId));
             const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
             g.setAttribute('class', 'hex-group');
+            if (system) g.classList.add('route-eligible');
             g.setAttribute('data-id', hexId);
             g.onclick = (e) => handleHexClick(e, hexId, g);
 
@@ -480,6 +559,8 @@ export function drawGrid(cols, rows, options = {}) {
             viewport.appendChild(g);
         }
     }
+
+    renderRouteOverlay(viewport);
 }
 
 export function calculateHexPoints(cx, cy, size) {
@@ -494,6 +575,9 @@ export function calculateHexPoints(cx, cy, size) {
 
 export function setupPanZoom() {
     const container = document.getElementById('mapContainer');
+    const setShiftShortcutCursor = (enabled) => {
+        document.body.classList.toggle('route-shortcut-active', enabled);
+    };
 
     container.addEventListener('wheel', (e) => {
         e.preventDefault();
@@ -539,6 +623,15 @@ export function setupPanZoom() {
     window.addEventListener('mouseup', () => {
         state.viewState.isDragging = false;
     });
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Shift') setShiftShortcutCursor(true);
+    });
+    window.addEventListener('keyup', (e) => {
+        if (e.key === 'Shift') setShiftShortcutCursor(false);
+    });
+    window.addEventListener('blur', () => {
+        setShiftShortcutCursor(false);
+    });
 }
 
 export function updateViewTransform() {
@@ -550,6 +643,14 @@ export function updateViewTransform() {
 
 export function handleHexClick(e, id, groupElement) {
     if (state.viewState.dragDistance > 5) return;
+    if (e.shiftKey) {
+        e.preventDefault();
+        emitEvent(EVENTS.ROUTE_SHORTCUT_HEX, { hexId: id });
+        return;
+    }
+    if (state.routePlanner && (state.routePlanner.startHexId || state.routePlanner.endHexId)) {
+        emitEvent(EVENTS.ROUTE_SHORTCUT_CLEAR, { silent: true });
+    }
     selectHex(id, groupElement);
 }
 
@@ -560,6 +661,7 @@ export function selectHex(id, groupElement) {
     state.selectedHexId = id;
     state.selectedBodyIndex = null;
     updateInfoPanel(id);
+    emitEvent(EVENTS.HEX_SELECTED, { hexId: id });
 }
 
 function configureSystemHeaderAndStar(refs, system, id, preselectedBodyIndex) {

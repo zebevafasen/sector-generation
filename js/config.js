@@ -133,6 +133,13 @@ export const state = {
     pinnedHexIds: [],
     statusMessageTimer: null,
     starTooltipPinned: false,
+    routePlanner: {
+        startHexId: null,
+        endHexId: null,
+        pathHexIds: [],
+        hops: 0,
+        pickMode: null
+    },
     viewState: {
         scale: 1,
         x: 0,

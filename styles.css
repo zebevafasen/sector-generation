@@ -47,6 +47,9 @@
             text-decoration-style: dashed;
             text-underline-offset: 4px;
         }
+        .route-shortcut-active .hex-group.route-eligible .hex {
+            cursor: crosshair;
+        }
 
         body {
             background-color: #020617; /* Very dark slate */
@@ -57,8 +60,14 @@
         #mapContainer {
             cursor: grab;
             overflow: hidden; /* Hide scrollbars for manual pan */
+            user-select: none;
+            -webkit-user-select: none;
         }
         #mapContainer:active {
             cursor: grabbing;
+        }
+        #hexGrid, #mapViewport, .hex-text {
+            user-select: none;
+            -webkit-user-select: none;
         }
     </style>
