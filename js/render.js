@@ -414,7 +414,7 @@ export function clearInfoPanel() {
 
     if (refs.starClassLabel) {
         refs.starClassLabel.innerText = 'Class --';
-        refs.starClassLabel.classList.remove('cursor-help', 'text-sky-300', 'star-class-hint');
+        refs.starClassLabel.classList.remove('cursor-help', 'text-slate-400', 'star-class-hint');
     }
 
     if (refs.starAgeLabel) refs.starAgeLabel.innerText = 'Age: --';

@@ -146,17 +146,12 @@ export function showStarClassInfo(event, pin = false) {
     if (!cls) return;
     const info = getStarClassInfo(cls);
     const typicalAgeLabel = formatStarAgeRange(info.ageRange) || info.typicalAge || 'Age varies';
-    const companions = stars.filter((_, idx) => idx !== starIndex);
-    const companionLines = companions.length
-        ? `<div class="border-t border-slate-700/60 mt-2 pt-2 text-slate-400">Companions: <span class="text-slate-200">${escapeHtml(companions.map(star => star.class).join(' + '))}</span></div>`
-        : '';
     panel.innerHTML = `
         <div class="font-semibold text-sky-300 mb-1">${escapeHtml(info.name)}</div>
         <div class="text-slate-400 mb-0.5">Temp: <span class="text-slate-200">${escapeHtml(info.temp)}</span></div>
         <div class="text-slate-400 mb-0.5">Mass: <span class="text-slate-200">${escapeHtml(info.mass)}</span></div>
         <div class="text-slate-400 mb-1">Typical Age: <span class="text-slate-200">${escapeHtml(typicalAgeLabel)}</span></div>
         <div class="text-slate-300 leading-snug">${escapeHtml(info.notes)}</div>
-        ${companionLines}
     `;
     panel.classList.remove('hidden');
     panel.style.opacity = '1';

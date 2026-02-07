@@ -153,7 +153,7 @@ export function configureSystemHeaderAndStar({ refs, system, id, preselectedBody
     if (refs.selectedSystemPinState) refs.selectedSystemPinState.innerText = `Pinned: ${isPinned ? 'Yes' : 'No'}`;
     if (refs.starClassLabel) {
         refs.starClassLabel.innerText = `Class ${primaryStar.class} Star`;
-        refs.starClassLabel.classList.add('cursor-help', 'text-sky-300', 'star-class-hint');
+        refs.starClassLabel.classList.add('cursor-help', 'text-slate-400', 'star-class-hint');
         refs.starClassLabel.setAttribute('data-star-index', '0');
     }
     if (refs.starAgeLabel) {
@@ -188,7 +188,6 @@ export function configureSystemHeaderAndStar({ refs, system, id, preselectedBody
                 : (star.starAge && Number.isFinite(star.starAge.value) && star.starAge.unit
                     ? formatStarAgeValue(star.starAge.value, star.starAge.unit)
                     : (getStarClassInfo(star.class).typicalAge || 'Unknown'));
-            const role = star.role || `Companion ${starIndex}`;
             const displayName = star.name || `${system.name} ${String.fromCharCode(65 + starIndex)}`;
             return `
                 <div class="bg-slate-800/50 p-3 rounded border border-slate-700">
@@ -206,7 +205,6 @@ export function configureSystemHeaderAndStar({ refs, system, id, preselectedBody
                                 <p class="text-slate-400 cursor-help star-class-hint" data-star-index="${starIndex}">Class ${star.class} Star</p>
                                 <p class="text-slate-500">Age: ${ageLabel}</p>
                             </div>
-                            <div class="text-[10px] text-slate-500 mt-1">${role}</div>
                             <div class="${state.editMode ? 'mt-2' : 'hidden mt-2'}">
                                 <label class="block text-[10px] text-slate-500 mb-1">Star Type</label>
                                 <select class="companion-star-class-select w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 focus:border-sky-500 focus:outline-none" data-star-index="${starIndex}">
@@ -239,7 +237,7 @@ export function renderEmptyHexInfo({ refs, id }) {
 
     if (refs.starClassLabel) {
         refs.starClassLabel.innerText = 'Class Unknown';
-        refs.starClassLabel.classList.remove('cursor-help', 'text-sky-300', 'star-class-hint');
+        refs.starClassLabel.classList.remove('cursor-help', 'text-slate-400', 'star-class-hint');
     }
     if (refs.starAgeLabel) refs.starAgeLabel.innerText = 'Age: --';
     if (refs.starVisual) {
