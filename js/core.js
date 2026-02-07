@@ -45,12 +45,14 @@ export function isRealisticPlanetWeightingEnabled() {
     return !!(toggle && toggle.checked);
 }
 
-export function showStatusMessage(message, tone = 'info') {
+export function showStatusMessage(message, tone = 'info', options = {}) {
     const statusEl = document.getElementById('statusMessage');
     if (!statusEl) {
         console.log(message);
         return;
     }
+    const persist = !!options.persist;
+    const durationMs = Number.isFinite(options.durationMs) ? Math.max(0, options.durationMs) : 5000;
     const toneMap = {
         info: 'text-slate-400',
         success: 'text-emerald-300',
@@ -58,12 +60,18 @@ export function showStatusMessage(message, tone = 'info') {
         error: 'text-rose-300'
     };
     const toneClass = toneMap[tone] || toneMap.info;
+    if (state.statusMessageTimer) clearTimeout(state.statusMessageTimer);
+    state.statusMessageTimer = null;
     statusEl.className = `text-[10px] mt-0.5 ${toneClass}`;
     statusEl.textContent = message;
-    if (state.statusMessageTimer) clearTimeout(state.statusMessageTimer);
+    if (persist) return;
+    if (!message || durationMs === 0) {
+        statusEl.textContent = '';
+        return;
+    }
     state.statusMessageTimer = setTimeout(() => {
         statusEl.textContent = '';
-    }, 5000);
+    }, durationMs);
 }
 
 export function getStarClassInfo(classCode) {

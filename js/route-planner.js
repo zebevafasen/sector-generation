@@ -178,6 +178,9 @@ function recalculateRoute(refs, options = {}) {
         route.pathHexIds = [];
         route.hops = 0;
         updateRouteLabels(refs);
+        if (route.startHexId && !route.endHexId) {
+            showStatusMessage(`Route start ${route.startHexId}. Select destination.`, 'info', { persist: true });
+        }
         if (shouldRedraw) redrawRoute();
         return;
     }
@@ -185,6 +188,7 @@ function recalculateRoute(refs, options = {}) {
     route.pathHexIds = computePath(route.startHexId, route.endHexId, width, height);
     route.hops = route.pathHexIds.length > 1 ? route.pathHexIds.length - 1 : 0;
     updateRouteLabels(refs);
+    showStatusMessage(`Route ${route.startHexId} -> ${route.endHexId}: ${route.hops} hops`, 'success', { persist: true });
     if (shouldRedraw) redrawRoute();
 }
 
@@ -214,7 +218,7 @@ function handleShortcutSelect(hexId, refs) {
     if (!route.startHexId) {
         route.startHexId = hexId;
         recalculateRoute(refs);
-        showStatusMessage(`Route start set to ${hexId}. Shift+Left Click destination next.`, 'info');
+        showStatusMessage(`Route start ${hexId}. Select destination.`, 'info', { persist: true });
         return;
     }
 
@@ -222,13 +226,13 @@ function handleShortcutSelect(hexId, refs) {
         route.startHexId = hexId;
         route.endHexId = null;
         recalculateRoute(refs);
-        showStatusMessage(`New route start set to ${hexId}. Shift+Left Click destination next.`, 'info');
+        showStatusMessage(`Route start ${hexId}. Select destination.`, 'info', { persist: true });
         return;
     }
 
     route.endHexId = hexId;
     recalculateRoute(refs);
-    showStatusMessage(`Route calculated: ${route.hops} hops.`, 'success');
+    showStatusMessage(`Route ${route.startHexId} -> ${route.endHexId}: ${route.hops} hops`, 'success', { persist: true });
 }
 
 function clearRoute(refs) {
@@ -238,6 +242,7 @@ function clearRoute(refs) {
     state.routePlanner.hops = 0;
     state.routePlanner.pickMode = null;
     updateRouteLabels(refs);
+    showStatusMessage('', 'info', { durationMs: 0 });
     redrawRoute();
 }
 

@@ -479,6 +479,7 @@ export function drawGrid(cols, rows, options = {}) {
             const isPinned = !!(system && state.pinnedHexIds && state.pinnedHexIds.includes(hexId));
             const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
             g.setAttribute('class', 'hex-group');
+            if (system) g.classList.add('route-eligible');
             g.setAttribute('data-id', hexId);
             g.onclick = (e) => handleHexClick(e, hexId, g);
 
@@ -553,6 +554,9 @@ export function calculateHexPoints(cx, cy, size) {
 
 export function setupPanZoom() {
     const container = document.getElementById('mapContainer');
+    const setShiftShortcutCursor = (enabled) => {
+        document.body.classList.toggle('route-shortcut-active', enabled);
+    };
 
     container.addEventListener('wheel', (e) => {
         e.preventDefault();
@@ -598,6 +602,15 @@ export function setupPanZoom() {
     window.addEventListener('mouseup', () => {
         state.viewState.isDragging = false;
     });
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Shift') setShiftShortcutCursor(true);
+    });
+    window.addEventListener('keyup', (e) => {
+        if (e.key === 'Shift') setShiftShortcutCursor(false);
+    });
+    window.addEventListener('blur', () => {
+        setShiftShortcutCursor(false);
+    });
 }
 
 export function updateViewTransform() {
@@ -610,6 +623,7 @@ export function updateViewTransform() {
 export function handleHexClick(e, id, groupElement) {
     if (state.viewState.dragDistance > 5) return;
     if (e.shiftKey) {
+        e.preventDefault();
         emitEvent(EVENTS.ROUTE_SHORTCUT_HEX, { hexId: id });
         return;
     }
