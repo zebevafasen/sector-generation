@@ -50,6 +50,8 @@ function resetBodyDetailsPanel() {
     const quickDeleteBodyBtn = document.getElementById('quickDeleteBodyBtn');
     const editPlanetTypeRow = document.getElementById('editPlanetTypeRow');
     const editPlanetTypeSelect = document.getElementById('editPlanetTypeSelect');
+    const editInhabitPlanetRow = document.getElementById('editInhabitPlanetRow');
+    const editInhabitPlanetBtn = document.getElementById('editInhabitPlanetBtn');
     const placeholder = document.getElementById('infoBodyDetailsPlaceholder');
 
     if (panel) panel.classList.add('hidden');
@@ -64,6 +66,12 @@ function resetBodyDetailsPanel() {
     setButtonAction(quickDeleteBodyBtn, false);
     if (editPlanetTypeRow) editPlanetTypeRow.classList.add('hidden');
     if (editPlanetTypeSelect) editPlanetTypeSelect.onchange = null;
+    if (editInhabitPlanetRow) editInhabitPlanetRow.classList.add('hidden');
+    if (editInhabitPlanetBtn) {
+        editInhabitPlanetBtn.disabled = true;
+        editInhabitPlanetBtn.onclick = null;
+        editInhabitPlanetBtn.innerText = 'Inhabit Planet';
+    }
     if (placeholder) placeholder.innerText = 'Detailed stats coming soon.';
 }
 
@@ -171,6 +179,8 @@ function getInfoPanelRefs() {
         editStarClassSelect: document.getElementById('editStarClassSelect'),
         editPlanetTypeRow: document.getElementById('editPlanetTypeRow'),
         editPlanetTypeSelect: document.getElementById('editPlanetTypeSelect'),
+        editInhabitPlanetRow: document.getElementById('editInhabitPlanetRow'),
+        editInhabitPlanetBtn: document.getElementById('editInhabitPlanetBtn'),
         addSystemHereBtn: document.getElementById('addSystemHereBtn'),
         pinSelectedSystemBtn: document.getElementById('pinSelectedSystemBtn'),
         rerollSelectedSystemBtn: document.getElementById('rerollSelectedSystemBtn'),
@@ -192,6 +202,15 @@ function disableStarEditControls(refs) {
 function disablePlanetTypeControls(refs) {
     if (refs.editPlanetTypeRow) refs.editPlanetTypeRow.classList.add('hidden');
     if (refs.editPlanetTypeSelect) refs.editPlanetTypeSelect.onchange = null;
+}
+
+function disableInhabitControls(refs) {
+    if (refs.editInhabitPlanetRow) refs.editInhabitPlanetRow.classList.add('hidden');
+    if (refs.editInhabitPlanetBtn) {
+        refs.editInhabitPlanetBtn.disabled = true;
+        refs.editInhabitPlanetBtn.onclick = null;
+        refs.editInhabitPlanetBtn.innerText = 'Inhabit Planet';
+    }
 }
 
 export function ensureStarGradient(svg, starClass) {
@@ -596,6 +615,27 @@ function renderSystemBodyLists(refs, system, id, preselectedBodyIndex) {
                     refs.editPlanetTypeSelect.onchange = null;
                 }
             }
+            if (refs.editInhabitPlanetRow && refs.editInhabitPlanetBtn) {
+                const canEditInhabit = state.editMode && isPlanetary;
+                refs.editInhabitPlanetRow.classList.toggle('hidden', !canEditInhabit);
+                if (canEditInhabit) {
+                    const alreadyInhabited = !!(system.planets[bodyIndex] && system.planets[bodyIndex].habitable);
+                    refs.editInhabitPlanetBtn.innerText = alreadyInhabited ? 'Planet Inhabited' : 'Inhabit Planet';
+                    refs.editInhabitPlanetBtn.disabled = alreadyInhabited;
+                    refs.editInhabitPlanetBtn.onclick = alreadyInhabited ? null : () => {
+                        const targetSystem = state.sectors[id];
+                        if (!targetSystem || !targetSystem.planets[bodyIndex]) return;
+                        targetSystem.planets[bodyIndex].habitable = true;
+                        reportSystemInvariantIssues(targetSystem, 'edit-inhabit-planet');
+                        notifySectorDataChanged();
+                        updateInfoPanel(id, bodyIndex);
+                    };
+                } else {
+                    refs.editInhabitPlanetBtn.disabled = true;
+                    refs.editInhabitPlanetBtn.onclick = null;
+                    refs.editInhabitPlanetBtn.innerText = 'Inhabit Planet';
+                }
+            }
             if (refs.quickDeleteBodyBtn && state.editMode) {
                 setButtonAction(refs.quickDeleteBodyBtn, true, () => {
                     emitEvent(EVENTS.REQUEST_DELETE_SELECTED_BODY);
@@ -672,6 +712,7 @@ function renderEmptyHexInfo(refs, id) {
     setButtonAction(refs.renameBodyBtn, false);
     setButtonAction(refs.quickDeleteBodyBtn, false);
     disablePlanetTypeControls(refs);
+    disableInhabitControls(refs);
     setBodySummaryLabels(refs, 0, 0, 0);
     if (refs.pinSelectedSystemBtn) {
         refs.pinSelectedSystemBtn.disabled = true;
@@ -735,6 +776,7 @@ export function clearInfoPanel() {
     setBodySummaryLabels(refs, 0, 0, 0);
     disableStarEditControls(refs);
     disablePlanetTypeControls(refs);
+    disableInhabitControls(refs);
 
     if (refs.pinSelectedSystemBtn) {
         refs.pinSelectedSystemBtn.disabled = true;
