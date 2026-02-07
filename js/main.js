@@ -4,6 +4,7 @@ import { EVENTS } from './events.js';
 import { state } from './config.js';
 import { addBodyToSelectedSystem, addSystemAtHex, deleteSelectedBody, deleteSelectedSystem, generateSector, rerollSelectedPlanet, rerollSelectedSystem, rerollUnpinnedSystems, setEditMode, toggleEditMode, togglePinSelectedSystem } from './generation.js';
 import { captureHistorySnapshot, setupHistory } from './history.js';
+import { setupSearchPanel } from './search.js';
 import { autoSaveSectorState, exportSector, handleImportFile, loadSectorLocal, restoreCachedSectorState, saveSectorLocal, triggerImport } from './storage.js';
 import { setupPanZoom, updateInfoPanel, updateViewTransform } from './render.js';
 
@@ -32,6 +33,8 @@ function getMainRefs() {
         mainRefsCache.editDeleteSystemBtn = document.getElementById('editDeleteSystemBtn');
         mainRefsCache.editModeControls = document.getElementById('editModeControls');
         mainRefsCache.editHistoryPanel = document.getElementById('editHistoryPanel');
+        mainRefsCache.searchToggleBtn = document.getElementById('searchToggleBtn');
+        mainRefsCache.searchPanelContent = document.getElementById('searchPanelContent');
         mainRefsCache.quickDeleteBodyBtn = document.getElementById('quickDeleteBodyBtn');
         mainRefsCache.seedInput = document.getElementById('seedInput');
         mainRefsCache.sizePreset = document.getElementById('sizePreset');
@@ -113,6 +116,14 @@ function setupPanelToggles() {
 
 function bindUiEvents() {
     const refs = getMainRefs();
+    if (refs.searchToggleBtn && refs.searchPanelContent) {
+        refs.searchToggleBtn.addEventListener('click', () => {
+            const isCollapsed = refs.searchPanelContent.classList.toggle('hidden');
+            refs.searchToggleBtn.innerText = isCollapsed ? '+' : '-';
+            refs.searchToggleBtn.title = isCollapsed ? 'Expand search panel' : 'Collapse search panel';
+            refs.searchToggleBtn.setAttribute('aria-label', isCollapsed ? 'Expand search panel' : 'Collapse search panel');
+        });
+    }
 
     refs.modeSizePresetBtn?.addEventListener('click', () => setSizeMode('preset'));
     refs.modeSizeCustomBtn?.addEventListener('click', () => setSizeMode('custom'));
@@ -215,6 +226,7 @@ window.onload = function() {
     setupPanelToggles();
     bindUiEvents();
     setupHistory();
+    setupSearchPanel();
     const importInput = document.getElementById('importFileInput');
     if (importInput) importInput.addEventListener('change', handleImportFile);
     setSizeMode('preset');
