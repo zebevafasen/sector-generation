@@ -83,7 +83,7 @@ const DEEP_SPACE_POI_TEMPLATES = [
         summary: 'A functioning gate nexus that can sling ships across major corridor distances.',
         risk: 'Low',
         rewardHint: 'Can open rapid transit options between distant regions.',
-        weight: 0.85
+        weight: 0.45
     },
     {
         kind: 'Navigation',
@@ -91,7 +91,7 @@ const DEEP_SPACE_POI_TEMPLATES = [
         summary: 'A dormant gate structure with partial telemetry and unstable startup traces.',
         risk: 'Medium',
         rewardHint: 'Potential to restore long-range transit if reactivated.',
-        weight: 0.85
+        weight: 0.9
     },
     {
         kind: 'Navigation',
