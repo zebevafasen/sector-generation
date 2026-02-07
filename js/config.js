@@ -98,7 +98,7 @@ export const PLANET_TYPES = [
 ];
 
 export const POI_TYPES = [
-    'Research Station', 'Mining Outpost', 'Refueling Depot', 'Pirate Haven', 'Ancient Ruins', 'Jump Gate'
+    'Research Station', 'Mining Outpost', 'Refueling Depot', 'Pirate Haven', 'Ancient Ruins', 'Jump Gate', 'Active Jump-Gate', 'Inactive Jump-Gate'
 ];
 
 export const GRID_PRESETS = {

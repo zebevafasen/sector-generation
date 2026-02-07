@@ -79,6 +79,22 @@ const DEEP_SPACE_POI_TEMPLATES = [
     },
     {
         kind: 'Navigation',
+        name: 'Active Jump-Gate',
+        summary: 'A functioning gate nexus that can sling ships across major corridor distances.',
+        risk: 'Low',
+        rewardHint: 'Can open rapid transit options between distant regions.',
+        weight: 0.85
+    },
+    {
+        kind: 'Navigation',
+        name: 'Inactive Jump-Gate',
+        summary: 'A dormant gate structure with partial telemetry and unstable startup traces.',
+        risk: 'Medium',
+        rewardHint: 'Potential to restore long-range transit if reactivated.',
+        weight: 0.85
+    },
+    {
+        kind: 'Navigation',
         name: 'Refueling Station',
         summary: 'An autonomous tanker dock with reserve fuel cells and transfer hardpoints.',
         risk: 'Low',
