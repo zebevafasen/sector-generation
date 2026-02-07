@@ -24,6 +24,7 @@ const STAR_CLASS_PLANET_WEIGHTS = {
     'Black Hole': { 'Gas Giant': 0.22, Terrestrial: 0.02, Oceanic: 0.00, Volcanic: 0.32, Desert: 0.06, Barren: 0.36, Arctic: 0.02 },
     default: { 'Gas Giant': 0.18, Terrestrial: 0.22, Oceanic: 0.14, Volcanic: 0.11, Desert: 0.15, Barren: 0.12, Arctic: 0.08 }
 };
+const HABITABLE_PLANET_TYPES = new Set(['Terrestrial', 'Oceanic', 'Desert', 'Arctic']);
 
 function pickWeightedType(weights, excludedTypes = new Set()) {
     const candidates = PLANET_TYPES
@@ -56,6 +57,38 @@ function pickRandomPlanetType(excludedTypes = new Set()) {
         return PLANET_TYPES[Math.floor(rand() * PLANET_TYPES.length)];
     }
     return candidates[Math.floor(rand() * candidates.length)];
+}
+
+function isHabitableCandidateType(type) {
+    return HABITABLE_PLANET_TYPES.has(type);
+}
+
+function assignSystemHabitability(planets) {
+    if (!planets.length) return;
+
+    const candidateIndexes = [];
+    planets.forEach((planet, index) => {
+        if (isHabitableCandidateType(planet.type)) candidateIndexes.push(index);
+    });
+
+    if (!candidateIndexes.length) {
+        const fallbackIndex = Math.floor(rand() * planets.length);
+        planets[fallbackIndex].type = 'Terrestrial';
+        candidateIndexes.push(fallbackIndex);
+    }
+
+    shuffleArray(candidateIndexes, rand);
+    const primaryIndex = candidateIndexes.shift();
+    planets[primaryIndex].habitable = true;
+
+    let extraHabitableCount = 0;
+    candidateIndexes.forEach(index => {
+        const extraChance = 0.12 * Math.pow(0.45, extraHabitableCount);
+        if (rand() < extraChance) {
+            planets[index].habitable = true;
+            extraHabitableCount++;
+        }
+    });
 }
 
 export function generateSector() {
@@ -163,9 +196,12 @@ export function generateSystemData() {
             name: `${name} ${romanize(i + 1)}`,
             type,
             features,
-            pop
+            pop,
+            habitable: false
         });
     }
+
+    assignSystemHabitability(planets);
 
     if (rand() > 0.65) {
         planets.push({
