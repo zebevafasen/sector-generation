@@ -15,7 +15,7 @@ import {
 import { EVENTS, emitEvent } from './events.js';
 import { reportSystemInvariantIssues } from './invariants.js';
 import { generateStarAge, generateSeedString, isAutoSeedEnabled, rand, setRandomStream, setSeed, showStatusMessage } from './core.js';
-import { isArtificialBodyType, isBeltOrFieldBodyType } from './body-classification.js';
+import { isArtificialBodyType, isBeltOrFieldBodyType, isPlanetaryBody } from './body-classification.js';
 import { generatePlanetEnvironment } from './planet-environment.js';
 import { refreshSystemPlanetPopulation } from './planet-population.js';
 import { refreshSystemPlanetTags } from './planet-tags.js';
@@ -24,7 +24,6 @@ import {
     assignSystemHabitability,
     generatePlanetSize,
     isHabitableCandidateType,
-    isPlanetaryBody,
     pickPlanetTypeForStarClass,
     pickRandomPlanetType
 } from './planetary-rules.js';
