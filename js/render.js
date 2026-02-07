@@ -3,6 +3,11 @@ import { formatStarAgeValue, getStarClassInfo, hideStarClassInfo } from './core.
 
 const STAR_GRADIENT_CACHE = {};
 
+function notifySectorDataChanged() {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(new Event('sectorDataChanged'));
+}
+
 function normalizeBodyType(type) {
     return type === 'Lava' ? 'Volcanic' : type;
 }
@@ -56,6 +61,7 @@ function resetBodyDetailsPanel() {
     const content = document.getElementById('infoBodyDetailsContent');
     const name = document.getElementById('infoBodyDetailsName');
     const type = document.getElementById('infoBodyDetailsType');
+    const renameBodyBtn = document.getElementById('renameBodyBtn');
     const placeholder = document.getElementById('infoBodyDetailsPlaceholder');
 
     if (panel) panel.classList.add('hidden');
@@ -66,6 +72,10 @@ function resetBodyDetailsPanel() {
     if (content) content.classList.add('hidden');
     if (name) name.innerText = 'Body';
     if (type) type.innerText = 'Type';
+    if (renameBodyBtn) {
+        renameBodyBtn.disabled = true;
+        renameBodyBtn.onclick = null;
+    }
     if (placeholder) placeholder.innerText = 'Detailed stats coming soon.';
 }
 
@@ -340,7 +350,7 @@ export function selectHex(id, groupElement) {
     updateInfoPanel(id);
 }
 
-export function updateInfoPanel(id) {
+export function updateInfoPanel(id, preselectedBodyIndex = null) {
     const system = state.sectors[id];
     state.selectedSystemData = system;
     const [c, r] = id.split('-');
@@ -366,6 +376,8 @@ export function updateInfoPanel(id) {
     const planetSummary = document.getElementById('infoPlanetSummary');
     const beltSummary = document.getElementById('infoBeltSummary');
     const stationSummary = document.getElementById('infoStationSummary');
+    const renameSystemBtn = document.getElementById('renameSystemBtn');
+    const renameBodyBtn = document.getElementById('renameBodyBtn');
     const pinSelectedSystemBtn = document.getElementById('pinSelectedSystemBtn');
     const rerollSelectedSystemBtn = document.getElementById('rerollSelectedSystemBtn');
     const selectedSystemPinState = document.getElementById('selectedSystemPinState');
@@ -378,6 +390,18 @@ export function updateInfoPanel(id) {
         typeLabel.className = 'text-xs px-2 py-0.5 rounded-full bg-sky-900 text-sky-200 border border-sky-600';
 
         document.getElementById('infoSystemName').innerText = system.name;
+        if (renameSystemBtn) {
+            renameSystemBtn.disabled = false;
+            renameSystemBtn.onclick = () => {
+                const nextNameRaw = prompt('Rename system', system.name);
+                if (nextNameRaw === null) return;
+                const nextName = nextNameRaw.trim();
+                if (!nextName) return;
+                system.name = nextName;
+                notifySectorDataChanged();
+                updateInfoPanel(id, preselectedBodyIndex);
+            };
+        }
         const isPinned = !!(state.pinnedHexIds && state.pinnedHexIds.includes(id));
         if (pinSelectedSystemBtn) {
             pinSelectedSystemBtn.disabled = false;
@@ -418,11 +442,12 @@ export function updateInfoPanel(id) {
             stationList.innerHTML = '';
             resetBodyDetailsPanel();
 
-            const renderBody = (body) => {
+            const renderBody = (body, bodyIndex) => {
                 const li = document.createElement('li');
                 li.className = 'bg-slate-800/50 p-2 rounded border border-slate-700/50 flex flex-col cursor-pointer transition-colors hover:border-sky-600/60';
                 li.setAttribute('role', 'button');
                 li.setAttribute('tabindex', '0');
+                li.setAttribute('data-body-index', String(bodyIndex));
 
                 const normalizedType = normalizeBodyType(body.type);
                 const bodyIcon = getBodyIconMarkup(normalizedType);
@@ -437,6 +462,10 @@ export function updateInfoPanel(id) {
                     if (selectedBodyEl === li) {
                         li.classList.remove('ring-1', 'ring-sky-500/70', 'border-sky-500/70');
                         selectedBodyEl = null;
+                        if (renameBodyBtn) {
+                            renameBodyBtn.disabled = true;
+                            renameBodyBtn.onclick = null;
+                        }
                         resetBodyDetailsPanel();
                         return;
                     }
@@ -446,6 +475,19 @@ export function updateInfoPanel(id) {
                     li.classList.add('ring-1', 'ring-sky-500/70', 'border-sky-500/70');
                     selectedBodyEl = li;
                     showBodyDetailsPanel(body, li);
+                    if (renameBodyBtn) {
+                        renameBodyBtn.disabled = false;
+                        renameBodyBtn.onclick = () => {
+                            const currentName = system.planets[bodyIndex] ? system.planets[bodyIndex].name : body.name;
+                            const nextNameRaw = prompt('Rename object', currentName);
+                            if (nextNameRaw === null) return;
+                            const nextName = nextNameRaw.trim();
+                            if (!nextName || !system.planets[bodyIndex]) return;
+                            system.planets[bodyIndex].name = nextName;
+                            notifySectorDataChanged();
+                            updateInfoPanel(id, bodyIndex);
+                        };
+                    }
                 };
 
                 li.addEventListener('click', selectBody);
@@ -458,15 +500,19 @@ export function updateInfoPanel(id) {
                 return li;
             };
 
-            system.planets.forEach(body => {
+            system.planets.forEach((body, bodyIndex) => {
                 if (body.type === 'Artificial') {
-                    stationList.appendChild(renderBody(body));
+                    stationList.appendChild(renderBody(body, bodyIndex));
                 } else if (/belt|field/i.test(body.type)) {
-                    beltList.appendChild(renderBody(body));
+                    beltList.appendChild(renderBody(body, bodyIndex));
                 } else {
-                    planetList.appendChild(renderBody(body));
+                    planetList.appendChild(renderBody(body, bodyIndex));
                 }
             });
+            if (Number.isInteger(preselectedBodyIndex) && preselectedBodyIndex >= 0) {
+                const node = document.querySelector(`[data-body-index="${preselectedBodyIndex}"]`);
+                if (node) node.click();
+            }
 
             const planetCount = system.planets.filter(body => body.type !== 'Artificial' && !/belt|field/i.test(body.type)).length;
             const beltCount = system.planets.filter(body => /belt|field/i.test(body.type)).length;
@@ -498,6 +544,14 @@ export function updateInfoPanel(id) {
         if (planetList) planetList.innerHTML = '';
         if (beltList) beltList.innerHTML = '';
         if (stationList) stationList.innerHTML = '';
+        if (renameSystemBtn) {
+            renameSystemBtn.disabled = true;
+            renameSystemBtn.onclick = null;
+        }
+        if (renameBodyBtn) {
+            renameBodyBtn.disabled = true;
+            renameBodyBtn.onclick = null;
+        }
         if (planetSummary) planetSummary.innerText = 'Planets (0)';
         if (beltSummary) beltSummary.innerText = 'Belts & Fields (0)';
         if (stationSummary) stationSummary.innerText = 'Stations (0)';
@@ -529,6 +583,16 @@ export function clearInfoPanel() {
 
     const starAgeLabel = document.getElementById('infoStarAge');
     if (starAgeLabel) starAgeLabel.innerText = 'Age: --';
+    const renameSystemBtn = document.getElementById('renameSystemBtn');
+    if (renameSystemBtn) {
+        renameSystemBtn.disabled = true;
+        renameSystemBtn.onclick = null;
+    }
+    const renameBodyBtn = document.getElementById('renameBodyBtn');
+    if (renameBodyBtn) {
+        renameBodyBtn.disabled = true;
+        renameBodyBtn.onclick = null;
+    }
     const planetSummary = document.getElementById('infoPlanetSummary');
     const beltSummary = document.getElementById('infoBeltSummary');
     const stationSummary = document.getElementById('infoStationSummary');

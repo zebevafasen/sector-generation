@@ -102,6 +102,7 @@ function bindUiEvents() {
     byId('modePresetBtn')?.addEventListener('click', autoSaveSectorState);
     byId('modeManualBtn')?.addEventListener('click', autoSaveSectorState);
     byId('randomizeSeedBtn')?.addEventListener('click', autoSaveSectorState);
+    window.addEventListener('sectorDataChanged', autoSaveSectorState);
 }
 
 window.onload = function() {
