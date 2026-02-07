@@ -490,6 +490,10 @@ export function generateSystemData(config = null, context = null) {
     }
 
     assignSystemHabitability(planets, generationProfile);
+    const primaryHabitable = planets.find(body => body.habitable);
+    if (primaryHabitable) {
+        primaryHabitable.name = `${name} Prime`;
+    }
 
     if (rand() < generationProfile.beltChance) {
         planets.push({
