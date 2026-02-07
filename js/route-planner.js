@@ -159,6 +159,15 @@ function isSystemHex(hexId) {
     return !!(state.sectors && state.sectors[hexId]);
 }
 
+function isRefuelingPoiHex(hexId) {
+    if (!(state.deepSpacePois && state.deepSpacePois[hexId])) return false;
+    const poi = state.deepSpacePois[hexId];
+    if (poi.isRefuelingStation) return true;
+    const name = String(poi.name || '');
+    const kind = String(poi.kind || '');
+    return kind.toLowerCase() === 'navigation' && /refueling station/i.test(name);
+}
+
 function computePath(startHexId, endHexId, width, height) {
     if (!startHexId || !endHexId) return [];
     if (startHexId === endHexId) return [startHexId];
@@ -205,7 +214,9 @@ function computePath(startHexId, endHexId, width, height) {
 
         getNeighbors(currentParsed.col, currentParsed.row, width, height).forEach((neighbor) => {
             const neighborHexId = `${neighbor.col}-${neighbor.row}`;
-            const nextStreak = isSystemHex(neighborHexId) ? 0 : currentNode.emptyStreak + 1;
+            const nextStreak = (isSystemHex(neighborHexId) || isRefuelingPoiHex(neighborHexId))
+                ? 0
+                : currentNode.emptyStreak + 1;
             if (nextStreak > 2) return;
 
             const neighborKey = makeNodeKey(neighborHexId, nextStreak);
@@ -264,7 +275,7 @@ function recalculateRoute(refs, options = {}) {
     route.hops = route.pathHexIds.length > 1 ? route.pathHexIds.length - 1 : 0;
     updateRouteLabels(refs);
     if (!route.pathHexIds.length) {
-        showStatusMessage(`No valid route ${route.startHexId} -> ${route.endHexId} (max 2 empty hexes before a system).`, 'warn', { persist: true });
+        showStatusMessage(`No valid route ${route.startHexId} -> ${route.endHexId} (max 2 empty hexes before a system or refueling station).`, 'warn', { persist: true });
     } else {
         showStatusMessage(`Route ${route.startHexId} -> ${route.endHexId}: ${route.hops} hops`, 'success', { persist: true });
     }

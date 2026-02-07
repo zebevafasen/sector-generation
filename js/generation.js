@@ -74,7 +74,17 @@ const DEEP_SPACE_POI_TEMPLATES = [
         name: 'Ancient Lane Marker',
         summary: 'A pre-collapse gravimetric marker still broadcasting weak lane data.',
         risk: 'Low',
-        rewardHint: 'Can reveal safer micro-routes and old map fragments.'
+        rewardHint: 'Can reveal safer micro-routes and old map fragments.',
+        weight: 1
+    },
+    {
+        kind: 'Navigation',
+        name: 'Refueling Station',
+        summary: 'An autonomous tanker dock with reserve fuel cells and transfer hardpoints.',
+        risk: 'Low',
+        rewardHint: 'Extends long-haul range by enabling mid-route fuel top-offs.',
+        weight: 0.22,
+        isRefuelingStation: true
     }
 ];
 
@@ -312,14 +322,27 @@ function countNeighborSystems(hexId, sectors) {
 }
 
 function createDeepSpacePoi() {
-    const template = DEEP_SPACE_POI_TEMPLATES[Math.floor(rand() * DEEP_SPACE_POI_TEMPLATES.length)];
+    const totalWeight = DEEP_SPACE_POI_TEMPLATES.reduce((sum, template) =>
+        sum + (Number.isFinite(template.weight) && template.weight > 0 ? template.weight : 1), 0);
+    let roll = rand() * totalWeight;
+    let template = DEEP_SPACE_POI_TEMPLATES[DEEP_SPACE_POI_TEMPLATES.length - 1];
+    for (let i = 0; i < DEEP_SPACE_POI_TEMPLATES.length; i++) {
+        const candidate = DEEP_SPACE_POI_TEMPLATES[i];
+        const weight = Number.isFinite(candidate.weight) && candidate.weight > 0 ? candidate.weight : 1;
+        roll -= weight;
+        if (roll <= 0) {
+            template = candidate;
+            break;
+        }
+    }
     const serial = Math.floor(rand() * 900) + 100;
     return {
         kind: template.kind,
         name: `${template.name} ${serial}`,
         summary: template.summary,
         risk: template.risk,
-        rewardHint: template.rewardHint
+        rewardHint: template.rewardHint,
+        isRefuelingStation: !!template.isRefuelingStation
     };
 }
 

@@ -38,6 +38,58 @@ test('route planner can create and clear a shortcut route overlay', async ({ pag
   await expect(page.locator('#mapViewport polyline')).toHaveCount(0);
 });
 
+test('route planner can bridge long gaps using refueling-station POIs', async ({ page }) => {
+  await page.goto('/sector_generator.html');
+  await page.locator('#modeSizeCustomBtn').click();
+  await page.locator('#gridWidth').fill('1');
+  await page.locator('#gridHeight').fill('6');
+  await page.locator('#modeManualBtn').click();
+  await page.locator('#manualMin').fill('0');
+  await page.locator('#manualMax').fill('0');
+  await page.locator('#generateSectorBtn').click();
+
+  await page.locator('#editModeToggleBtn').click();
+  await expect(page.locator('#editModeToggleBtn')).toContainText('EDIT MODE: ON');
+
+  await page.locator('.hex-group[data-id="0-0"]').click();
+  await page.locator('#addSystemHereBtn').click();
+  await page.locator('.hex-group[data-id="0-5"]').click();
+  await page.locator('#addSystemHereBtn').click();
+
+  await page.evaluate(() => {
+    window.dispatchEvent(new CustomEvent('routeShortcutHex', { detail: { hexId: '0-0' } }));
+    window.dispatchEvent(new CustomEvent('routeShortcutHex', { detail: { hexId: '0-5' } }));
+  });
+  await expect(page.locator('#mapViewport polyline')).toHaveCount(0);
+
+  await page.locator('.hex-group[data-id="0-3"]').click();
+  await page.locator('#addPoiHereBtn').click();
+  await expect(page.locator('#statusMessage')).toContainText('Added POI');
+
+  const ensureNavigationPoi = async () => {
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const detailsText = await page.locator('#emptyDetails').innerText();
+      if (/Type\s*Navigation/i.test(detailsText)) return;
+      await page.locator('#rerollSelectedSystemBtn').click();
+      await expect(page.locator('#statusMessage')).toContainText('Rerolled POI');
+    }
+    throw new Error('Unable to roll a Navigation POI in 20 attempts.');
+  };
+  await ensureNavigationPoi();
+
+  await Promise.all([
+    page.waitForEvent('dialog').then((dialog) => dialog.accept('Refueling Station 777')),
+    page.locator('#renamePoiBtn').click()
+  ]);
+  await expect(page.locator('#statusMessage')).toContainText('Renamed POI');
+
+  await page.evaluate(() => {
+    window.dispatchEvent(new CustomEvent('routeShortcutHex', { detail: { hexId: '0-0' } }));
+    window.dispatchEvent(new CustomEvent('routeShortcutHex', { detail: { hexId: '0-5' } }));
+  });
+  await expect(page.locator('#mapViewport polyline')).toHaveCount(1);
+});
+
 test('json export can be imported to restore sector stats', async ({ page }) => {
   await page.goto('/sector_generator.html');
   await page.locator('#generateSectorBtn').click();

@@ -91,7 +91,9 @@ function sanitizeDeepSpacePois(rawPois, width, height, sectors) {
         const rewardHint = typeof poi.rewardHint === 'string' && poi.rewardHint.trim()
             ? poi.rewardHint.trim()
             : 'No additional intel.';
-        deepSpacePois[hexId] = { name, kind, summary, risk, rewardHint };
+        const isRefuelingStation = !!poi.isRefuelingStation
+            || (kind.toLowerCase() === 'navigation' && /refueling station/i.test(name));
+        deepSpacePois[hexId] = { name, kind, summary, risk, rewardHint, isRefuelingStation };
     });
 
     return { deepSpacePois, dropped };
