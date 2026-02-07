@@ -4,7 +4,7 @@
 } from './config.js';
 import { isAutoSeedEnabled, isRealisticPlanetWeightingEnabled, setSeed, showStatusMessage } from './core.js';
 import { setDensityMode, setSizeMode } from './controls.js';
-import { clearInfoPanel, drawGrid } from './render.js';
+import { clearInfoPanel, drawGrid, selectHex } from './render.js';
 
 export function buildSectorPayload(meta = {}) {
     const width = Number.isFinite(meta.width) ? meta.width : (parseInt(document.getElementById('gridWidth').value, 10) || 0);
@@ -33,10 +33,36 @@ export function buildSectorPayload(meta = {}) {
         autoSeed: isAutoSeedEnabled(),
         realisticPlanetWeights: isRealisticPlanetWeightingEnabled(),
         generationProfile: generationProfileSelect ? generationProfileSelect.value : 'cinematic',
+        selectedHexId: state.selectedHexId || null,
         dimensions: { width, height },
         stats: { totalHexes, totalSystems },
         sectors: JSON.parse(JSON.stringify(state.sectors))
     };
+}
+
+export function autoSaveSectorState() {
+    if (!(typeof window !== 'undefined' && window.localStorage)) return;
+    try {
+        const payload = buildSectorPayload();
+        window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(payload));
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+export function restoreCachedSectorState() {
+    if (!(typeof window !== 'undefined' && window.localStorage)) return false;
+    try {
+        const raw = window.localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (!raw) return false;
+        const payload = JSON.parse(raw);
+        if (!payload || !payload.dimensions || !payload.sectors) return false;
+        applySectorPayload(payload);
+        return true;
+    } catch (err) {
+        console.error(err);
+        return false;
+    }
 }
 
 export function saveSectorLocal() {
@@ -185,6 +211,10 @@ export function applySectorPayload(payload) {
     state.selectedHexId = null;
     clearInfoPanel();
     drawGrid(width, height);
+    if (payload.selectedHexId && state.sectors[payload.selectedHexId]) {
+        const group = document.querySelector(`.hex-group[data-id="${payload.selectedHexId}"]`);
+        if (group) selectHex(payload.selectedHexId, group);
+    }
 
     const totalHexes = payload.stats && Number.isFinite(payload.stats.totalHexes) ? payload.stats.totalHexes : width * height;
     const systemCount = payload.stats && Number.isFinite(payload.stats.totalSystems) ? payload.stats.totalSystems : Object.keys(state.sectors).length;
@@ -194,4 +224,5 @@ export function applySectorPayload(payload) {
     if (payload.generatedAt) {
         state.lastSectorSnapshot.generatedAt = payload.generatedAt;
     }
+    autoSaveSectorState();
 }

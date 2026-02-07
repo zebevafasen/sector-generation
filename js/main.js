@@ -1,7 +1,7 @@
 ﻿import { setDensityMode, setSizeMode, setupStarClassTooltip } from './controls.js';
 import { randomizeSeed } from './core.js';
 import { generateSector } from './generation.js';
-import { exportSector, handleImportFile, loadSectorLocal, saveSectorLocal, triggerImport } from './storage.js';
+import { autoSaveSectorState, exportSector, handleImportFile, loadSectorLocal, restoreCachedSectorState, saveSectorLocal, triggerImport } from './storage.js';
 import { setupPanZoom } from './render.js';
 
 function bindUiEvents() {
@@ -17,6 +17,23 @@ function bindUiEvents() {
     byId('exportSectorBtn')?.addEventListener('click', exportSector);
     byId('triggerImportBtn')?.addEventListener('click', triggerImport);
     byId('generateSectorBtn')?.addEventListener('click', generateSector);
+
+    const persistOnChangeIds = [
+        'sizePreset', 'gridWidth', 'gridHeight', 'densityPreset', 'manualMin', 'manualMax',
+        'seedInput', 'autoSeedToggle', 'realisticPlanetWeightsToggle', 'generationProfile'
+    ];
+    persistOnChangeIds.forEach((id) => {
+        const el = byId(id);
+        if (!el) return;
+        el.addEventListener('change', autoSaveSectorState);
+    });
+    byId('seedInput')?.addEventListener('input', autoSaveSectorState);
+
+    byId('modeSizePresetBtn')?.addEventListener('click', autoSaveSectorState);
+    byId('modeSizeCustomBtn')?.addEventListener('click', autoSaveSectorState);
+    byId('modePresetBtn')?.addEventListener('click', autoSaveSectorState);
+    byId('modeManualBtn')?.addEventListener('click', autoSaveSectorState);
+    byId('randomizeSeedBtn')?.addEventListener('click', autoSaveSectorState);
 }
 
 window.onload = function() {
@@ -26,5 +43,7 @@ window.onload = function() {
     if (importInput) importInput.addEventListener('change', handleImportFile);
     setSizeMode('preset');
     setupStarClassTooltip();
-    generateSector();
+    if (!restoreCachedSectorState()) {
+        generateSector();
+    }
 };

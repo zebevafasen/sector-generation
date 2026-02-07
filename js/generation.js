@@ -8,7 +8,7 @@
 } from './config.js';
 import { generateStarAge, generateSeedString, isAutoSeedEnabled, isRealisticPlanetWeightingEnabled, prepareSeed, rand, showStatusMessage } from './core.js';
 import { getSelectedGridSize } from './controls.js';
-import { buildSectorPayload } from './storage.js';
+import { autoSaveSectorState, buildSectorPayload } from './storage.js';
 import { clearInfoPanel, drawGrid } from './render.js';
 import { romanize, shuffleArray } from './utils.js';
 
@@ -210,6 +210,7 @@ export function generateSector() {
     document.getElementById('statusTotalHexes').innerText = `${totalHexes} Hexes`;
     document.getElementById('statusTotalSystems').innerText = `${systemCount} Systems`;
     state.lastSectorSnapshot = buildSectorPayload({ width: w, height: h, totalHexes, systemCount });
+    autoSaveSectorState();
     showStatusMessage(seedUsed ? `Generated seed ${seedUsed}` : 'Sector regenerated.', 'info');
 }
 
