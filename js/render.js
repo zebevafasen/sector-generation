@@ -43,6 +43,63 @@ function redrawAndReselect(hexId, preselectedBodyIndex = null) {
     }
 }
 
+function getHexCenter(col, row) {
+    const xOffset = (row % 2 === 1) ? (HEX_WIDTH / 2) : 0;
+    return {
+        x: (col * HEX_WIDTH) + xOffset + (HEX_WIDTH / 2),
+        y: (row * (HEX_HEIGHT * 0.75)) + (HEX_HEIGHT / 2)
+    };
+}
+
+function renderRouteOverlay(viewport) {
+    const route = state.routePlanner || {};
+    const path = Array.isArray(route.pathHexIds) ? route.pathHexIds : [];
+    if (path.length < 2) return;
+
+    const points = path
+        .map((hexId) => {
+            const [cRaw, rRaw] = String(hexId).split('-');
+            const c = parseInt(cRaw, 10);
+            const r = parseInt(rRaw, 10);
+            if (!Number.isInteger(c) || !Number.isInteger(r)) return null;
+            const center = getHexCenter(c, r);
+            return `${center.x},${center.y}`;
+        })
+        .filter(Boolean);
+
+    if (points.length < 2) return;
+
+    const pathLine = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+    pathLine.setAttribute('points', points.join(' '));
+    pathLine.setAttribute('fill', 'none');
+    pathLine.setAttribute('stroke', '#38bdf8');
+    pathLine.setAttribute('stroke-width', '3');
+    pathLine.setAttribute('stroke-linecap', 'round');
+    pathLine.setAttribute('stroke-linejoin', 'round');
+    pathLine.setAttribute('stroke-opacity', '0.9');
+    pathLine.style.filter = 'drop-shadow(0 0 4px rgba(56, 189, 248, 0.8))';
+    viewport.appendChild(pathLine);
+
+    const startId = path[0];
+    const endId = path[path.length - 1];
+    [startId, endId].forEach((hexId, index) => {
+        const [cRaw, rRaw] = String(hexId).split('-');
+        const c = parseInt(cRaw, 10);
+        const r = parseInt(rRaw, 10);
+        if (!Number.isInteger(c) || !Number.isInteger(r)) return;
+        const center = getHexCenter(c, r);
+
+        const marker = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        marker.setAttribute('cx', String(center.x));
+        marker.setAttribute('cy', String(center.y));
+        marker.setAttribute('r', '5');
+        marker.setAttribute('fill', index === 0 ? '#22c55e' : '#f43f5e');
+        marker.setAttribute('stroke', '#e2e8f0');
+        marker.setAttribute('stroke-width', '1');
+        viewport.appendChild(marker);
+    });
+}
+
 function resetBodyDetailsPanel() {
     const panel = document.getElementById('infoBodyDetailsPanel');
     const empty = document.getElementById('infoBodyDetailsEmpty');
@@ -480,6 +537,8 @@ export function drawGrid(cols, rows, options = {}) {
             viewport.appendChild(g);
         }
     }
+
+    renderRouteOverlay(viewport);
 }
 
 export function calculateHexPoints(cx, cy, size) {
@@ -560,6 +619,7 @@ export function selectHex(id, groupElement) {
     state.selectedHexId = id;
     state.selectedBodyIndex = null;
     updateInfoPanel(id);
+    emitEvent(EVENTS.HEX_SELECTED, { hexId: id });
 }
 
 function configureSystemHeaderAndStar(refs, system, id, preselectedBodyIndex) {

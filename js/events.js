@@ -1,5 +1,6 @@
 export const EVENTS = {
     SECTOR_DATA_CHANGED: 'sectorDataChanged',
+    HEX_SELECTED: 'hexSelected',
     REQUEST_ADD_SYSTEM_AT_HEX: 'requestAddSystemAtHex',
     REQUEST_DELETE_SELECTED_BODY: 'requestDeleteSelectedBody',
     REQUEST_REROLL_SELECTED_PLANET: 'requestRerollSelectedPlanet',
