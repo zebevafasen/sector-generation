@@ -6,11 +6,57 @@
     STAR_VISUALS,
     state
 } from './config.js';
-import { generateStarAge, generateSeedString, isAutoSeedEnabled, prepareSeed, rand, showStatusMessage } from './core.js';
+import { generateStarAge, generateSeedString, isAutoSeedEnabled, isRealisticPlanetWeightingEnabled, prepareSeed, rand, showStatusMessage } from './core.js';
 import { getSelectedGridSize } from './controls.js';
 import { buildSectorPayload } from './storage.js';
 import { clearInfoPanel, drawGrid } from './render.js';
 import { romanize, shuffleArray } from './utils.js';
+
+const STAR_CLASS_PLANET_WEIGHTS = {
+    O: { 'Gas Giant': 0.28, Terrestrial: 0.07, Oceanic: 0.02, Volcanic: 0.24, Desert: 0.17, Barren: 0.20, Arctic: 0.02 },
+    B: { 'Gas Giant': 0.26, Terrestrial: 0.09, Oceanic: 0.03, Volcanic: 0.20, Desert: 0.17, Barren: 0.20, Arctic: 0.05 },
+    A: { 'Gas Giant': 0.24, Terrestrial: 0.15, Oceanic: 0.08, Volcanic: 0.16, Desert: 0.16, Barren: 0.13, Arctic: 0.08 },
+    F: { 'Gas Giant': 0.20, Terrestrial: 0.23, Oceanic: 0.17, Volcanic: 0.10, Desert: 0.14, Barren: 0.08, Arctic: 0.08 },
+    G: { 'Gas Giant': 0.19, Terrestrial: 0.24, Oceanic: 0.19, Volcanic: 0.09, Desert: 0.12, Barren: 0.08, Arctic: 0.09 },
+    K: { 'Gas Giant': 0.17, Terrestrial: 0.22, Oceanic: 0.16, Volcanic: 0.11, Desert: 0.13, Barren: 0.10, Arctic: 0.11 },
+    M: { 'Gas Giant': 0.12, Terrestrial: 0.20, Oceanic: 0.11, Volcanic: 0.18, Desert: 0.11, Barren: 0.16, Arctic: 0.12 },
+    Neutron: { 'Gas Giant': 0.20, Terrestrial: 0.04, Oceanic: 0.01, Volcanic: 0.30, Desert: 0.08, Barren: 0.35, Arctic: 0.02 },
+    'Black Hole': { 'Gas Giant': 0.22, Terrestrial: 0.02, Oceanic: 0.00, Volcanic: 0.32, Desert: 0.06, Barren: 0.36, Arctic: 0.02 },
+    default: { 'Gas Giant': 0.18, Terrestrial: 0.22, Oceanic: 0.14, Volcanic: 0.11, Desert: 0.15, Barren: 0.12, Arctic: 0.08 }
+};
+
+function pickWeightedType(weights, excludedTypes = new Set()) {
+    const candidates = PLANET_TYPES
+        .filter(type => !excludedTypes.has(type))
+        .map(type => ({ type, weight: weights[type] || 0 }))
+        .filter(item => item.weight > 0);
+
+    if (!candidates.length) {
+        return PLANET_TYPES[Math.floor(rand() * PLANET_TYPES.length)];
+    }
+
+    const total = candidates.reduce((sum, item) => sum + item.weight, 0);
+    let roll = rand() * total;
+    for (const item of candidates) {
+        roll -= item.weight;
+        if (roll <= 0) return item.type;
+    }
+
+    return candidates[candidates.length - 1].type;
+}
+
+function pickPlanetTypeForStarClass(starClass, excludedTypes = new Set()) {
+    const weights = STAR_CLASS_PLANET_WEIGHTS[starClass] || STAR_CLASS_PLANET_WEIGHTS.default;
+    return pickWeightedType(weights, excludedTypes);
+}
+
+function pickRandomPlanetType(excludedTypes = new Set()) {
+    const candidates = PLANET_TYPES.filter(type => !excludedTypes.has(type));
+    if (!candidates.length) {
+        return PLANET_TYPES[Math.floor(rand() * PLANET_TYPES.length)];
+    }
+    return candidates[Math.floor(rand() * candidates.length)];
+}
 
 export function generateSector() {
     if (isAutoSeedEnabled()) {
@@ -89,10 +135,16 @@ export function generateSystemData() {
     const planetCount = Math.floor(rand() * 10) + 1;
     const planets = [];
     let population = 0;
+    let hasTerrestrial = false;
     const starAge = generateStarAge(sClass);
 
+    const useWeightedTypes = isRealisticPlanetWeightingEnabled();
     for (let i = 0; i < planetCount; i++) {
-        const type = PLANET_TYPES[Math.floor(rand() * PLANET_TYPES.length)];
+        const excludedTypes = hasTerrestrial ? new Set(['Terrestrial']) : new Set();
+        const type = useWeightedTypes
+            ? pickPlanetTypeForStarClass(sClass, excludedTypes)
+            : pickRandomPlanetType(excludedTypes);
+        if (type === 'Terrestrial') hasTerrestrial = true;
         let pop = 0;
         const features = [];
 

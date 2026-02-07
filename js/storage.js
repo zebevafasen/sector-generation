@@ -2,7 +2,7 @@
     LOCAL_STORAGE_KEY,
     state
 } from './config.js';
-import { isAutoSeedEnabled, setSeed, showStatusMessage } from './core.js';
+import { isAutoSeedEnabled, isRealisticPlanetWeightingEnabled, setSeed, showStatusMessage } from './core.js';
 import { setDensityMode, setSizeMode } from './controls.js';
 import { clearInfoPanel, drawGrid } from './render.js';
 
@@ -30,6 +30,7 @@ export function buildSectorPayload(meta = {}) {
             max: manualMaxInput ? parseInt(manualMaxInput.value, 10) || 0 : 0
         },
         autoSeed: isAutoSeedEnabled(),
+        realisticPlanetWeights: isRealisticPlanetWeightingEnabled(),
         dimensions: { width, height },
         stats: { totalHexes, totalSystems },
         sectors: JSON.parse(JSON.stringify(state.sectors))
@@ -159,6 +160,10 @@ export function applySectorPayload(payload) {
     if (typeof payload.autoSeed === 'boolean') {
         const toggle = document.getElementById('autoSeedToggle');
         if (toggle) toggle.checked = payload.autoSeed;
+    }
+    if (typeof payload.realisticPlanetWeights === 'boolean') {
+        const toggle = document.getElementById('realisticPlanetWeightsToggle');
+        if (toggle) toggle.checked = payload.realisticPlanetWeights;
     }
 
     const seedInput = document.getElementById('seedInput');

@@ -47,6 +47,11 @@ export function isAutoSeedEnabled() {
     return !!(toggle && toggle.checked);
 }
 
+export function isRealisticPlanetWeightingEnabled() {
+    const toggle = document.getElementById('realisticPlanetWeightsToggle');
+    return !!(toggle && toggle.checked);
+}
+
 export function showStatusMessage(message, tone = 'info') {
     const statusEl = document.getElementById('statusMessage');
     if (!statusEl) {
