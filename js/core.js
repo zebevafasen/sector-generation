@@ -10,22 +10,6 @@ function escapeHtml(value) {
         .replace(/'/g, '&#39;');
 }
 
-export function prepareSeed() {
-    const input = document.getElementById('seedInput');
-    if (!input) {
-        state.seededRandomFn = () => Math.random();
-        state.currentSeed = '';
-        return '';
-    }
-    let seedValue = (input.value || '').trim();
-    if (!seedValue) {
-        seedValue = generateSeedString();
-        input.value = seedValue;
-    }
-    setSeed(seedValue);
-    return seedValue;
-}
-
 export function setSeed(seedValue) {
     const normalized = String(seedValue);
     state.currentSeed = normalized;
