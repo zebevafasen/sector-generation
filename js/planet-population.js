@@ -91,6 +91,7 @@ export function refreshSystemPlanetPopulation(system, options = {}) {
     system.planets.forEach((body) => {
         if (!isPlanetaryBody(body)) {
             body.pop = 0;
+            body.basePop = 0;
             if (Array.isArray(body.features)) {
                 body.features = body.features.filter(feature => feature !== 'Inhabited');
             }
@@ -99,11 +100,15 @@ export function refreshSystemPlanetPopulation(system, options = {}) {
 
         if (body.habitable) {
             const numericPop = Number(body.pop);
-            if (forceRecalculate || !Number.isFinite(numericPop) || numericPop <= 0) {
-                body.pop = generatePlanetPopulationBillions(body, randomFn);
-            } else {
-                body.pop = Math.round(numericPop * 10) / 10;
+            const numericBasePop = Number(body.basePop);
+            if (forceRecalculate || !Number.isFinite(numericBasePop) || numericBasePop <= 0) {
+                if (!forceRecalculate && Number.isFinite(numericPop) && numericPop > 0) {
+                    body.basePop = Math.round(numericPop * 10) / 10;
+                } else {
+                    body.basePop = generatePlanetPopulationBillions(body, randomFn);
+                }
             }
+            body.pop = Math.round(Number(body.basePop) * 10) / 10;
 
             const features = ensureFeaturesArray(body);
             if (!features.includes('Inhabited')) features.push('Inhabited');
@@ -111,6 +116,7 @@ export function refreshSystemPlanetPopulation(system, options = {}) {
         }
 
         body.pop = 0;
+        body.basePop = 0;
         if (Array.isArray(body.features)) {
             body.features = body.features.filter(feature => feature !== 'Inhabited');
         }

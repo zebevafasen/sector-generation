@@ -352,6 +352,7 @@ export function generateSystemData(config = null, context = null) {
             temperature: environment.temperature,
             features,
             pop: 0,
+            basePop: 0,
             tags: [],
             habitable: false
         });
@@ -478,6 +479,7 @@ export function addBodyToSelectedSystem(kind) {
             temperature: environment.temperature,
             features: [],
             pop: 0,
+            basePop: 0,
             tags: [],
             habitable: false
         });
@@ -570,6 +572,7 @@ export function rerollSelectedPlanet() {
     targetPlanet.temperature = nextEnvironment.temperature;
     targetPlanet.features = [];
     targetPlanet.pop = 0;
+    targetPlanet.basePop = 0;
     targetPlanet.tags = [];
     targetPlanet.habitable = wasHabitable && isHabitableCandidateType(nextType);
 

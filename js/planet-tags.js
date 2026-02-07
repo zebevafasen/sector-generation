@@ -1,3 +1,5 @@
+import { formatPopulationBillions } from './planet-population.js';
+
 function normalizeLabel(value) {
     return String(value || '').trim().toLowerCase();
 }
@@ -20,7 +22,35 @@ function weightedPick(items, randomFn, excluded = new Set()) {
     return candidates[candidates.length - 1].tag;
 }
 
-function baseTagWeights(planet) {
+function weightedPickCompatible(items, randomFn, selectedTags) {
+    const pool = items.filter(item =>
+        item.weight > 0
+        && !selectedTags.includes(item.tag)
+        && isTagCompatible(item.tag, selectedTags)
+    );
+    return weightedPick(pool, randomFn, new Set(selectedTags));
+}
+
+const TAG_INCOMPATIBILITIES = {
+    'Ecumenopolis': new Set(['Abandoned Colony', 'Frontier Outpost', 'Colony World', 'Prison Planet']),
+    'Abandoned Colony': new Set(['Ecumenopolis', 'Core Trade Hub', 'Agri World', 'Cultural Center', 'Research Enclave']),
+    'Prison Planet': new Set(['Ecumenopolis', 'Cultural Center', 'Agri World']),
+    'Civil War': new Set(['Quarantined World']),
+    'Quarantined World': new Set(['Civil War'])
+};
+
+function isTagCompatible(candidate, selectedTags) {
+    for (const selected of selectedTags) {
+        const selectedBlocked = TAG_INCOMPATIBILITIES[selected];
+        const candidateBlocked = TAG_INCOMPATIBILITIES[candidate];
+        if ((selectedBlocked && selectedBlocked.has(candidate)) || (candidateBlocked && candidateBlocked.has(selected))) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function baseInhabitedTagWeights(planet) {
     const pop = Math.max(0, Number(planet.pop) || 0);
     const size = normalizeLabel(planet.size);
     const type = normalizeLabel(planet.type);
@@ -56,21 +86,111 @@ function baseTagWeights(planet) {
     ];
 }
 
-export function generateInhabitedPlanetTags(planet, randomFn = Math.random) {
-    if (!planet || !planet.habitable || !isPlanetaryBody(planet)) return [];
-
-    const weights = baseTagWeights(planet);
-    const primary = weightedPick(weights, randomFn);
-    if (!primary) return [];
-
-    const tags = [primary];
+function conditionTagWeights(planet) {
+    const type = normalizeLabel(planet.type);
+    const atmosphere = normalizeLabel(planet.atmosphere);
+    const temperature = normalizeLabel(planet.temperature);
     const pop = Math.max(0, Number(planet.pop) || 0);
-    const secondaryChance = Math.min(0.55, 0.20 + (Math.sqrt(pop) * 0.045));
-    if (randomFn() < secondaryChance) {
-        const secondary = weightedPick(weights, randomFn, new Set(tags));
-        if (secondary) tags.push(secondary);
+    const habitable = !!planet.habitable;
+
+    const harsh = atmosphere === 'toxic'
+        || atmosphere === 'corrosive'
+        || atmosphere === 'none'
+        || atmosphere === 'trace'
+        || temperature === 'scorching'
+        || temperature === 'burning'
+        || temperature === 'freezing'
+        || temperature === 'frozen';
+
+    const prisonFriendly = type === 'barren'
+        || type === 'desert'
+        || type === 'arctic'
+        || type === 'volcanic'
+        || atmosphere === 'toxic'
+        || atmosphere === 'corrosive'
+        || harsh;
+
+    const ecumenopolisWeight = habitable ? (pop > 25 ? 0.08 : (pop > 12 ? 0.05 : (pop > 5 ? 0.03 : 0.015))) : 0;
+    const seismicWeight = (type === 'volcanic' ? 2.2 : 1.0) * (harsh ? 1.3 : 1.0);
+    const activeBattlefieldWeight = pop > 0 ? 1.6 : 0.8;
+    const quarantinedWeight = (harsh ? 1.4 : 1.0) * (pop > 0 ? 1.2 : 0.9);
+    const civilWarWeight = pop > 0 ? (pop < 1 ? 0.6 : 1.8) : 0.2;
+    const prisonPlanetWeight = prisonFriendly ? (pop > 0 ? 1.6 : 1.2) : 0.2;
+    const abandonedColonyWeight = pop > 0 ? (pop < 3 ? 1.9 : 0.9) : 0.5;
+
+    return [
+        { tag: 'Ecumenopolis', weight: ecumenopolisWeight },
+        { tag: 'Seismic Instability', weight: seismicWeight },
+        { tag: 'Active Battlefield', weight: activeBattlefieldWeight },
+        { tag: 'Quarantined World', weight: quarantinedWeight },
+        { tag: 'Civil War', weight: civilWarWeight },
+        { tag: 'Prison Planet', weight: prisonPlanetWeight },
+        { tag: 'Abandoned Colony', weight: abandonedColonyWeight }
+    ];
+}
+
+function buildTagCandidateWeights(planet) {
+    const candidates = [];
+    if (planet.habitable) {
+        candidates.push(...baseInhabitedTagWeights(planet));
     }
-    return tags;
+    candidates.push(...conditionTagWeights(planet));
+    return candidates;
+}
+
+function sanitizeTags(rawTags) {
+    if (!Array.isArray(rawTags) || !rawTags.length) return [];
+    const output = [];
+    rawTags.forEach((tag) => {
+        if (typeof tag !== 'string' || !tag.trim()) return;
+        if (output.includes(tag)) return;
+        if (!isTagCompatible(tag, output)) return;
+        if (output.length < 2) output.push(tag);
+    });
+    return output;
+}
+
+function generatePlanetTags(planet, randomFn = Math.random) {
+    if (!planet || !isPlanetaryBody(planet)) return [];
+
+    const candidates = buildTagCandidateWeights(planet);
+    if (!candidates.length) return [];
+
+    const tags = [];
+    const first = weightedPick(candidates, randomFn);
+    if (first) tags.push(first);
+
+    const wantsSecondTag = randomFn() < 0.90;
+    if (wantsSecondTag && tags.length < 2) {
+        const second = weightedPickCompatible(candidates, randomFn, tags);
+        if (second) tags.push(second);
+    }
+
+    return sanitizeTags(tags);
+}
+
+function round1(value) {
+    return Math.round(value * 10) / 10;
+}
+
+function applyTagPopulationEffects(body) {
+    if (!isPlanetaryBody(body) || !body.habitable) return;
+
+    const tags = Array.isArray(body.tags) ? body.tags : [];
+    const base = Number.isFinite(Number(body.basePop)) && Number(body.basePop) > 0
+        ? Number(body.basePop)
+        : Math.max(0, Number(body.pop) || 0);
+
+    if (base <= 0) {
+        body.pop = 0;
+        return;
+    }
+
+    let modifier = 1.0;
+    if (tags.includes('Ecumenopolis')) modifier *= 5.5;
+    if (tags.includes('Abandoned Colony')) modifier *= 0.12;
+
+    body.pop = round1(Math.min(999, Math.max(0.1, base * modifier)));
 }
 
 export function refreshSystemPlanetTags(system, options = {}) {
@@ -79,12 +199,25 @@ export function refreshSystemPlanetTags(system, options = {}) {
     const forceRecalculate = !!options.forceRecalculate;
 
     system.planets.forEach((body) => {
-        if (!isPlanetaryBody(body) || !body.habitable) {
+        if (!isPlanetaryBody(body)) {
             body.tags = [];
             return;
         }
 
-        if (!forceRecalculate && Array.isArray(body.tags) && body.tags.length) return;
-        body.tags = generateInhabitedPlanetTags(body, randomFn);
+        const hasExisting = Array.isArray(body.tags) && body.tags.length > 0;
+        if (!forceRecalculate && hasExisting) {
+            body.tags = sanitizeTags(body.tags);
+            applyTagPopulationEffects(body);
+            return;
+        }
+
+        body.tags = generatePlanetTags(body, randomFn);
+        applyTagPopulationEffects(body);
     });
+
+    const totalPopulation = system.planets.reduce((sum, body) => {
+        const numeric = Number(body && body.pop);
+        return Number.isFinite(numeric) && numeric > 0 ? sum + numeric : sum;
+    }, 0);
+    system.totalPop = totalPopulation > 0 ? formatPopulationBillions(totalPopulation) : 'None';
 }
