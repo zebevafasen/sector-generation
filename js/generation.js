@@ -32,6 +32,10 @@ const BASE_HABITABILITY_TYPE_WEIGHT = {
     Arctic: 0.75
 };
 const ADJACENT_DUPLICATE_NAME_CHANCE = 0.35;
+const HABITABLE_WORLD_SUFFIXES = [
+    'Haven', 'Eden', 'Sanctuary', 'Harbor', 'Bastion', 'Refuge',
+    'Prospect', 'Utopia', 'Arcadia', 'New Dawn', 'Greenfall', 'Crossing'
+];
 const GENERATION_PROFILES = {
     cinematic: {
         inhabitedChance: 0.45,
@@ -291,6 +295,20 @@ function generateSystemName(coordId, usedNames, sectorsByCoord) {
     return fallback;
 }
 
+function getUniqueHabitableSuffixes(count) {
+    const pool = [...HABITABLE_WORLD_SUFFIXES];
+    shuffleArray(pool, rand);
+    const picked = [];
+    for (let i = 0; i < count; i++) {
+        if (i < pool.length) {
+            picked.push(pool[i]);
+        } else {
+            picked.push(`Colony ${i - pool.length + 1}`);
+        }
+    }
+    return picked;
+}
+
 function computeSystemCount(totalHexes, config) {
     if (config.densityMode === 'preset') {
         return Math.floor(totalHexes * config.densityPreset);
@@ -501,6 +519,11 @@ export function generateSystemData(config = null, context = null) {
         } else {
             planet.name = `${name} ${romanize(index)}`;
         }
+    });
+    const secondaryHabitable = planets.filter((planet, index) => index > 0 && planet.habitable);
+    const inhabitedSuffixes = getUniqueHabitableSuffixes(secondaryHabitable.length);
+    secondaryHabitable.forEach((planet, idx) => {
+        planet.name = `${name} ${inhabitedSuffixes[idx]}`;
     });
 
     if (rand() < generationProfile.beltChance) {
