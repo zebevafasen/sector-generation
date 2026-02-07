@@ -1,9 +1,11 @@
 ﻿import { HEX_HEIGHT, HEX_SIZE, HEX_WIDTH, STAR_VISUALS, state } from './config.js';
-import { formatStarAgeValue, generateStarAge, getStarClassInfo, hideStarClassInfo } from './core.js';
+import { formatStarAgeValue, generateStarAge, getStarClassInfo, hideStarClassInfo, rand } from './core.js';
 import { getBodyIconMarkup, normalizeBodyType } from './body-icons.js';
 import { EVENTS, emitEvent } from './events.js';
 import { reportSystemInvariantIssues } from './invariants.js';
 import { generatePlanetEnvironment, getDefaultPlanetEnvironment, isPlanetaryBodyType } from './planet-environment.js';
+import { formatPopulationBillions, refreshSystemPlanetPopulation } from './planet-population.js';
+import { refreshSystemPlanetTags } from './planet-tags.js';
 
 const STAR_GRADIENT_CACHE = {};
 
@@ -58,6 +60,10 @@ function resetBodyDetailsPanel() {
     const envRow = document.getElementById('infoBodyEnvironmentRow');
     const atmosphereValue = document.getElementById('infoBodyAtmosphere');
     const temperatureValue = document.getElementById('infoBodyTemperature');
+    const populationRow = document.getElementById('infoBodyPopulationRow');
+    const populationValue = document.getElementById('infoBodyPopulation');
+    const tagsRow = document.getElementById('infoBodyTagsRow');
+    const tagsValue = document.getElementById('infoBodyTags');
     const placeholder = document.getElementById('infoBodyDetailsPlaceholder');
 
     if (panel) panel.classList.add('hidden');
@@ -94,7 +100,11 @@ function resetBodyDetailsPanel() {
     if (envRow) envRow.classList.add('hidden');
     if (atmosphereValue) atmosphereValue.innerText = '--';
     if (temperatureValue) temperatureValue.innerText = '--';
-    if (placeholder) placeholder.innerText = 'Detailed stats coming soon.';
+    if (populationRow) populationRow.classList.add('hidden');
+    if (populationValue) populationValue.innerText = '--';
+    if (tagsRow) tagsRow.classList.add('hidden');
+    if (tagsValue) tagsValue.innerHTML = '';
+    if (placeholder) placeholder.innerText = '';
 }
 
 function positionBodyDetailsPanel(panel, anchorEl) {
@@ -129,6 +139,10 @@ function showBodyDetailsPanel(body, anchorEl) {
     const envRow = document.getElementById('infoBodyEnvironmentRow');
     const atmosphereValue = document.getElementById('infoBodyAtmosphere');
     const temperatureValue = document.getElementById('infoBodyTemperature');
+    const populationRow = document.getElementById('infoBodyPopulationRow');
+    const populationValue = document.getElementById('infoBodyPopulation');
+    const tagsRow = document.getElementById('infoBodyTagsRow');
+    const tagsValue = document.getElementById('infoBodyTags');
     const placeholder = document.getElementById('infoBodyDetailsPlaceholder');
     const normalizedType = normalizeBodyType(body.type);
 
@@ -176,7 +190,27 @@ function showBodyDetailsPanel(body, anchorEl) {
             temperatureValue.removeAttribute('data-field-value');
         }
     }
-    if (placeholder) placeholder.innerText = 'Detailed stats coming soon.';
+    if (populationRow && populationValue) {
+        if (isPlanetaryBodyType(normalizedType) && body.habitable && Number(body.pop) > 0) {
+            populationValue.innerText = formatPopulationBillions(Number(body.pop));
+            populationRow.classList.remove('hidden');
+        } else {
+            populationValue.innerText = '--';
+            populationRow.classList.add('hidden');
+        }
+    }
+    if (tagsRow && tagsValue) {
+        if (isPlanetaryBodyType(normalizedType) && body.habitable && Array.isArray(body.tags) && body.tags.length) {
+            tagsValue.innerHTML = body.tags
+                .map(tag => `<span class="inline-flex items-center rounded border border-sky-700/55 bg-sky-900/25 px-1.5 py-0.5 text-[10px] text-sky-200">${escapeHtml(tag)}</span>`)
+                .join('');
+            tagsRow.classList.remove('hidden');
+        } else {
+            tagsValue.innerHTML = '';
+            tagsRow.classList.add('hidden');
+        }
+    }
+    if (placeholder) placeholder.innerText = '';
     if (panel && anchorEl) positionBodyDetailsPanel(panel, anchorEl);
 }
 
@@ -651,7 +685,7 @@ function renderSystemBodyLists(refs, system, id, preselectedBodyIndex) {
         let html = `<div class="flex justify-between items-center font-semibold text-sky-100"><span class="inline-flex items-center gap-2">${bodyIcon}${safeName}</span><button class="body-rename-btn w-5 h-5 inline-flex items-center justify-center text-[10px] rounded bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:border-sky-500 transition-colors" title="Rename object" aria-label="Rename object">✎</button></div>`;
         html += '<div class="mt-1 flex items-end justify-between">';
         if (isPlanetary && body.habitable) {
-            html += '<span class="inline-block px-1.5 py-0.5 rounded border text-[11px] text-emerald-300 border-emerald-600/60 bg-emerald-900/25">Inhabitated</span>';
+            html += '<span class="inline-block px-1.5 py-0.5 rounded border text-[11px] text-emerald-300 border-emerald-600/60 bg-emerald-900/25">Inhabited</span>';
         } else {
             html += '<span></span>';
         }
@@ -722,6 +756,10 @@ function renderSystemBodyLists(refs, system, id, preselectedBodyIndex) {
                         const nextEnvironment = generatePlanetEnvironment(nextType);
                         targetSystem.planets[bodyIndex].atmosphere = nextEnvironment.atmosphere;
                         targetSystem.planets[bodyIndex].temperature = nextEnvironment.temperature;
+                        targetSystem.planets[bodyIndex].pop = 0;
+                        targetSystem.planets[bodyIndex].tags = [];
+                        refreshSystemPlanetPopulation(targetSystem, { randomFn: rand });
+                        refreshSystemPlanetTags(targetSystem, { randomFn: rand });
                         reportSystemInvariantIssues(targetSystem, 'edit-planet-type');
                         notifySectorDataChanged();
                         updateInfoPanel(id, bodyIndex);
@@ -742,6 +780,10 @@ function renderSystemBodyLists(refs, system, id, preselectedBodyIndex) {
                         const targetSystem = state.sectors[id];
                         if (!targetSystem || !targetSystem.planets[bodyIndex]) return;
                         targetSystem.planets[bodyIndex].habitable = !alreadyInhabited;
+                        targetSystem.planets[bodyIndex].pop = 0;
+                        targetSystem.planets[bodyIndex].tags = [];
+                        refreshSystemPlanetPopulation(targetSystem, { randomFn: rand });
+                        refreshSystemPlanetTags(targetSystem, { randomFn: rand });
                         reportSystemInvariantIssues(targetSystem, 'edit-inhabit-planet');
                         notifySectorDataChanged();
                         updateInfoPanel(id, bodyIndex);
@@ -862,6 +904,8 @@ export function updateInfoPanel(id, preselectedBodyIndex = null) {
     panel.classList.add('opacity-100');
     refs.hexId.innerText = displayId;
     if (system) {
+        refreshSystemPlanetPopulation(system, { randomFn: rand });
+        refreshSystemPlanetTags(system, { randomFn: rand });
         configureSystemHeaderAndStar(refs, system, id, preselectedBodyIndex);
         refs.planetCountLabel.innerText =
             system.planets.filter(p => p.type !== 'Artificial' && !/belt|field/i.test(p.type)).length;
