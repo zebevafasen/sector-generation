@@ -6,33 +6,52 @@ import { isAutoSeedEnabled, isRealisticPlanetWeightingEnabled, setSeed, showStat
 import { setDensityMode, setSizeMode } from './controls.js';
 import { clearInfoPanel, drawGrid, selectHex } from './render.js';
 
+function getStorageUiRefs() {
+    return {
+        gridWidthInput: document.getElementById('gridWidth'),
+        gridHeightInput: document.getElementById('gridHeight'),
+        sizePresetSelect: document.getElementById('sizePreset'),
+        densityPresetSelect: document.getElementById('densityPreset'),
+        manualMinInput: document.getElementById('manualMin'),
+        manualMaxInput: document.getElementById('manualMax'),
+        generationProfileSelect: document.getElementById('generationProfile'),
+        autoSeedToggle: document.getElementById('autoSeedToggle'),
+        realisticWeightsToggle: document.getElementById('realisticPlanetWeightsToggle'),
+        seedInput: document.getElementById('seedInput'),
+        statusTotalHexes: document.getElementById('statusTotalHexes'),
+        statusTotalSystems: document.getElementById('statusTotalSystems')
+    };
+}
+
+function updateStatusLabels(refs, totalHexes, totalSystems) {
+    if (refs.statusTotalHexes) refs.statusTotalHexes.innerText = `${totalHexes} Hexes`;
+    if (refs.statusTotalSystems) refs.statusTotalSystems.innerText = `${totalSystems} Systems`;
+}
+
 export function buildSectorPayload(meta = {}) {
-    const width = Number.isFinite(meta.width) ? meta.width : (parseInt(document.getElementById('gridWidth').value, 10) || 0);
-    const height = Number.isFinite(meta.height) ? meta.height : (parseInt(document.getElementById('gridHeight').value, 10) || 0);
+    const refs = getStorageUiRefs();
+    const width = Number.isFinite(meta.width) ? meta.width : (parseInt(refs.gridWidthInput.value, 10) || 0);
+    const height = Number.isFinite(meta.height) ? meta.height : (parseInt(refs.gridHeightInput.value, 10) || 0);
     const totalHexes = Number.isFinite(meta.totalHexes) ? meta.totalHexes : width * height;
     const totalSystems = Number.isFinite(meta.systemCount) ? meta.systemCount : Object.keys(state.sectors).length;
-    const densitySelect = document.getElementById('densityPreset');
-    const manualMinInput = document.getElementById('manualMin');
-    const manualMaxInput = document.getElementById('manualMax');
-    const generationProfileSelect = document.getElementById('generationProfile');
 
     return {
         version: 1,
         generatedAt: new Date().toISOString(),
         seed: state.currentSeed,
         sizeMode: state.sizeMode,
-        sizePreset: state.sizeMode === 'preset' && document.getElementById('sizePreset')
-            ? document.getElementById('sizePreset').value
+        sizePreset: state.sizeMode === 'preset' && refs.sizePresetSelect
+            ? refs.sizePresetSelect.value
             : 'custom',
         densityMode: state.densityMode,
-        densityPreset: densitySelect ? densitySelect.value : null,
+        densityPreset: refs.densityPresetSelect ? refs.densityPresetSelect.value : null,
         manualRange: {
-            min: manualMinInput ? parseInt(manualMinInput.value, 10) || 0 : 0,
-            max: manualMaxInput ? parseInt(manualMaxInput.value, 10) || 0 : 0
+            min: refs.manualMinInput ? parseInt(refs.manualMinInput.value, 10) || 0 : 0,
+            max: refs.manualMaxInput ? parseInt(refs.manualMaxInput.value, 10) || 0 : 0
         },
         autoSeed: isAutoSeedEnabled(),
         realisticPlanetWeights: isRealisticPlanetWeightingEnabled(),
-        generationProfile: generationProfileSelect ? generationProfileSelect.value : 'cinematic',
+        generationProfile: refs.generationProfileSelect ? refs.generationProfileSelect.value : 'cinematic',
         sectorConfigSnapshot: state.sectorConfigSnapshot || null,
         pinnedHexIds: Array.isArray(state.pinnedHexIds) ? state.pinnedHexIds : [],
         selectedHexId: state.selectedHexId || null,
@@ -160,9 +179,9 @@ export function applySectorPayload(payload) {
         return;
     }
 
-    const sizePresetSelect = document.getElementById('sizePreset');
-    if (payload.sizePreset && payload.sizePreset !== 'custom' && sizePresetSelect) {
-        sizePresetSelect.value = payload.sizePreset;
+    const refs = getStorageUiRefs();
+    if (payload.sizePreset && payload.sizePreset !== 'custom' && refs.sizePresetSelect) {
+        refs.sizePresetSelect.value = payload.sizePreset;
     }
     if (payload.sizeMode) {
         setSizeMode(payload.sizeMode);
@@ -170,37 +189,34 @@ export function applySectorPayload(payload) {
 
     const width = parseInt(payload.dimensions.width, 10) || 1;
     const height = parseInt(payload.dimensions.height, 10) || 1;
-    document.getElementById('gridWidth').value = width;
-    document.getElementById('gridHeight').value = height;
+    refs.gridWidthInput.value = width;
+    refs.gridHeightInput.value = height;
 
     if (payload.densityMode) {
         setDensityMode(payload.densityMode);
     }
-    if (payload.densityPreset && document.getElementById('densityPreset')) {
-        document.getElementById('densityPreset').value = payload.densityPreset;
+    if (payload.densityPreset && refs.densityPresetSelect) {
+        refs.densityPresetSelect.value = payload.densityPreset;
     }
     if (payload.manualRange) {
         if (typeof payload.manualRange.min === 'number') {
-            document.getElementById('manualMin').value = payload.manualRange.min;
+            refs.manualMinInput.value = payload.manualRange.min;
         }
         if (typeof payload.manualRange.max === 'number') {
-            document.getElementById('manualMax').value = payload.manualRange.max;
+            refs.manualMaxInput.value = payload.manualRange.max;
         }
     }
     if (typeof payload.autoSeed === 'boolean') {
-        const toggle = document.getElementById('autoSeedToggle');
-        if (toggle) toggle.checked = payload.autoSeed;
+        if (refs.autoSeedToggle) refs.autoSeedToggle.checked = payload.autoSeed;
     }
     if (typeof payload.realisticPlanetWeights === 'boolean') {
-        const toggle = document.getElementById('realisticPlanetWeightsToggle');
-        if (toggle) toggle.checked = payload.realisticPlanetWeights;
+        if (refs.realisticWeightsToggle) refs.realisticWeightsToggle.checked = payload.realisticPlanetWeights;
     }
-    if (payload.generationProfile && document.getElementById('generationProfile')) {
-        document.getElementById('generationProfile').value = payload.generationProfile;
+    if (payload.generationProfile && refs.generationProfileSelect) {
+        refs.generationProfileSelect.value = payload.generationProfile;
     }
 
-    const seedInput = document.getElementById('seedInput');
-    if (seedInput) seedInput.value = payload.seed || '';
+    if (refs.seedInput) refs.seedInput.value = payload.seed || '';
 
     if (payload.seed) {
         setSeed(payload.seed);
@@ -235,8 +251,7 @@ export function applySectorPayload(payload) {
 
     const totalHexes = payload.stats && Number.isFinite(payload.stats.totalHexes) ? payload.stats.totalHexes : width * height;
     const systemCount = payload.stats && Number.isFinite(payload.stats.totalSystems) ? payload.stats.totalSystems : Object.keys(state.sectors).length;
-    document.getElementById('statusTotalHexes').innerText = `${totalHexes} Hexes`;
-    document.getElementById('statusTotalSystems').innerText = `${systemCount} Systems`;
+    updateStatusLabels(refs, totalHexes, systemCount);
     state.lastSectorSnapshot = buildSectorPayload({ width, height, totalHexes, systemCount });
     if (payload.generatedAt) {
         state.lastSectorSnapshot.generatedAt = payload.generatedAt;
