@@ -344,7 +344,7 @@ export function updateInfoPanel(id) {
     const system = state.sectors[id];
     state.selectedSystemData = system;
     const [c, r] = id.split('-');
-    const displayId = `${String(c).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
+    const displayId = `${String(c).padStart(2, '0')}${String(r).padStart(2, '0')}`;
 
     hideStarClassInfo(true);
     state.starTooltipPinned = false;
@@ -352,7 +352,7 @@ export function updateInfoPanel(id) {
     const panel = document.getElementById('infoPanel');
     panel.classList.remove('opacity-50', 'pointer-events-none');
     panel.classList.add('opacity-100');
-    document.getElementById('infoHexId').innerText = `HEX ${displayId}`;
+    document.getElementById('infoHexId').innerText = displayId;
 
     const sysDetails = document.getElementById('systemDetails');
     const emptyDetails = document.getElementById('emptyDetails');
