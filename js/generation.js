@@ -14,6 +14,8 @@ import { EVENTS, emitEvent } from './events.js';
 import { reportSystemInvariantIssues } from './invariants.js';
 import { generateStarAge, generateSeedString, isAutoSeedEnabled, rand, setSeed, showStatusMessage } from './core.js';
 import { generatePlanetEnvironment } from './planet-environment.js';
+import { refreshSystemPlanetPopulation } from './planet-population.js';
+import { refreshSystemPlanetTags } from './planet-tags.js';
 import {
     applyPlanetaryOrderAndNames,
     assignSystemHabitability,
@@ -269,6 +271,8 @@ function sanitizePinnedHexes(width, height) {
 function reconcilePlanetaryBodies(system) {
     if (!system || !Array.isArray(system.planets)) return;
     system.planets = applyPlanetaryOrderAndNames(system.name, system.planets, rand);
+    refreshSystemPlanetPopulation(system, { randomFn: rand });
+    refreshSystemPlanetTags(system, { randomFn: rand });
     reportSystemInvariantIssues(system, 'reconcile');
 }
 
@@ -322,7 +326,6 @@ export function generateSystemData(config = null, context = null) {
 
     const planetCount = Math.floor(rand() * 6) + 1;
     const planets = [];
-    let population = 0;
     let hasTerrestrial = false;
     const starAge = generateStarAge(sClass);
 
@@ -334,14 +337,7 @@ export function generateSystemData(config = null, context = null) {
             : pickRandomPlanetType(rand, excludedTypes);
         if (type === 'Terrestrial') hasTerrestrial = true;
         const environment = generatePlanetEnvironment(type, rand);
-        let pop = 0;
         const features = [];
-
-        if (['Terrestrial', 'Oceanic', 'Desert', 'Arctic'].includes(type) && rand() < generationProfile.inhabitedChance) {
-            pop = Math.floor(rand() * 10) + 1;
-            population += pop;
-            features.push('Inhabited');
-        }
 
         if (rand() < generationProfile.planetPoiChance) {
             const poi = POI_TYPES[Math.floor(rand() * POI_TYPES.length)];
@@ -355,7 +351,9 @@ export function generateSystemData(config = null, context = null) {
             atmosphere: environment.atmosphere,
             temperature: environment.temperature,
             features,
-            pop,
+            pop: 0,
+            basePop: 0,
+            tags: [],
             habitable: false
         });
     }
@@ -393,8 +391,10 @@ export function generateSystemData(config = null, context = null) {
         palette: visuals,
         starAge,
         planets,
-        totalPop: population > 0 ? `${population} Billion` : 'None'
+        totalPop: 'None'
     };
+    refreshSystemPlanetPopulation(generatedSystem, { forceRecalculate: true, randomFn: rand });
+    refreshSystemPlanetTags(generatedSystem, { forceRecalculate: true, randomFn: rand });
     reportSystemInvariantIssues(generatedSystem, 'generate');
     return generatedSystem;
 }
@@ -479,6 +479,8 @@ export function addBodyToSelectedSystem(kind) {
             temperature: environment.temperature,
             features: [],
             pop: 0,
+            basePop: 0,
+            tags: [],
             habitable: false
         });
         reconcilePlanetaryBodies(system);
@@ -570,6 +572,8 @@ export function rerollSelectedPlanet() {
     targetPlanet.temperature = nextEnvironment.temperature;
     targetPlanet.features = [];
     targetPlanet.pop = 0;
+    targetPlanet.basePop = 0;
+    targetPlanet.tags = [];
     targetPlanet.habitable = wasHabitable && isHabitableCandidateType(nextType);
 
     const planetaryBodies = system.planets.filter(isPlanetaryBody);

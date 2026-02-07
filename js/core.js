@@ -216,6 +216,29 @@ function getTemperatureTooltip(temperature) {
     return entries[key] || 'Estimated broad thermal regime for this body.';
 }
 
+function getPlanetTagTooltip(tag) {
+    const key = normalizeLookupKey(tag);
+    const entries = {
+        'colony-world': 'Young settlement still building core infrastructure, institutions, and long-range resilience.',
+        'core-trade-hub': 'High-throughput commercial nexus with strong logistics, finance, and interstellar market reach.',
+        'industrial-powerhouse': 'Production-focused world with heavy manufacturing, refining, and strategic material output.',
+        'agri-world': 'Food-export economy centered on large-scale agriculture, aquaculture, or bioresource processing.',
+        'research-enclave': 'Knowledge economy world with major laboratories, academic centers, and advanced R&D programs.',
+        'military-bastion': 'Fortified strategic anchor with major defense installations, fleet support, and hardened infrastructure.',
+        'frontier-outpost': 'Remote edge settlement with limited support, high risk, and strong expansion potential.',
+        'cultural-center': 'Destination world known for culture, heritage, pilgrimage, recreation, or hospitality industries.',
+        'tourism-/-cultural-center': 'Destination world known for culture, heritage, pilgrimage, recreation, or hospitality industries.',
+        ecumenopolis: 'Planet-wide urban megastructure with immense infrastructure density and extreme population concentration.',
+        'seismic-instability': 'Frequent tectonic upheaval, quakes, and crustal volatility that threaten long-term surface stability.',
+        'active-battlefield': 'Current conflict zone contested by external powers with active deployments and ongoing operations.',
+        'quarantined-world': 'Travel and contact restricted under biosecurity, contamination, or strategic containment protocols.',
+        'civil-war': 'Active internal conflict between major local factions competing for governance, territory, or law.',
+        'prison-planet': 'World organized around large-scale detention infrastructure, penal colonies, and security enforcement.',
+        'abandoned-colony': 'Former settled world now largely depopulated after collapse, evacuation, or systemic failure.'
+    };
+    return entries[key] || 'Strategic or socio-economic specialization observed for this inhabited world.';
+}
+
 export function showFieldInfoTooltip(event, field, value) {
     const panel = document.getElementById('fieldInfoTooltip');
     if (!panel) return;
@@ -235,6 +258,9 @@ export function showFieldInfoTooltip(event, field, value) {
     } else if (fieldKey === 'temperature') {
         label = 'Temperature';
         description = getTemperatureTooltip(value);
+    } else if (fieldKey === 'tag') {
+        label = 'Planet Tag';
+        description = getPlanetTagTooltip(value);
     }
 
     panel.innerHTML = `
