@@ -7,7 +7,18 @@ import { captureHistorySnapshot, setupHistory } from './history.js';
 import { setupMultiSectorLinks } from './multi-sector.js';
 import { setupSearchPanel } from './search.js';
 import { setupRoutePlanner } from './route-planner.js';
-import { autoSaveSectorState, exportSector, handleImportFile, loadSectorLocal, restoreCachedSectorState, saveSectorLocal, triggerImport } from './storage.js';
+import {
+    autoSaveSectorState,
+    exportSector,
+    exportSectorGmBrief,
+    exportSectorPng,
+    exportSectorSvg,
+    handleImportFile,
+    loadSectorLocal,
+    restoreCachedSectorState,
+    saveSectorLocal,
+    triggerImport
+} from './storage.js';
 import { setupPanZoom, updateInfoPanel, updateViewTransform } from './render.js';
 
 const mainRefsCache = {};
@@ -22,6 +33,11 @@ function getMainRefs() {
         mainRefsCache.saveSectorLocalBtn = document.getElementById('saveSectorLocalBtn');
         mainRefsCache.loadSectorLocalBtn = document.getElementById('loadSectorLocalBtn');
         mainRefsCache.exportSectorBtn = document.getElementById('exportSectorBtn');
+        mainRefsCache.exportSuitePanel = document.getElementById('exportSuitePanel');
+        mainRefsCache.exportJsonBtn = document.getElementById('exportJsonBtn');
+        mainRefsCache.exportSvgBtn = document.getElementById('exportSvgBtn');
+        mainRefsCache.exportPngBtn = document.getElementById('exportPngBtn');
+        mainRefsCache.exportBriefBtn = document.getElementById('exportBriefBtn');
         mainRefsCache.triggerImportBtn = document.getElementById('triggerImportBtn');
         mainRefsCache.generateSectorBtn = document.getElementById('generateSectorBtn');
         mainRefsCache.rerollUnpinnedBtn = document.getElementById('rerollUnpinnedBtn');
@@ -118,6 +134,12 @@ function setupPanelToggles() {
 
 function bindUiEvents() {
     const refs = getMainRefs();
+    if (refs.exportSectorBtn && refs.exportSuitePanel) {
+        refs.exportSectorBtn.addEventListener('click', () => {
+            const isHidden = refs.exportSuitePanel.classList.toggle('hidden');
+            refs.exportSectorBtn.setAttribute('aria-expanded', String(!isHidden));
+        });
+    }
     if (refs.searchToggleBtn && refs.searchPanelContent) {
         refs.searchToggleBtn.addEventListener('click', () => {
             const isCollapsed = refs.searchPanelContent.classList.toggle('hidden');
@@ -134,7 +156,10 @@ function bindUiEvents() {
     refs.randomizeSeedBtn?.addEventListener('click', randomizeSeed);
     refs.saveSectorLocalBtn?.addEventListener('click', saveSectorLocal);
     refs.loadSectorLocalBtn?.addEventListener('click', loadSectorLocal);
-    refs.exportSectorBtn?.addEventListener('click', exportSector);
+    refs.exportJsonBtn?.addEventListener('click', exportSector);
+    refs.exportSvgBtn?.addEventListener('click', exportSectorSvg);
+    refs.exportPngBtn?.addEventListener('click', exportSectorPng);
+    refs.exportBriefBtn?.addEventListener('click', exportSectorGmBrief);
     refs.triggerImportBtn?.addEventListener('click', triggerImport);
     refs.generateSectorBtn?.addEventListener('click', generateSector);
     refs.rerollUnpinnedBtn?.addEventListener('click', rerollUnpinnedSystems);
