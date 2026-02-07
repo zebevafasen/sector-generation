@@ -1,7 +1,7 @@
 import { setDensityMode, setSizeMode, setupStarClassTooltip } from './controls.js';
 import { randomizeSeed } from './core.js';
 import { state } from './config.js';
-import { generateSector, rerollSelectedSystem, rerollUnpinnedSystems, togglePinSelectedSystem } from './generation.js';
+import { addBodyToSelectedSystem, addSystemAtHex, deleteSelectedBody, deleteSelectedSystem, generateSector, rerollSelectedSystem, rerollUnpinnedSystems, setEditMode, toggleEditMode, togglePinSelectedSystem } from './generation.js';
 import { autoSaveSectorState, exportSector, handleImportFile, loadSectorLocal, restoreCachedSectorState, saveSectorLocal, triggerImport } from './storage.js';
 import { setupPanZoom, updateViewTransform } from './render.js';
 
@@ -85,6 +85,12 @@ function bindUiEvents() {
     byId('rerollUnpinnedBtn')?.addEventListener('click', rerollUnpinnedSystems);
     byId('rerollSelectedSystemBtn')?.addEventListener('click', rerollSelectedSystem);
     byId('pinSelectedSystemBtn')?.addEventListener('click', togglePinSelectedSystem);
+    byId('editModeToggleBtn')?.addEventListener('click', toggleEditMode);
+    byId('editAddPlanetBtn')?.addEventListener('click', () => addBodyToSelectedSystem('planet'));
+    byId('editAddBeltBtn')?.addEventListener('click', () => addBodyToSelectedSystem('belt'));
+    byId('editAddStationBtn')?.addEventListener('click', () => addBodyToSelectedSystem('station'));
+    byId('editDeleteBodyBtn')?.addEventListener('click', deleteSelectedBody);
+    byId('editDeleteSystemBtn')?.addEventListener('click', deleteSelectedSystem);
 
     const persistOnChangeIds = [
         'sizePreset', 'gridWidth', 'gridHeight', 'densityPreset', 'manualMin', 'manualMax',
@@ -103,6 +109,27 @@ function bindUiEvents() {
     byId('modeManualBtn')?.addEventListener('click', autoSaveSectorState);
     byId('randomizeSeedBtn')?.addEventListener('click', autoSaveSectorState);
     window.addEventListener('sectorDataChanged', autoSaveSectorState);
+    window.addEventListener('requestAddSystemAtHex', (event) => {
+        if (!state.editMode) return;
+        const hexId = event && event.detail ? event.detail.hexId : null;
+        if (!hexId) return;
+        addSystemAtHex(hexId);
+    });
+    window.addEventListener('editModeChanged', updateEditModeUi);
+}
+
+function updateEditModeUi() {
+    const toggleBtn = document.getElementById('editModeToggleBtn');
+    const editControls = document.getElementById('editModeControls');
+    if (toggleBtn) {
+        toggleBtn.innerText = state.editMode ? 'EDIT MODE: ON' : 'EDIT MODE: OFF';
+        toggleBtn.className = state.editMode
+            ? 'w-full py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded border border-emerald-500 font-semibold transition-all active:scale-95'
+            : 'w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded border border-slate-600 font-semibold transition-all active:scale-95';
+    }
+    if (editControls) {
+        editControls.classList.toggle('hidden', !state.editMode);
+    }
 }
 
 window.onload = function() {
@@ -112,6 +139,8 @@ window.onload = function() {
     const importInput = document.getElementById('importFileInput');
     if (importInput) importInput.addEventListener('change', handleImportFile);
     setSizeMode('preset');
+    setEditMode(false);
+    updateEditModeUi();
     setupStarClassTooltip();
     if (!restoreCachedSectorState()) {
         generateSector();

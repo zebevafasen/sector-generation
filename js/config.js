@@ -118,10 +118,12 @@ export const NAME_PREFIX = SYSTEM_NAME_PREFIX;
 export const NAME_SUFFIX = SYSTEM_NAME_SUFFIX;
 
 export const state = {
+    editMode: false,
     sizeMode: 'preset',
     densityMode: 'preset',
     sectors: {},
     selectedHexId: null,
+    selectedBodyIndex: null,
     selectedSystemData: null,
     currentSeed: '',
     seededRandomFn: () => Math.random(),

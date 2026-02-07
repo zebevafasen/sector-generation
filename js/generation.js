@@ -423,6 +423,50 @@ function reselectionAfterDraw(selectedHexId) {
     }
 }
 
+function isPlanetaryBody(body) {
+    return !!body && body.type !== 'Artificial' && !/belt|field/i.test(body.type);
+}
+
+function reconcilePlanetaryBodies(system) {
+    if (!system || !Array.isArray(system.planets)) return;
+
+    const planetary = system.planets.filter(isPlanetaryBody);
+    const nonPlanetary = system.planets.filter(body => !isPlanetaryBody(body));
+    if (!planetary.length) {
+        system.planets = nonPlanetary;
+        return;
+    }
+
+    let primary = planetary.find(body => body.habitable);
+    if (!primary) {
+        primary = planetary[0];
+        primary.habitable = true;
+    }
+
+    const orderedPlanetary = [primary, ...planetary.filter(body => body !== primary)];
+    const secondaryHabitable = orderedPlanetary.filter((body, index) => index > 0 && body.habitable);
+    const inhabitedSuffixes = getUniqueHabitableSuffixes(secondaryHabitable.length);
+    let nonHabitableNumeral = 1;
+    let inhabitedSuffixIndex = 0;
+
+    orderedPlanetary.forEach((planet, index) => {
+        if (index === 0) {
+            planet.habitable = true;
+            planet.name = `${system.name} Prime`;
+            return;
+        }
+        if (planet.habitable) {
+            planet.name = `${system.name} ${inhabitedSuffixes[inhabitedSuffixIndex]}`;
+            inhabitedSuffixIndex++;
+            return;
+        }
+        planet.name = `${system.name} ${romanize(nonHabitableNumeral)}`;
+        nonHabitableNumeral++;
+    });
+
+    system.planets = [...orderedPlanetary, ...nonPlanetary];
+}
+
 export function generateSector() {
     if (isAutoSeedEnabled()) {
         const input = document.getElementById('seedInput');
@@ -556,6 +600,138 @@ export function generateSystemData(config = null, context = null) {
         planets,
         totalPop: population > 0 ? `${population} Billion` : 'None'
     };
+}
+
+function notifyEditModeChanged() {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(new Event('editModeChanged'));
+}
+
+export function setEditMode(enabled) {
+    state.editMode = !!enabled;
+    state.selectedBodyIndex = null;
+    notifyEditModeChanged();
+}
+
+export function toggleEditMode() {
+    setEditMode(!state.editMode);
+    showStatusMessage(state.editMode ? 'Edit mode enabled.' : 'Edit mode disabled.', 'info');
+}
+
+export function addSystemAtHex(hexId) {
+    const config = getGenerationConfigSnapshot();
+    if (!isHexIdInBounds(hexId, config.width, config.height)) return;
+    if (state.sectors[hexId]) return;
+
+    const usedNames = new Set(
+        Object.values(state.sectors)
+            .map(system => (system && system.name ? system.name : null))
+            .filter(Boolean)
+    );
+    state.sectors[hexId] = generateSystemData(config, {
+        coordId: hexId,
+        usedNames,
+        sectorsByCoord: state.sectors
+    });
+
+    drawGrid(config.width, config.height, { resetView: false });
+    reselectionAfterDraw(hexId);
+    sanitizePinnedHexes(config.width, config.height);
+    refreshSectorSnapshot(config, config.width, config.height);
+    updateSectorStatus(config.width * config.height, Object.keys(state.sectors).length);
+    showStatusMessage(`Added system at ${hexId}.`, 'success');
+}
+
+export function deleteSelectedSystem() {
+    const selectedHexId = state.selectedHexId;
+    if (!selectedHexId || !state.sectors[selectedHexId]) {
+        showStatusMessage('Select a system to delete.', 'warn');
+        return;
+    }
+
+    const config = getGenerationConfigSnapshot();
+    delete state.sectors[selectedHexId];
+    state.pinnedHexIds = (state.pinnedHexIds || []).filter(id => id !== selectedHexId);
+    state.selectedHexId = null;
+    state.selectedBodyIndex = null;
+
+    drawGrid(config.width, config.height, { resetView: false });
+    clearInfoPanel();
+    sanitizePinnedHexes(config.width, config.height);
+    refreshSectorSnapshot(config, config.width, config.height);
+    updateSectorStatus(config.width * config.height, Object.keys(state.sectors).length);
+    showStatusMessage(`Deleted system ${selectedHexId}.`, 'success');
+}
+
+export function addBodyToSelectedSystem(kind) {
+    const selectedHexId = state.selectedHexId;
+    const system = selectedHexId ? state.sectors[selectedHexId] : null;
+    if (!system) {
+        showStatusMessage('Select a system first.', 'warn');
+        return;
+    }
+
+    if (kind === 'planet') {
+        const hasTerrestrial = system.planets.some(body => isPlanetaryBody(body) && body.type === 'Terrestrial');
+        const excluded = hasTerrestrial ? new Set(['Terrestrial']) : new Set();
+        const type = pickRandomPlanetType(excluded);
+        system.planets.push({
+            name: `${system.name} ${romanize(1)}`,
+            type,
+            features: [],
+            pop: 0,
+            habitable: false
+        });
+        reconcilePlanetaryBodies(system);
+    } else if (kind === 'belt') {
+        const existing = system.planets.filter(body => /belt|field/i.test(body.type)).length;
+        system.planets.push({
+            name: `${system.name} Belt ${romanize(existing + 1)}`,
+            type: rand() > 0.6 ? 'Debris Field' : 'Asteroid Belt',
+            features: [],
+            pop: 0
+        });
+    } else if (kind === 'station') {
+        const existing = system.planets.filter(body => body.type === 'Artificial').length;
+        system.planets.push({
+            name: `Station ${system.name} ${romanize(existing + 1)}`,
+            type: 'Artificial',
+            features: [],
+            pop: 0
+        });
+    } else {
+        return;
+    }
+
+    state.selectedBodyIndex = null;
+    updateInfoPanel(selectedHexId);
+    const config = getGenerationConfigSnapshot();
+    refreshSectorSnapshot(config, config.width, config.height);
+    showStatusMessage('Added new object.', 'success');
+}
+
+export function deleteSelectedBody() {
+    const selectedHexId = state.selectedHexId;
+    const system = selectedHexId ? state.sectors[selectedHexId] : null;
+    if (!system) {
+        showStatusMessage('Select a system first.', 'warn');
+        return;
+    }
+    if (!Number.isInteger(state.selectedBodyIndex) || state.selectedBodyIndex < 0 || state.selectedBodyIndex >= system.planets.length) {
+        showStatusMessage('Select an object to delete.', 'warn');
+        return;
+    }
+
+    const [removed] = system.planets.splice(state.selectedBodyIndex, 1);
+    state.selectedBodyIndex = null;
+    if (removed && isPlanetaryBody(removed)) {
+        reconcilePlanetaryBodies(system);
+    }
+
+    updateInfoPanel(selectedHexId);
+    const config = getGenerationConfigSnapshot();
+    refreshSectorSnapshot(config, config.width, config.height);
+    showStatusMessage('Deleted selected object.', 'success');
 }
 
 export function rerollSelectedSystem() {

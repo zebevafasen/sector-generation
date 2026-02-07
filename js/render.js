@@ -339,6 +339,12 @@ export function updateViewTransform() {
 
 export function handleHexClick(e, id, groupElement) {
     if (state.viewState.dragDistance > 5) return;
+    if (state.editMode && !state.sectors[id]) {
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('requestAddSystemAtHex', { detail: { hexId: id } }));
+        }
+        return;
+    }
     selectHex(id, groupElement);
 }
 
@@ -347,6 +353,7 @@ export function selectHex(id, groupElement) {
     const poly = groupElement.querySelector('polygon');
     poly.classList.add('selected');
     state.selectedHexId = id;
+    state.selectedBodyIndex = null;
     updateInfoPanel(id);
 }
 
@@ -462,6 +469,7 @@ export function updateInfoPanel(id, preselectedBodyIndex = null) {
                     if (selectedBodyEl === li) {
                         li.classList.remove('ring-1', 'ring-sky-500/70', 'border-sky-500/70');
                         selectedBodyEl = null;
+                        state.selectedBodyIndex = null;
                         if (renameBodyBtn) {
                             renameBodyBtn.disabled = true;
                             renameBodyBtn.onclick = null;
@@ -474,6 +482,7 @@ export function updateInfoPanel(id, preselectedBodyIndex = null) {
                     }
                     li.classList.add('ring-1', 'ring-sky-500/70', 'border-sky-500/70');
                     selectedBodyEl = li;
+                    state.selectedBodyIndex = bodyIndex;
                     showBodyDetailsPanel(body, li);
                     if (renameBodyBtn) {
                         renameBodyBtn.disabled = false;
@@ -574,6 +583,7 @@ export function clearInfoPanel() {
     document.getElementById('emptyDetails').classList.remove('hidden');
     document.getElementById('emptyDetails').innerText = 'Select a hex to view data.';
     state.selectedSystemData = null;
+    state.selectedBodyIndex = null;
 
     const starClassLabel = document.getElementById('infoStarClass');
     if (starClassLabel) {

@@ -139,6 +139,9 @@
             <button id="rerollUnpinnedBtn" class="w-full py-2 bg-amber-700 hover:bg-amber-600 text-white rounded shadow-lg shadow-amber-900/40 font-semibold transition-all active:scale-95">
                 REROLL UNPINNED
             </button>
+            <button id="editModeToggleBtn" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded border border-slate-600 font-semibold transition-all active:scale-95">
+                EDIT MODE: OFF
+            </button>
 
         </div>
         <button id="toggleLeftPanelBtn" aria-label="Toggle controls panel" class="absolute top-24 right-0 translate-x-full w-7 h-12 rounded-r bg-slate-900 border border-slate-700 border-l-0 text-slate-200 font-semibold hover:text-white hover:border-sky-500 transition-colors z-30">&laquo;</button>
@@ -181,6 +184,13 @@
                         <button id="rerollSelectedSystemBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Reroll System</button>
                     </div>
                     <p id="selectedSystemPinState" class="text-[11px] text-slate-500">Pinned: No</p>
+                    <div id="editModeControls" class="hidden grid grid-cols-2 gap-2">
+                        <button id="editAddPlanetBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-emerald-500 transition-colors">Add Planet</button>
+                        <button id="editAddBeltBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-violet-500 transition-colors">Add Belt</button>
+                        <button id="editAddStationBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-fuchsia-500 transition-colors">Add Station</button>
+                        <button id="editDeleteBodyBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-rose-500 transition-colors">Delete Object</button>
+                        <button id="editDeleteSystemBtn" class="col-span-2 py-1.5 text-xs rounded bg-rose-900/35 border border-rose-700 text-rose-200 hover:bg-rose-800/40 hover:border-rose-500 transition-colors">Delete System</button>
+                    </div>
 
                     <!-- Star Info -->
                     <div class="bg-slate-800/50 p-3 rounded border border-slate-700">
