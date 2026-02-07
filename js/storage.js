@@ -13,6 +13,9 @@ import { validateSectorPayload } from './sector-payload-validation.js';
 import { ensureSystemStarFields, getSystemStars } from './star-system.js';
 import { sortHexIds } from './utils.js';
 
+const AUTO_SAVE_STORAGE_KEY = `${LOCAL_STORAGE_KEY}:autosave`;
+const MANUAL_SAVE_STORAGE_KEY = `${LOCAL_STORAGE_KEY}:manual`;
+
 function getStorageUiRefs() {
     return {
         gridWidthInput: document.getElementById('gridWidth'),
@@ -217,7 +220,7 @@ export function autoSaveSectorState() {
     if (!(typeof window !== 'undefined' && window.localStorage)) return;
     try {
         const payload = buildSectorPayload();
-        window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(payload));
+        window.localStorage.setItem(AUTO_SAVE_STORAGE_KEY, JSON.stringify(payload));
     } catch (err) {
         console.error(err);
     }
@@ -226,7 +229,9 @@ export function autoSaveSectorState() {
 export function restoreCachedSectorState() {
     if (!(typeof window !== 'undefined' && window.localStorage)) return false;
     try {
-        const raw = window.localStorage.getItem(LOCAL_STORAGE_KEY);
+        const raw = window.localStorage.getItem(AUTO_SAVE_STORAGE_KEY)
+            || window.localStorage.getItem(MANUAL_SAVE_STORAGE_KEY)
+            || window.localStorage.getItem(LOCAL_STORAGE_KEY);
         if (!raw) return false;
         const payload = JSON.parse(raw);
         const validation = validateSectorPayload(payload);
@@ -250,7 +255,7 @@ export function saveSectorLocal() {
     }
     try {
         const payload = buildSectorPayload();
-        window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(payload));
+        window.localStorage.setItem(MANUAL_SAVE_STORAGE_KEY, JSON.stringify(payload));
         showStatusMessage('Sector saved to this browser.', 'success');
     } catch (err) {
         console.error(err);
@@ -264,7 +269,8 @@ export function loadSectorLocal() {
         return;
     }
     try {
-        const raw = window.localStorage.getItem(LOCAL_STORAGE_KEY);
+        const raw = window.localStorage.getItem(MANUAL_SAVE_STORAGE_KEY)
+            || window.localStorage.getItem(LOCAL_STORAGE_KEY);
         if (!raw) {
             showStatusMessage('No saved sector found.', 'warn');
             return;
