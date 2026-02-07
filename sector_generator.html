@@ -1,0 +1,228 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hex Star Sector Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="styles.css">
+
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col md:flex-row font-sans">
+
+    <!-- SIDEBAR: Controls & Info -->
+    <aside class="w-full md:w-96 bg-slate-900 border-r border-slate-700 flex flex-col h-full z-10 shadow-2xl">
+        
+        <!-- Header -->
+        <div class="p-4 border-b border-slate-700 bg-slate-950">
+            <h1 class="text-xl font-bold text-sky-400 tracking-wider uppercase">Sector Gen <span class="text-xs text-slate-500 align-top">v1.2</span></h1>
+            <p class="text-xs text-slate-500 mt-1">Hex-based cartography system</p>
+        </div>
+
+        <!-- Controls (Scrollable part of sidebar) -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-6">
+            
+            <!-- Grid Config -->
+            <div class="space-y-3">
+                <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wide">Grid Configuration</h2>
+                
+                <div class="flex gap-2 mb-2 bg-slate-800 p-1 rounded">
+                    <button id="modeSizePresetBtn" onclick="setSizeMode('preset')" class="flex-1 py-1 text-xs rounded bg-sky-600 text-white shadow transition-all">Preset</button>
+                    <button id="modeSizeCustomBtn" onclick="setSizeMode('custom')" class="flex-1 py-1 text-xs rounded text-slate-400 hover:text-white transition-all">Custom</button>
+                </div>
+
+                <!-- Size Preset UI -->
+                <div id="sizePresetContainer">
+                    <label class="block text-xs text-slate-500 mb-1">Sector Size</label>
+                    <select id="sizePreset" class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm focus:border-sky-500 focus:outline-none">
+                        <option value="scout">Scout Run (4 x 6)</option>
+                        <option value="frontier">Frontier Drift (6 x 8)</option>
+                        <option value="standard" selected>Standard Chart (8 x 10)</option>
+                        <option value="expedition">Expedition Grid (10 x 12)</option>
+                        <option value="dominion">Dominion Net (12 x 16)</option>
+                    </select>
+                </div>
+
+                <!-- Custom Size UI -->
+                <div id="sizeCustomContainer" class="hidden grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-slate-500 mb-1">Width</label>
+                        <input type="number" id="gridWidth" value="8" 
+                            class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm focus:border-sky-500 focus:outline-none transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-500 mb-1">Height</label>
+                        <input type="number" id="gridHeight" value="10" 
+                            class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm focus:border-sky-500 focus:outline-none transition-colors">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Density Config -->
+            <div class="space-y-3">
+                <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wide">Stellar Density</h2>
+                
+                <div class="flex gap-2 mb-2 bg-slate-800 p-1 rounded">
+                    <button id="modePresetBtn" onclick="setDensityMode('preset')" class="flex-1 py-1 text-xs rounded bg-sky-600 text-white shadow transition-all">Preset</button>
+                    <button id="modeManualBtn" onclick="setDensityMode('manual')" class="flex-1 py-1 text-xs rounded text-slate-400 hover:text-white transition-all">Custom</button>
+                </div>
+
+                <!-- Preset UI -->
+                <div id="densityPresetContainer">
+                    <label class="block text-xs text-slate-500 mb-1">Density Level</label>
+                    <select id="densityPreset" class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm focus:border-sky-500 focus:outline-none">
+                        <option value="0.05">Void (5%)</option>
+                        <option value="0.15">Sparse (15%)</option>
+                        <option value="0.20" selected>Standard (20%)</option>
+                        <option value="0.33">Busy (33%)</option>
+                        <option value="0.50">Dense (50%)</option>
+                        <option value="0.70">Core (70%)</option>
+                    </select>
+                </div>
+
+                <!-- Manual UI -->
+                <div id="densityManualContainer" class="hidden grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-slate-500 mb-1">Min Systems</label>
+                        <input type="number" id="manualMin" min="0" value="5" 
+                            class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm focus:border-sky-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-500 mb-1">Max Systems</label>
+                        <input type="number" id="manualMax" min="1" value="15" 
+                            class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm focus:border-sky-500 focus:outline-none">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seed & Data -->
+            <div class="space-y-3">
+                <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wide">Seed & Data</h2>
+                <div>
+                    <label class="block text-xs text-slate-500 mb-1">Seed</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="seedInput" placeholder="Auto" 
+                            class="flex-1 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm focus:border-sky-500 focus:outline-none transition-colors">
+                        <button onclick="randomizeSeed()" class="px-2 text-xs bg-slate-800 border border-slate-600 rounded text-slate-300 hover:text-white hover:border-sky-500 transition-colors">Randomize</button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="saveSectorLocal()" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors">Save Local</button>
+                    <button onclick="loadSectorLocal()" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors">Load Local</button>
+                    <button onclick="exportSector()" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors">Export JSON</button>
+                    <button onclick="triggerImport()" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors">Import JSON</button>
+                </div>
+                <label class="flex items-center gap-2 text-xs text-slate-400">
+                    <input type="checkbox" id="autoSeedToggle" class="accent-sky-500 bg-slate-800 border-slate-600 rounded">
+                    Auto-new seed on generate
+                </label>
+                <input type="file" id="importFileInput" accept="application/json,.json" class="hidden" />
+            </div>
+
+            <button onclick="generateSector()" class="w-full py-2 bg-sky-600 hover:bg-sky-500 text-white rounded shadow-lg shadow-sky-900/50 font-semibold transition-all active:scale-95">
+                GENERATE SECTOR
+            </button>
+
+        </div>
+    </aside>
+
+    <!-- MAIN: Map Area -->
+    <main class="flex-1 bg-slate-950 relative overflow-hidden flex flex-col order-2">
+        <!-- Toolbar / Status -->
+        <div class="absolute top-0 left-0 w-full p-2 z-10 flex justify-between pointer-events-none">
+            <div class="bg-slate-900/90 backdrop-blur border border-slate-700 px-3 py-1 rounded text-xs text-slate-400 shadow-xl pointer-events-auto flex flex-col">
+                <div><span id="statusTotalHexes">0 Hexes</span> &bull; <span id="statusTotalSystems" class="text-sky-400 font-bold">0 Systems</span></div>
+                <div id="statusMessage" class="text-[10px] text-slate-500 mt-0.5"></div>
+            </div>
+            <div class="text-xs text-slate-600 italic px-4">
+                Scroll to zoom • Drag to move
+            </div>
+        </div>
+
+        <!-- Scrollable Canvas Wrapper -->
+        <div id="mapContainer" class="flex-1 overflow-hidden p-0 flex items-center justify-center bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L3N2Zz4=')]">
+            <svg id="hexGrid" class="w-full h-full drop-shadow-2xl"></svg>
+        </div>
+    </main>
+
+    <!-- INFO SIDEBAR -->
+    <aside class="w-full md:w-96 bg-slate-900 border-t md:border-t-0 md:border-l border-slate-700 flex flex-col h-full z-10 shadow-2xl order-3">
+        <div class="p-4 border-b border-slate-700 bg-slate-950">
+            <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wide">System Information</h2>
+            <p class="text-xs text-slate-500 mt-1">Details for the selected hex</p>
+        </div>
+        <div class="flex-1 overflow-y-auto p-4">
+            <div id="infoPanel" class="opacity-50 pointer-events-none transition-opacity duration-300">
+                <div class="flex justify-between items-baseline mb-4">
+                    <h2 class="text-xl font-bold text-white" id="infoHexId">--</h2>
+                    <span class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-600" id="infoType">Empty Space</span>
+                </div>
+                
+                <div id="systemDetails" class="hidden space-y-4">
+                    <!-- Star Info -->
+                    <div class="bg-slate-800/50 p-3 rounded border border-slate-700">
+                        <div class="flex items-center gap-3">
+                            <div id="infoStarVisual" class="w-10 h-10 rounded-full shadow-lg"></div>
+                            <div class="flex-1">
+                                <h3 id="infoSystemName" class="font-bold text-sky-300">System Name</h3>
+                                <div class="flex flex-wrap gap-3 text-xs mt-0.5">
+                                    <p id="infoStarClass" class="text-slate-400">Class G2V</p>
+                                    <p id="infoStarAge" class="text-slate-500">Age: --</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stats -->
+                    <div class="grid grid-cols-2 gap-3 text-xs">
+                        <div class="bg-slate-800 p-3 rounded">
+                            <span class="block text-slate-500">Planets</span>
+                            <span id="infoPlanetCount" class="text-lg font-mono text-white">0</span>
+                        </div>
+                        <div class="bg-slate-800 p-3 rounded">
+                            <span class="block text-slate-500">Population</span>
+                            <span id="infoPop" class="text-lg font-mono text-white">0</span>
+                        </div>
+                    </div>
+
+                    <!-- Bodies List -->
+                    <div class="space-y-3 max-h-80 overflow-y-auto pr-1">
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-500 uppercase mb-2">Planets</h4>
+                            <ul id="infoPlanetList" class="space-y-2 text-sm text-slate-300">
+                                <!-- Populated by JS -->
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-500 uppercase mb-2">Belts &amp; Fields</h4>
+                            <ul id="infoBeltList" class="space-y-2 text-sm text-slate-300">
+                                <!-- Populated by JS -->
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-500 uppercase mb-2">Stations</h4>
+                            <ul id="infoStationList" class="space-y-2 text-sm text-slate-300">
+                                <!-- Populated by JS -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="emptyDetails" class="text-sm text-slate-500 italic mt-4 text-center">
+                    Select a hex to view data.
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <div id="starClassTooltip" class="hidden fixed z-50 w-64 bg-slate-900/95 border border-slate-700 text-[11px] text-slate-200 rounded-lg shadow-xl px-3 py-2 pointer-events-none"></div>
+    <script src="js/config.js"></script>
+    <script src="js/core.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/controls.js"></script>
+    <script src="js/generation.js"></script>
+    <script src="js/render.js"></script>
+    <script src="js/main.js"></script>
+
+</body>
+</html>

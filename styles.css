@@ -1,0 +1,60 @@
+﻿        /* Custom scrollbar for sci-fi feel */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569; 
+        }
+
+        /* Hexagon interaction styles */
+        .hex {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .hex:hover {
+            stroke: #38bdf8; /* Sky blue hover */
+            stroke-width: 2px;
+            fill-opacity: 0.3;
+        }
+        .hex.selected {
+            stroke: #fbbf24; /* Amber selected */
+            stroke-width: 3px;
+            filter: drop-shadow(0 0 4px #fbbf24);
+        }
+        .hex-text {
+            pointer-events: none;
+            font-size: 10px;
+            font-family: monospace;
+            fill: #64748b;
+        }
+        .star-circle {
+            pointer-events: none;
+        }
+        .star-class-hint {
+            text-decoration: underline;
+            text-decoration-style: dashed;
+            text-underline-offset: 4px;
+        }
+
+        body {
+            background-color: #020617; /* Very dark slate */
+            color: #e2e8f0;
+        }
+
+        /* Pan/Zoom Styles */
+        #mapContainer {
+            cursor: grab;
+            overflow: hidden; /* Hide scrollbars for manual pan */
+        }
+        #mapContainer:active {
+            cursor: grabbing;
+        }
+    </style>

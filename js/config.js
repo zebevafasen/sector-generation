@@ -1,0 +1,142 @@
+﻿        // --- Constants & Config ---
+        const HEX_SIZE = 40;
+        const HEX_WIDTH = Math.sqrt(3) * HEX_SIZE;
+        const HEX_HEIGHT = 2 * HEX_SIZE;
+        
+        // Colors & glow data for Star Classes (approximate blackbody colors)
+        const STAR_VISUALS = {
+            'O': { core: '#6fa8ff', mid: '#a8c4ff', halo: '#e1ecff' }, // Blue hypergiant
+            'B': { core: '#84b9ff', mid: '#bfd4ff', halo: '#f0f6ff' }, // Blue-white
+            'A': { core: '#cfdfff', mid: '#e8f0ff', halo: '#ffffff' }, // White
+            'F': { core: '#f6f1d5', mid: '#fff4cf', halo: '#fff9e0' }, // Yellow-white
+            'G': { core: '#ffd87f', mid: '#ffe39f', halo: '#fff5d5' }, // Yellow
+            'K': { core: '#ffbb66', mid: '#ffd0a2', halo: '#ffe9d1' }, // Orange
+            'M': { core: '#ff7a45', mid: '#ff9b6f', halo: '#ffd7be' }, // Red dwarf
+            'Neutron': { core: '#7ef3ff', mid: '#c6fbff', halo: '#ffffff' },
+            'Black Hole': { core: '#05070f', mid: '#401f5b', halo: '#b389ff' },
+            'default': { core: '#ffffff', mid: '#ffe5b4', halo: '#fff5d5' }
+        };
+
+        const STAR_COLORS = Object.fromEntries(Object.entries(STAR_VISUALS).map(([key, palette]) => [key, palette.core]));
+
+        const STAR_CLASS_INFO = {
+            'O': {
+                name: 'O-type (Blue Hypergiant)',
+                temp: '30,000 – 50,000 K',
+                mass: '> 16 M☉',
+                typicalAge: '< 10 Myr',
+                ageRange: { min: 1, max: 8, unit: 'Myr' },
+                notes: 'Extremely luminous, short-lived stars that flood sectors with ultraviolet radiation and ionizing winds.'
+            },
+            'B': {
+                name: 'B-type (Blue-White Giant)',
+                temp: '10,000 – 30,000 K',
+                mass: '2 – 16 M☉',
+                typicalAge: '10 – 100 Myr',
+                ageRange: { min: 10, max: 120, unit: 'Myr' },
+                notes: 'Bright, young stars that often reside in stellar nurseries and carve large ionized bubbles in nearby gas.'
+            },
+            'A': {
+                name: 'A-type (White Star)',
+                temp: '7,500 – 10,000 K',
+                mass: '1.4 – 2.1 M☉',
+                typicalAge: '100 – 500 Myr',
+                ageRange: { min: 100, max: 900, unit: 'Myr' },
+                notes: 'Prominent hydrogen Balmer lines, strong ultraviolet flux, and typically surrounded by dusty debris disks.'
+            },
+            'F': {
+                name: 'F-type (Yellow-White Star)',
+                temp: '6,000 – 7,500 K',
+                mass: '1.0 – 1.4 M☉',
+                typicalAge: '1 – 4 Gyr',
+                ageRange: { min: 1, max: 4.5, unit: 'Gyr' },
+                notes: 'Stable main-sequence stars with shallow convective zones; good candidates for habitable-zone worlds.'
+            },
+            'G': {
+                name: 'G-type (Yellow Star)',
+                temp: '5,200 – 6,000 K',
+                mass: '0.8 – 1.0 M☉',
+                typicalAge: '4 – 10 Gyr',
+                ageRange: { min: 4, max: 10, unit: 'Gyr' },
+                notes: 'Solar analogs with balanced radiation and magnetic activity; habitable zones sit ~1 AU from the star.'
+            },
+            'K': {
+                name: 'K-type (Orange Dwarf)',
+                temp: '3,900 – 5,200 K',
+                mass: '0.6 – 0.8 M☉',
+                typicalAge: '10 – 30 Gyr (main-sequence)',
+                ageRange: { min: 8, max: 30, unit: 'Gyr' },
+                notes: 'Cooler, long-lived stars with wide, stable habitable zones and lower stellar flare rates than M dwarfs.'
+            },
+            'M': {
+                name: 'M-type (Red Dwarf)',
+                temp: '2,400 – 3,900 K',
+                mass: '0.08 – 0.6 M☉',
+                typicalAge: '> 30 Gyr (projected)',
+                ageRange: { min: 20, max: 200, unit: 'Gyr' },
+                notes: 'Most common stellar class; dim output but lifespans in the trillions of years. Habitable worlds must orbit closely.'
+            },
+            'Neutron': {
+                name: 'Neutron Star',
+                temp: '600,000 – 1,000,000 K (surface)',
+                mass: '1.1 – 2.3 M☉ in a 10 km radius',
+                typicalAge: 'Remnant (0 – 100 Myr)',
+                ageRange: { min: 0.01, max: 100, unit: 'Myr' },
+                notes: 'Collapsed stellar cores with ultra-strong magnetic fields; emit intense X-rays or pulsar beams.'
+            },
+            'Black Hole': {
+                name: 'Stellar-mass Black Hole',
+                temp: 'Hawking radiation negligible',
+                mass: '> 3 M☉',
+                typicalAge: 'Remnant (0.1 – 10 Gyr)',
+                ageRange: { min: 0.1, max: 10, unit: 'Gyr' },
+                notes: 'Event horizon traps light; detectable via accretion disks, relativistic jets, and gravitational lensing signatures.'
+            }
+        };
+
+        const PLANET_TYPES = [
+            'Gas Giant', 'Ice Giant', 'Terrestrial', 'Desert', 'Oceanic', 'Lava', 'Barren', 'Asteroid Belt'
+        ];
+        
+        const POI_TYPES = [
+            'Research Station', 'Mining Outpost', 'Refueling Depot', 'Pirate Haven', 'Ancient Ruins', 'Jump Gate'
+        ];
+
+        const GRID_PRESETS = {
+            scout: { label: 'Scout Run', width: 4, height: 6 },
+            frontier: { label: 'Frontier Drift', width: 6, height: 8 },
+            standard: { label: 'Standard Chart', width: 8, height: 10 },
+            expedition: { label: 'Expedition Grid', width: 10, height: 12 },
+            dominion: { label: 'Dominion Net', width: 12, height: 16 }
+        };
+
+        const LOCAL_STORAGE_KEY = 'hex-star-sector-gen';
+
+        // Name Generation Parts
+        const NAME_PREFIX = ['Alpha', 'Beta', 'Gamma', 'Delta', 'Omicron', 'Proxima', 'Vega', 'Altair', 'Sirius', 'Rigel', 'Kepler', 'Trappist', 'Sol', 'Deneb', 'Corgi', 'Xylar', 'Zeta', 'Epsilon'];
+        const NAME_SUFFIX = ['Major', 'Minor', 'Prime', 'IV', 'VII', 'X', 'Ceti', 'Centauri', 'Eridani', 'Sector', 'Expanse'];
+
+        // State
+        let sizeMode = 'preset';
+        let densityMode = 'preset';
+        let sectors = {}; // Map of "col-row" -> System Data
+        let selectedHexId = null;
+        let selectedSystemData = null;
+        let currentSeed = '';
+        let seededRandomFn = () => Math.random();
+        let lastSectorSnapshot = null;
+        let statusMessageTimer = null;
+
+        // View State (Pan/Zoom)
+        let viewState = {
+            scale: 1,
+            x: 0,
+            y: 0,
+            isDragging: false,
+            startX: 0,
+            startY: 0,
+            lastX: 0,
+            lastY: 0
+        };
+
+
