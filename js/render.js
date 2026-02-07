@@ -46,7 +46,7 @@ function resetBodyDetailsPanel() {
     const content = document.getElementById('infoBodyDetailsContent');
     const name = document.getElementById('infoBodyDetailsName');
     const type = document.getElementById('infoBodyDetailsType');
-    const renameBodyBtn = document.getElementById('editRenameBodyBtn');
+    const renameBodyBtn = document.getElementById('renameBodyBtn');
     const quickDeleteBodyBtn = document.getElementById('quickDeleteBodyBtn');
     const editPlanetTypeRow = document.getElementById('editPlanetTypeRow');
     const editPlanetTypeSelect = document.getElementById('editPlanetTypeSelect');
@@ -165,7 +165,7 @@ function getInfoPanelRefs() {
         beltSummaryLabel: document.getElementById('infoBeltSummaryLabel'),
         stationSummaryLabel: document.getElementById('infoStationSummaryLabel'),
         renameSystemBtn: document.getElementById('renameSystemBtn'),
-        renameBodyBtn: document.getElementById('editRenameBodyBtn'),
+        renameBodyBtn: document.getElementById('renameBodyBtn'),
         quickDeleteBodyBtn: document.getElementById('quickDeleteBodyBtn'),
         editStarClassRow: document.getElementById('editStarClassRow'),
         editStarClassSelect: document.getElementById('editStarClassSelect'),
