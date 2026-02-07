@@ -190,6 +190,13 @@ function setPinButtonStyle(button, isPinned) {
     }
 }
 
+function setPinButtonContent(button, isPinned) {
+    if (!button) return;
+    button.innerText = isPinned ? '📍' : '📌';
+    button.title = isPinned ? 'Unpin system' : 'Pin system';
+    button.setAttribute('aria-label', isPinned ? 'Unpin system' : 'Pin system');
+}
+
 function setButtonAction(button, enabled, onClick = null) {
     if (!button) return;
     button.disabled = !enabled;
@@ -579,7 +586,7 @@ function configureSystemHeaderAndStar(refs, system, id, preselectedBodyIndex) {
     const isPinned = !!(state.pinnedHexIds && state.pinnedHexIds.includes(id));
     if (refs.pinSelectedSystemBtn) {
         refs.pinSelectedSystemBtn.disabled = false;
-        refs.pinSelectedSystemBtn.innerText = isPinned ? 'Unpin System' : 'Pin System';
+        setPinButtonContent(refs.pinSelectedSystemBtn, isPinned);
         setPinButtonStyle(refs.pinSelectedSystemBtn, isPinned);
     }
     if (refs.rerollSelectedSystemBtn) refs.rerollSelectedSystemBtn.disabled = false;
@@ -832,7 +839,7 @@ function renderEmptyHexInfo(refs, id) {
     setBodySummaryLabels(refs, 0, 0, 0);
     if (refs.pinSelectedSystemBtn) {
         refs.pinSelectedSystemBtn.disabled = true;
-        refs.pinSelectedSystemBtn.innerText = 'Pin System';
+        setPinButtonContent(refs.pinSelectedSystemBtn, false);
         setPinButtonStyle(refs.pinSelectedSystemBtn, false);
     }
     if (refs.rerollSelectedSystemBtn) refs.rerollSelectedSystemBtn.disabled = true;
@@ -896,7 +903,7 @@ export function clearInfoPanel() {
 
     if (refs.pinSelectedSystemBtn) {
         refs.pinSelectedSystemBtn.disabled = true;
-        refs.pinSelectedSystemBtn.innerText = 'Pin System';
+        setPinButtonContent(refs.pinSelectedSystemBtn, false);
         setPinButtonStyle(refs.pinSelectedSystemBtn, false);
     }
     if (refs.rerollSelectedSystemBtn) refs.rerollSelectedSystemBtn.disabled = true;
