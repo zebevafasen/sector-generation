@@ -55,7 +55,8 @@ export function generatePlanetEnvironment(type, randomFn = Math.random) {
             ],
             temperature: [
                 { label: 'Hot', weight: 0.45 },
-                { label: 'Scorching', weight: 0.40 },
+                { label: 'Scorching', weight: 0.30 },
+                { label: 'Burning', weight: 0.10 },
                 { label: 'Warm', weight: 0.10 },
                 { label: 'Temperate', weight: 0.05 }
             ]
@@ -73,7 +74,8 @@ export function generatePlanetEnvironment(type, randomFn = Math.random) {
                 { label: 'Hot', weight: 0.28 },
                 { label: 'Temperate', weight: 0.18 },
                 { label: 'Cold', weight: 0.14 },
-                { label: 'Scorching', weight: 0.08 }
+                { label: 'Scorching', weight: 0.05 },
+                { label: 'Burning', weight: 0.03 }
             ]
         },
         Barren: {
@@ -85,7 +87,8 @@ export function generatePlanetEnvironment(type, randomFn = Math.random) {
                 { label: 'Corrosive', weight: 0.04 }
             ],
             temperature: [
-                { label: 'Freezing', weight: 0.28 },
+                { label: 'Freezing', weight: 0.24 },
+                { label: 'Frozen', weight: 0.04 },
                 { label: 'Cold', weight: 0.26 },
                 { label: 'Hot', weight: 0.20 },
                 { label: 'Temperate', weight: 0.14 },
@@ -101,7 +104,8 @@ export function generatePlanetEnvironment(type, randomFn = Math.random) {
                 { label: 'Trace', weight: 0.08 }
             ],
             temperature: [
-                { label: 'Freezing', weight: 0.55 },
+                { label: 'Freezing', weight: 0.45 },
+                { label: 'Frozen', weight: 0.10 },
                 { label: 'Cold', weight: 0.34 },
                 { label: 'Temperate', weight: 0.08 },
                 { label: 'Warm', weight: 0.03 }
@@ -116,10 +120,12 @@ export function generatePlanetEnvironment(type, randomFn = Math.random) {
             ],
             temperature: [
                 { label: 'Cold', weight: 0.34 },
-                { label: 'Freezing', weight: 0.24 },
+                { label: 'Freezing', weight: 0.19 },
+                { label: 'Frozen', weight: 0.05 },
                 { label: 'Warm', weight: 0.20 },
                 { label: 'Hot', weight: 0.14 },
-                { label: 'Scorching', weight: 0.08 }
+                { label: 'Scorching', weight: 0.06 },
+                { label: 'Burning', weight: 0.02 }
             ]
         }
     };
