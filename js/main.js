@@ -1,10 +1,13 @@
 import { setDensityMode, setSizeMode, setupStarClassTooltip } from './controls.js';
 import { randomizeSeed } from './core.js';
+import { state } from './config.js';
 import { generateSector, rerollSelectedSystem, rerollUnpinnedSystems, togglePinSelectedSystem } from './generation.js';
 import { autoSaveSectorState, exportSector, handleImportFile, loadSectorLocal, restoreCachedSectorState, saveSectorLocal, triggerImport } from './storage.js';
-import { setupPanZoom } from './render.js';
+import { setupPanZoom, updateViewTransform } from './render.js';
 
 function setupPanelToggles() {
+    const mapContainer = document.getElementById('mapContainer');
+
     const bindToggle = (config) => {
         const sidebar = document.getElementById(config.sidebarId);
         const header = document.getElementById(config.headerId);
@@ -31,8 +34,21 @@ function setupPanelToggles() {
         applyState(collapsed);
 
         button.addEventListener('click', () => {
+            const beforeRect = mapContainer ? mapContainer.getBoundingClientRect() : null;
             collapsed = !collapsed;
             applyState(collapsed);
+            if (mapContainer && beforeRect) {
+                requestAnimationFrame(() => {
+                    const afterRect = mapContainer.getBoundingClientRect();
+                    const deltaX = afterRect.left - beforeRect.left;
+                    const deltaY = afterRect.top - beforeRect.top;
+                    if (deltaX !== 0 || deltaY !== 0) {
+                        state.viewState.x -= deltaX;
+                        state.viewState.y -= deltaY;
+                        updateViewTransform();
+                    }
+                });
+            }
         });
     };
 
