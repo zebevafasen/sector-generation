@@ -6,6 +6,7 @@ import { reportSystemInvariantIssues } from './invariants.js';
 import { generatePlanetEnvironment, getDefaultPlanetEnvironment, isPlanetaryBodyType } from './planet-environment.js';
 import { formatPopulationBillions, refreshSystemPlanetPopulation } from './planet-population.js';
 import { refreshSystemPlanetTags } from './planet-tags.js';
+import { getTradeLanes, isTradeOverlayEnabled } from './trade.js';
 
 const STAR_GRADIENT_CACHE = {};
 
@@ -119,6 +120,36 @@ function renderRouteOverlay(viewport) {
         marker.setAttribute('stroke-width', '1');
         viewport.appendChild(marker);
     });
+}
+
+function renderTradeOverlay(viewport) {
+    if (!isTradeOverlayEnabled()) return;
+    const lanes = getTradeLanes();
+    if (!lanes.length) return;
+
+    lanes.forEach((lane) => {
+        const from = parseHexIdToCenter(lane.fromHex);
+        const to = parseHexIdToCenter(lane.toHex);
+        if (!from || !to) return;
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', String(from.x));
+        line.setAttribute('y1', String(from.y));
+        line.setAttribute('x2', String(to.x));
+        line.setAttribute('y2', String(to.y));
+        line.setAttribute('stroke', '#f59e0b');
+        line.setAttribute('stroke-opacity', '0.32');
+        line.setAttribute('stroke-width', String(0.8 + (lane.weight || 1) * 0.45));
+        line.style.filter = 'drop-shadow(0 0 2px rgba(245, 158, 11, 0.6))';
+        viewport.appendChild(line);
+    });
+}
+
+function parseHexIdToCenter(hexId) {
+    const [cRaw, rRaw] = String(hexId || '').split('-');
+    const c = parseInt(cRaw, 10);
+    const r = parseInt(rRaw, 10);
+    if (!Number.isInteger(c) || !Number.isInteger(r)) return null;
+    return getHexCenter(c, r);
 }
 
 function resetBodyDetailsPanel() {
@@ -560,6 +591,7 @@ export function drawGrid(cols, rows, options = {}) {
         }
     }
 
+    renderTradeOverlay(viewport);
     renderRouteOverlay(viewport);
 }
 

@@ -133,6 +133,11 @@ export const state = {
     pinnedHexIds: [],
     statusMessageTimer: null,
     starTooltipPinned: false,
+    tradeOverlayEnabled: false,
+    tradeLayer: {
+        lanes: [],
+        economyByHex: {}
+    },
     routePlanner: {
         startHexId: null,
         endHexId: null,

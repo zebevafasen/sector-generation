@@ -6,6 +6,7 @@ import { addBodyToSelectedSystem, addSystemAtHex, deleteSelectedBody, deleteSele
 import { captureHistorySnapshot, setupHistory } from './history.js';
 import { setupSearchPanel } from './search.js';
 import { setupRoutePlanner } from './route-planner.js';
+import { setupTradeLayer } from './trade.js';
 import { autoSaveSectorState, exportSector, handleImportFile, loadSectorLocal, restoreCachedSectorState, saveSectorLocal, triggerImport } from './storage.js';
 import { setupPanZoom, updateInfoPanel, updateViewTransform } from './render.js';
 
@@ -160,7 +161,7 @@ function bindUiEvents() {
 
     const persistOnChangeIds = [
         'sizePreset', 'gridWidth', 'gridHeight', 'densityPreset', 'manualMin', 'manualMax',
-        'seedInput', 'autoSeedToggle', 'realisticPlanetWeightsToggle', 'generationProfile'
+        'seedInput', 'autoSeedToggle', 'realisticPlanetWeightsToggle', 'generationProfile', 'tradeOverlayToggle'
     ];
     persistOnChangeIds.forEach((id) => {
         const el = document.getElementById(id);
@@ -229,6 +230,7 @@ window.onload = function() {
     setupHistory();
     setupSearchPanel();
     setupRoutePlanner();
+    setupTradeLayer();
     const importInput = document.getElementById('importFileInput');
     if (importInput) importInput.addEventListener('change', handleImportFile);
     setSizeMode('preset');

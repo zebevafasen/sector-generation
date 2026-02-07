@@ -133,6 +133,17 @@
                 <input type="file" id="importFileInput" accept="application/json,.json" class="hidden" />
             </div>
 
+            <!-- Trade Layer -->
+            <div class="space-y-3">
+                <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wide">Trade Layer</h2>
+                <label class="flex items-center gap-2 text-xs text-slate-400">
+                    <input type="checkbox" id="tradeOverlayToggle" class="accent-sky-500 bg-slate-800 border-slate-600 rounded">
+                    Show trade lanes
+                </label>
+                <button id="recalculateTradeBtn" class="w-full py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors">Recalculate Trade</button>
+                <div id="tradeSummary" class="space-y-1 text-[11px] text-slate-500"></div>
+            </div>
+
             <button id="generateSectorBtn" class="w-full py-2 bg-sky-600 hover:bg-sky-500 text-white rounded shadow-lg shadow-sky-900/50 font-semibold transition-all active:scale-95">
                 GENERATE SECTOR
             </button>
