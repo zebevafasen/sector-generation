@@ -15,6 +15,68 @@ import {
     setPinButtonStyle
 } from './info-panel-ui.js';
 
+function bindCompanionStarListHandlers(refs) {
+    if (!refs.starList || refs.starList.dataset.companionHandlersBound === '1') return;
+    refs.starList.dataset.companionHandlersBound = '1';
+
+    refs.starList.addEventListener('click', (event) => {
+        const context = refs.starList._companionContext;
+        if (!context) return;
+        const { id, preselectedBodyIndex, notifySectorDataChanged, updateInfoPanel, redrawAndReselect } = context;
+        const renameButton = event.target instanceof Element ? event.target.closest('.companion-star-rename-btn') : null;
+        const deleteButton = event.target instanceof Element ? event.target.closest('.companion-star-delete-btn') : null;
+        if (!renameButton && !deleteButton) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const idx = parseInt((renameButton || deleteButton).getAttribute('data-star-index') || '-1', 10);
+        const current = state.sectors[id];
+        if (!current || !Array.isArray(current.stars) || idx < 1 || idx >= current.stars.length) return;
+
+        if (renameButton) {
+            const previousName = current.stars[idx].name || `${current.name} ${String.fromCharCode(65 + idx)}`;
+            const nextNameRaw = prompt('Rename star', previousName);
+            if (nextNameRaw === null) return;
+            const nextName = nextNameRaw.trim();
+            if (!nextName) return;
+            current.stars[idx].name = nextName;
+            notifySectorDataChanged('Rename Star');
+            updateInfoPanel(id, preselectedBodyIndex);
+            return;
+        }
+
+        const removed = removeStarAtIndex(current, idx);
+        if (!removed) return;
+        reportSystemInvariantIssues(current, 'delete-companion-star');
+        notifySectorDataChanged('Delete Companion Star');
+        redrawAndReselect(id, state.selectedBodyIndex);
+    });
+
+    refs.starList.addEventListener('change', (event) => {
+        const context = refs.starList._companionContext;
+        if (!context) return;
+        const { id, notifySectorDataChanged, redrawAndReselect } = context;
+        const select = event.target instanceof Element ? event.target.closest('.companion-star-class-select') : null;
+        if (!select) return;
+
+        const idx = parseInt(select.getAttribute('data-star-index') || '-1', 10);
+        const current = state.sectors[id];
+        if (!current || !Array.isArray(current.stars) || idx < 1 || idx >= current.stars.length) return;
+
+        const nextClass = select.value;
+        const nextPalette = STAR_VISUALS[nextClass] || STAR_VISUALS.default;
+        current.stars[idx].class = nextClass;
+        current.stars[idx].palette = nextPalette;
+        current.stars[idx].color = nextPalette.core;
+        current.stars[idx].glow = nextPalette.halo;
+        current.stars[idx].starAge = generateStarAge(nextClass);
+        reportSystemInvariantIssues(current, 'edit-companion-star-class');
+        notifySectorDataChanged('Edit Companion Star Class');
+        redrawAndReselect(id, state.selectedBodyIndex);
+    });
+}
+
 export function configureSystemHeaderAndStar({ refs, system, id, preselectedBodyIndex, notifySectorDataChanged, updateInfoPanel, redrawAndReselect }) {
     ensureSystemStarFields(system);
     const stars = getSystemStars(system);
@@ -115,6 +177,8 @@ export function configureSystemHeaderAndStar({ refs, system, id, preselectedBody
         refs.starVisual.style.boxShadow = `0 0 12px ${primaryStar.glow || palette.halo}`;
     }
     if (refs.starList) {
+        bindCompanionStarListHandlers(refs);
+        refs.starList._companionContext = { id, preselectedBodyIndex, notifySectorDataChanged, updateInfoPanel, redrawAndReselect };
         const companionStars = stars.slice(1);
         refs.starList.innerHTML = companionStars.map((star, index) => {
             const starIndex = index + 1;
@@ -163,56 +227,6 @@ export function configureSystemHeaderAndStar({ refs, system, id, preselectedBody
             `;
         }).join('');
         refs.starList.classList.toggle('hidden', companionStars.length === 0);
-
-        refs.starList.querySelectorAll('.companion-star-rename-btn').forEach((button) => {
-            button.addEventListener('click', (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                const idx = parseInt(button.getAttribute('data-star-index') || '-1', 10);
-                const current = state.sectors[id];
-                if (!current || !Array.isArray(current.stars) || idx < 1 || idx >= current.stars.length) return;
-                const previousName = current.stars[idx].name || `${current.name} ${String.fromCharCode(65 + idx)}`;
-                const nextNameRaw = prompt('Rename star', previousName);
-                if (nextNameRaw === null) return;
-                const nextName = nextNameRaw.trim();
-                if (!nextName) return;
-                current.stars[idx].name = nextName;
-                notifySectorDataChanged('Rename Star');
-                updateInfoPanel(id, preselectedBodyIndex);
-            });
-        });
-
-        refs.starList.querySelectorAll('.companion-star-class-select').forEach((select) => {
-            select.addEventListener('change', () => {
-                const idx = parseInt(select.getAttribute('data-star-index') || '-1', 10);
-                const current = state.sectors[id];
-                if (!current || !Array.isArray(current.stars) || idx < 1 || idx >= current.stars.length) return;
-                const nextClass = select.value;
-                const nextPalette = STAR_VISUALS[nextClass] || STAR_VISUALS.default;
-                current.stars[idx].class = nextClass;
-                current.stars[idx].palette = nextPalette;
-                current.stars[idx].color = nextPalette.core;
-                current.stars[idx].glow = nextPalette.halo;
-                current.stars[idx].starAge = generateStarAge(nextClass);
-                reportSystemInvariantIssues(current, 'edit-companion-star-class');
-                notifySectorDataChanged('Edit Companion Star Class');
-                redrawAndReselect(id, state.selectedBodyIndex);
-            });
-        });
-        refs.starList.querySelectorAll('.companion-star-delete-btn').forEach((button) => {
-            button.addEventListener('click', (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                const idx = parseInt(button.getAttribute('data-star-index') || '-1', 10);
-                const current = state.sectors[id];
-                if (!current) return;
-                const removed = removeStarAtIndex(current, idx);
-                if (!removed) return;
-                reportSystemInvariantIssues(current, 'delete-companion-star');
-                notifySectorDataChanged('Delete Companion Star');
-                redrawAndReselect(id, state.selectedBodyIndex);
-            });
-        });
     }
 }
 
@@ -234,6 +248,7 @@ export function renderEmptyHexInfo({ refs, id }) {
         refs.starVisual.style.boxShadow = 'none';
     }
     if (refs.starList) {
+        refs.starList._companionContext = null;
         refs.starList.innerHTML = '';
         refs.starList.classList.add('hidden');
     }

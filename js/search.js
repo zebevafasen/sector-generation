@@ -95,32 +95,23 @@ function renderResults(refs, matches) {
         return;
     }
 
-    matches.forEach((item) => {
-        const li = document.createElement('li');
-        const button = document.createElement('button');
+    const markup = matches.map((item) => {
         const active = item.hexId === state.selectedHexId;
         const popLabel = item.totalPop > 0 ? `${item.totalPop.toFixed(1)}B` : 'None';
-        button.type = 'button';
-        button.className = active
+        const classes = active
             ? 'w-full text-left rounded border border-sky-600 bg-sky-900/30 px-2 py-1.5'
             : 'w-full text-left rounded border border-slate-700 bg-slate-800/60 hover:border-sky-500 px-2 py-1.5';
-        button.innerHTML = `
-            <div class="text-xs text-sky-200 font-semibold">${item.system.name}</div>
-            <div class="text-[10px] text-slate-400">${item.hexId} · Class ${item.system.starClass} · Pop ${popLabel}</div>
-            <div class="text-[10px] text-slate-500">${item.bodyCounts.planets}P / ${item.bodyCounts.belts}B / ${item.bodyCounts.stations}S</div>
+        return `
+            <li>
+                <button type="button" class="${classes}" data-search-hex-id="${item.hexId}">
+                    <div class="text-xs text-sky-200 font-semibold">${item.system.name}</div>
+                    <div class="text-[10px] text-slate-400">${item.hexId} - Class ${item.system.starClass} - Pop ${popLabel}</div>
+                    <div class="text-[10px] text-slate-500">${item.bodyCounts.planets}P / ${item.bodyCounts.belts}B / ${item.bodyCounts.stations}S</div>
+                </button>
+            </li>
         `;
-        button.addEventListener('click', () => {
-            const group = document.querySelector(`.hex-group[data-id="${item.hexId}"]`);
-            if (!group) {
-                showStatusMessage(`Unable to focus ${item.hexId}.`, 'warn');
-                return;
-            }
-            selectHex(item.hexId, group);
-            renderResults(refs, matches);
-        });
-        li.appendChild(button);
-        refs.resultsList.appendChild(li);
-    });
+    }).join('');
+    refs.resultsList.innerHTML = markup;
 }
 
 function runSearch(refs) {
@@ -162,6 +153,20 @@ export function setupSearchPanel() {
         if (!el) return;
         el.addEventListener('input', () => runSearch(refs));
         el.addEventListener('change', () => runSearch(refs));
+    });
+
+    refs.resultsList.addEventListener('click', (event) => {
+        const button = event.target instanceof Element ? event.target.closest('[data-search-hex-id]') : null;
+        if (!button) return;
+        const hexId = button.getAttribute('data-search-hex-id');
+        if (!hexId) return;
+        const group = document.querySelector(`.hex-group[data-id="${hexId}"]`);
+        if (!group) {
+            showStatusMessage(`Unable to focus ${hexId}.`, 'warn');
+            return;
+        }
+        selectHex(hexId, group);
+        runSearch(refs);
     });
 
     window.addEventListener(EVENTS.SECTOR_DATA_CHANGED, () => runSearch(refs));

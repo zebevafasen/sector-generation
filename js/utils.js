@@ -6,6 +6,36 @@ export function shuffleArray(array, randFn) {
     }
 }
 
+export function parseHexId(hexId) {
+    const [cRaw, rRaw] = String(hexId || '').split('-');
+    const col = parseInt(cRaw, 10);
+    const row = parseInt(rRaw, 10);
+    if (!Number.isInteger(col) || !Number.isInteger(row)) return null;
+    return { col, row };
+}
+
+export function isHexCoordInBounds(col, row, width, height) {
+    return col >= 0 && row >= 0 && col < width && row < height;
+}
+
+export function isHexIdInBounds(hexId, width, height) {
+    const parsed = parseHexId(hexId);
+    if (!parsed) return false;
+    return isHexCoordInBounds(parsed.col, parsed.row, width, height);
+}
+
+export function sortHexIds(hexIds) {
+    return [...hexIds].sort((a, b) => {
+        const left = parseHexId(a);
+        const right = parseHexId(b);
+        if (!left && !right) return String(a).localeCompare(String(b));
+        if (!left) return 1;
+        if (!right) return -1;
+        if (left.col !== right.col) return left.col - right.col;
+        return left.row - right.row;
+    });
+}
+
 export function pickWeighted(items, randomFn = Math.random, getWeight = (item) => item.weight) {
     if (!Array.isArray(items) || !items.length) return null;
     const total = items.reduce((sum, item) => {

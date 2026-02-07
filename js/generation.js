@@ -29,41 +29,13 @@ import {
     pickRandomPlanetType
 } from './planetary-rules.js';
 import { autoSaveSectorState, buildSectorPayload } from './storage.js';
+import { readGenerationConfigFromUi } from './sector-config.js';
 import { ensureSystemStarFields } from './star-system.js';
 import { redrawGridAndReselect, refreshHexInfo, clearSelectionInfo } from './ui-sync.js';
-import { romanize, shuffleArray } from './utils.js';
+import { isHexIdInBounds, parseHexId, romanize, shuffleArray, sortHexIds } from './utils.js';
 
 function deepClone(value) {
     return JSON.parse(JSON.stringify(value));
-}
-
-function isHexIdInBounds(hexId, width, height) {
-    const [cRaw, rRaw] = String(hexId).split('-');
-    const c = parseInt(cRaw, 10);
-    const r = parseInt(rRaw, 10);
-    return Number.isInteger(c) && Number.isInteger(r) && c >= 0 && r >= 0 && c < width && r < height;
-}
-
-function readGenerationConfigFromUi() {
-    const sizePresetSelect = document.getElementById('sizePreset');
-    const densityPresetSelect = document.getElementById('densityPreset');
-    const manualMinInput = document.getElementById('manualMin');
-    const manualMaxInput = document.getElementById('manualMax');
-    const profileSelect = document.getElementById('generationProfile');
-    const weightedToggle = document.getElementById('realisticPlanetWeightsToggle');
-
-    return {
-        sizeMode: state.sizeMode || 'preset',
-        sizePreset: sizePresetSelect ? sizePresetSelect.value : 'standard',
-        width: parseInt(document.getElementById('gridWidth')?.value || '8', 10),
-        height: parseInt(document.getElementById('gridHeight')?.value || '10', 10),
-        densityMode: state.densityMode || 'preset',
-        densityPreset: normalizeDensityPresetKey(densityPresetSelect ? densityPresetSelect.value : 'standard'),
-        manualMin: manualMinInput ? parseInt(manualMinInput.value, 10) : 0,
-        manualMax: manualMaxInput ? parseInt(manualMaxInput.value, 10) : 0,
-        generationProfile: profileSelect ? profileSelect.value : 'high_adventure',
-        realisticPlanetWeights: !!(weightedToggle && weightedToggle.checked)
-    };
 }
 
 function normalizeGenerationConfig(config) {
@@ -117,7 +89,10 @@ function getGenerationConfigSnapshot() {
     if (state.lastSectorSnapshot && state.lastSectorSnapshot.sectorConfigSnapshot) {
         return normalizeGenerationConfig(state.lastSectorSnapshot.sectorConfigSnapshot);
     }
-    return normalizeGenerationConfig(readGenerationConfigFromUi());
+    return normalizeGenerationConfig(readGenerationConfigFromUi({
+        sizeMode: state.sizeMode,
+        densityMode: state.densityMode
+    }));
 }
 
 function getActiveGenerationProfile(profileKey) {
@@ -185,8 +160,9 @@ function generateNameCandidate() {
 }
 
 function parseCoordId(coordId) {
-    const [cRaw, rRaw] = String(coordId || '').split('-');
-    return { c: parseInt(cRaw, 10), r: parseInt(rRaw, 10) };
+    const parsed = parseHexId(coordId);
+    if (!parsed) return { c: NaN, r: NaN };
+    return { c: parsed.col, r: parsed.row };
 }
 
 function areCoordsAdjacent(coordA, coordB) {
@@ -279,19 +255,6 @@ function composeContentSeed(layoutSeed, iteration) {
     return `${layoutSeed}::content:${iteration}`;
 }
 
-function sortHexIds(hexIds) {
-    return [...hexIds].sort((a, b) => {
-        const [acRaw, arRaw] = String(a).split('-');
-        const [bcRaw, brRaw] = String(b).split('-');
-        const ac = parseInt(acRaw, 10);
-        const ar = parseInt(arRaw, 10);
-        const bc = parseInt(bcRaw, 10);
-        const br = parseInt(brRaw, 10);
-        if (ac !== bc) return ac - bc;
-        return ar - br;
-    });
-}
-
 function buildSectorFromConfig(config, fixedSystems = {}) {
     const normalized = normalizeGenerationConfig(config);
     const width = normalized.width;
@@ -375,7 +338,10 @@ export function generateSector() {
         seedUsed = setAndUseNewSeed();
     }
 
-    const config = normalizeGenerationConfig(readGenerationConfigFromUi());
+    const config = normalizeGenerationConfig(readGenerationConfigFromUi({
+        sizeMode: state.sizeMode,
+        densityMode: state.densityMode
+    }));
     state.layoutSeed = seedUsed;
     state.rerollIteration = 0;
     const built = buildSectorFromConfig(config, {});

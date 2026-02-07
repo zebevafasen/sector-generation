@@ -139,8 +139,7 @@ function setupPanelToggles() {
     });
 }
 
-function bindUiEvents() {
-    const refs = getMainRefs();
+function bindSectionToggles(refs) {
     if (refs.exportSectorBtn && refs.exportSuitePanel) {
         refs.exportSectorBtn.addEventListener('click', () => {
             const isHidden = refs.exportSuitePanel.classList.toggle('hidden');
@@ -155,7 +154,9 @@ function bindUiEvents() {
             refs.searchToggleBtn.setAttribute('aria-label', isCollapsed ? 'Expand search panel' : 'Collapse search panel');
         });
     }
+}
 
+function bindPrimaryActions(refs) {
     refs.modeSizePresetBtn?.addEventListener('click', () => setSizeMode('preset'));
     refs.modeSizeCustomBtn?.addEventListener('click', () => setSizeMode('custom'));
     refs.modePresetBtn?.addEventListener('click', () => setDensityMode('preset'));
@@ -190,7 +191,9 @@ function bindUiEvents() {
     });
     refs.editDeleteBodyBtn?.addEventListener('click', deleteSelectedBody);
     refs.editDeleteSystemBtn?.addEventListener('click', deleteSelectedSystem);
+}
 
+function bindPersistenceSync(refs) {
     const persistOnChangeIds = [
         'sizePreset', 'gridWidth', 'gridHeight', 'densityPreset', 'manualMin', 'manualMax',
         'seedInput', 'autoSeedToggle', 'realisticPlanetWeightsToggle', 'generationProfile'
@@ -219,6 +222,9 @@ function bindUiEvents() {
         syncDensityPresetForProfile(refs.generationProfile.value);
     });
     window.addEventListener(EVENTS.SECTOR_DATA_CHANGED, autoSaveSectorState);
+}
+
+function bindAppEventHandlers() {
     window.addEventListener(EVENTS.REQUEST_ADD_SYSTEM_AT_HEX, (event) => {
         if (!state.editMode) return;
         const hexId = event && event.detail ? event.detail.hexId : null;
@@ -238,6 +244,14 @@ function bindUiEvents() {
             updateInfoPanel(state.selectedHexId, state.selectedBodyIndex);
         }
     });
+}
+
+function bindUiEvents() {
+    const refs = getMainRefs();
+    bindSectionToggles(refs);
+    bindPrimaryActions(refs);
+    bindPersistenceSync(refs);
+    bindAppEventHandlers();
 }
 
 function updateEditModeUi() {
@@ -266,7 +280,7 @@ function updateEditModeUi() {
     if (refs.editAddStationInSectionBtn) refs.editAddStationInSectionBtn.classList.toggle('hidden', !state.editMode);
 }
 
-window.onload = function() {
+function initializeModules() {
     setupPanZoom();
     setupPanelToggles();
     bindUiEvents();
@@ -274,6 +288,9 @@ window.onload = function() {
     setupMultiSectorLinks();
     setupSearchPanel();
     setupRoutePlanner();
+}
+
+function initializeUiState() {
     const importInput = document.getElementById('importFileInput');
     if (importInput) importInput.addEventListener('change', handleImportFile);
     setSizeMode('preset');
@@ -283,9 +300,22 @@ window.onload = function() {
     updateEditModeUi();
     setupStarClassTooltip();
     setupFieldInfoTooltips();
+}
+
+function initializeSectorData() {
     if (!restoreCachedSectorState()) {
         generateSector();
     }
     captureHistorySnapshot('Initial State');
-};
+}
+
+function initApp() {
+    initializeModules();
+    initializeUiState();
+    initializeSectorData();
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    initApp();
+});
 
