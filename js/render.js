@@ -363,6 +363,9 @@ export function updateInfoPanel(id) {
     const planetList = document.getElementById('infoPlanetList');
     const beltList = document.getElementById('infoBeltList');
     const stationList = document.getElementById('infoStationList');
+    const planetSummary = document.getElementById('infoPlanetSummary');
+    const beltSummary = document.getElementById('infoBeltSummary');
+    const stationSummary = document.getElementById('infoStationSummary');
     const pinSelectedSystemBtn = document.getElementById('pinSelectedSystemBtn');
     const rerollSelectedSystemBtn = document.getElementById('rerollSelectedSystemBtn');
     const selectedSystemPinState = document.getElementById('selectedSystemPinState');
@@ -465,9 +468,15 @@ export function updateInfoPanel(id) {
                 }
             });
 
+            const planetCount = system.planets.filter(body => body.type !== 'Artificial' && !/belt|field/i.test(body.type)).length;
+            const beltCount = system.planets.filter(body => /belt|field/i.test(body.type)).length;
+            const stationCount = system.planets.filter(body => body.type === 'Artificial').length;
             if (!planetList.children.length) planetList.innerHTML = '<li class="italic text-slate-600">No planets detected.</li>';
             if (!beltList.children.length) beltList.innerHTML = '<li class="italic text-slate-600">No belts or fields detected.</li>';
             if (!stationList.children.length) stationList.innerHTML = '<li class="italic text-slate-600">No stations detected.</li>';
+            if (planetSummary) planetSummary.innerText = `Planets (${planetCount})`;
+            if (beltSummary) beltSummary.innerText = `Belts & Fields (${beltCount})`;
+            if (stationSummary) stationSummary.innerText = `Stations (${stationCount})`;
         }
     } else {
         sysDetails.classList.add('hidden');
@@ -489,6 +498,9 @@ export function updateInfoPanel(id) {
         if (planetList) planetList.innerHTML = '';
         if (beltList) beltList.innerHTML = '';
         if (stationList) stationList.innerHTML = '';
+        if (planetSummary) planetSummary.innerText = 'Planets (0)';
+        if (beltSummary) beltSummary.innerText = 'Belts & Fields (0)';
+        if (stationSummary) stationSummary.innerText = 'Stations (0)';
         if (pinSelectedSystemBtn) {
             pinSelectedSystemBtn.disabled = true;
             pinSelectedSystemBtn.innerText = 'Pin System';
@@ -517,6 +529,12 @@ export function clearInfoPanel() {
 
     const starAgeLabel = document.getElementById('infoStarAge');
     if (starAgeLabel) starAgeLabel.innerText = 'Age: --';
+    const planetSummary = document.getElementById('infoPlanetSummary');
+    const beltSummary = document.getElementById('infoBeltSummary');
+    const stationSummary = document.getElementById('infoStationSummary');
+    if (planetSummary) planetSummary.innerText = 'Planets (0)';
+    if (beltSummary) beltSummary.innerText = 'Belts & Fields (0)';
+    if (stationSummary) stationSummary.innerText = 'Stations (0)';
 
     const pinSelectedSystemBtn = document.getElementById('pinSelectedSystemBtn');
     if (pinSelectedSystemBtn) {
