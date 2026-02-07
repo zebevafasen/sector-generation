@@ -22,6 +22,19 @@ import {
 
 const STAR_GRADIENT_CACHE = {};
 
+function parseSectorOffset() {
+    const { width } = getCurrentGridDimensions();
+    const key = state.multiSector && state.multiSector.currentKey ? state.multiSector.currentKey : '0,0';
+    const [xRaw, yRaw] = String(key).split(',');
+    const sectorX = parseInt(xRaw, 10);
+    const sectorY = parseInt(yRaw, 10);
+    return {
+        sectorX: Number.isInteger(sectorX) ? sectorX : 0,
+        sectorY: Number.isInteger(sectorY) ? sectorY : 0,
+        width
+    };
+}
+
 function getStarMarkerRadius(starClass) {
     if (starClass === 'M' || starClass === 'Neutron') return 4;
     if (starClass === 'O' || starClass === 'B') return 9;
@@ -47,14 +60,114 @@ function notifySectorDataChanged(label = 'Edit Sector') {
 }
 
 function redrawAndReselect(hexId, preselectedBodyIndex = null) {
-    const { width, height } = getCurrentGridDimensions();
-    drawGrid(width, height, { resetView: false });
+    redrawHex(hexId);
     const selectedGroup = document.querySelector(`.hex-group[data-id="${hexId}"]`);
     if (!selectedGroup) return;
     selectHex(hexId, selectedGroup);
     if (Number.isInteger(preselectedBodyIndex) && preselectedBodyIndex >= 0) {
         updateInfoPanel(hexId, preselectedBodyIndex);
     }
+}
+
+function createHexGroup(svg, col, row, cols, rows, sectorX, sectorY) {
+    const hexId = `${col}-${row}`;
+    const system = state.sectors[hexId];
+    const xOffset = (row % 2 === 1) ? (HEX_WIDTH / 2) : 0;
+    const x = (col * HEX_WIDTH) + xOffset + (HEX_WIDTH / 2);
+    const y = (row * (HEX_HEIGHT * 0.75)) + (HEX_HEIGHT / 2);
+
+    const isPinned = !!(system && state.pinnedHexIds && state.pinnedHexIds.includes(hexId));
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('class', 'hex-group');
+    if (system) g.classList.add('route-eligible');
+    g.setAttribute('data-id', hexId);
+    g.onclick = (e) => handleHexClick(e, hexId, g);
+
+    const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    poly.setAttribute('points', calculateHexPoints(x, y, HEX_SIZE - 2));
+    poly.setAttribute('class', 'hex');
+    poly.setAttribute('fill', system ? '#0f172a' : '#1e293b');
+    poly.setAttribute('stroke', '#334155');
+    poly.setAttribute('stroke-width', '1');
+    if (isPinned) poly.classList.add('pinned');
+    g.appendChild(poly);
+
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', x);
+    text.setAttribute('y', y + HEX_SIZE / 1.5);
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('class', 'hex-text');
+    const globalC = col + (sectorX * cols);
+    const globalR = row + (sectorY * rows);
+    text.textContent = `${formatGlobalCoord(globalC)}${formatGlobalCoord(globalR)}`;
+    g.appendChild(text);
+
+    if (system) {
+        ensureSystemStarFields(system);
+        const stars = getSystemStars(system);
+        const primary = stars[0];
+        const baseRadius = getStarMarkerRadius(primary.class);
+        const offsets = getStarOffsets(stars.length, baseRadius);
+
+        stars.forEach((star, index) => {
+            const gradientId = ensureStarGradient(svg, star.class);
+            const offset = offsets[index] || offsets[0];
+            const cx = x + offset.dx;
+            const cy = y + offset.dy;
+            const rSize = Math.max(3, Math.round(getStarMarkerRadius(star.class) * (index === 0 ? 1 : 0.78)));
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', String(cx));
+            circle.setAttribute('cy', String(cy));
+            circle.setAttribute('r', String(rSize));
+            circle.setAttribute('fill', `url(#${gradientId})`);
+            circle.setAttribute('class', 'star-circle');
+            if (star.class === 'Black Hole') {
+                circle.setAttribute('stroke', 'white');
+                circle.setAttribute('stroke-width', '1');
+            }
+            circle.style.filter = `drop-shadow(0 0 8px ${star.glow || star.color})`;
+            g.appendChild(circle);
+        });
+
+        if (isPinned) {
+            const pinRing = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            pinRing.setAttribute('cx', x);
+            pinRing.setAttribute('cy', y);
+            pinRing.setAttribute('r', String(baseRadius + (stars.length > 1 ? 8 : 4)));
+            pinRing.setAttribute('fill', 'none');
+            pinRing.setAttribute('stroke', '#2dd4bf');
+            pinRing.setAttribute('stroke-width', '1.4');
+            pinRing.setAttribute('stroke-dasharray', '2 2');
+            pinRing.setAttribute('class', 'star-circle');
+            g.appendChild(pinRing);
+        }
+    }
+
+    return g;
+}
+
+export function redrawHex(hexId) {
+    const svg = document.getElementById('hexGrid');
+    const viewport = document.getElementById('mapViewport');
+    if (!svg || !viewport || !hexId) return null;
+
+    const [colRaw, rowRaw] = String(hexId).split('-');
+    const col = parseInt(colRaw, 10);
+    const row = parseInt(rowRaw, 10);
+    if (!Number.isInteger(col) || !Number.isInteger(row)) return null;
+
+    const { width, height } = getCurrentGridDimensions();
+    const { sectorX, sectorY } = parseSectorOffset();
+    const nextGroup = createHexGroup(svg, col, row, width, height, sectorX, sectorY);
+    const existing = viewport.querySelector(`.hex-group[data-id="${hexId}"]`);
+    if (!existing) return null;
+    viewport.replaceChild(nextGroup, existing);
+
+    if (state.selectedHexId === hexId && state.sectors[hexId]) {
+        const poly = nextGroup.querySelector('polygon.hex');
+        if (poly) poly.classList.add('selected');
+    }
+    return nextGroup;
 }
 export function ensureStarGradient(svg, starClass) {
     const key = (starClass || 'default').toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -127,93 +240,11 @@ export function drawGrid(cols, rows, options = {}) {
     }
     updateViewTransform();
 
-    const parseSectorOffset = () => {
-        const key = state.multiSector && state.multiSector.currentKey ? state.multiSector.currentKey : '0,0';
-        const [xRaw, yRaw] = String(key).split(',');
-        const sectorX = parseInt(xRaw, 10);
-        const sectorY = parseInt(yRaw, 10);
-        return {
-            sectorX: Number.isInteger(sectorX) ? sectorX : 0,
-            sectorY: Number.isInteger(sectorY) ? sectorY : 0
-        };
-    };
     const { sectorX, sectorY } = parseSectorOffset();
 
     for (let c = 0; c < cols; c++) {
         for (let r = 0; r < rows; r++) {
-            const hexId = `${c}-${r}`;
-            const system = state.sectors[hexId];
-            const xOffset = (r % 2 === 1) ? (HEX_WIDTH / 2) : 0;
-            const x = (c * HEX_WIDTH) + xOffset + (HEX_WIDTH / 2);
-            const y = (r * (HEX_HEIGHT * 0.75)) + (HEX_HEIGHT / 2);
-
-            const isPinned = !!(system && state.pinnedHexIds && state.pinnedHexIds.includes(hexId));
-            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-            g.setAttribute('class', 'hex-group');
-            if (system) g.classList.add('route-eligible');
-            g.setAttribute('data-id', hexId);
-            g.onclick = (e) => handleHexClick(e, hexId, g);
-
-            const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-            poly.setAttribute('points', calculateHexPoints(x, y, HEX_SIZE - 2));
-            poly.setAttribute('class', 'hex');
-            poly.setAttribute('fill', system ? '#0f172a' : '#1e293b');
-            poly.setAttribute('stroke', '#334155');
-            poly.setAttribute('stroke-width', '1');
-            if (isPinned) poly.classList.add('pinned');
-            g.appendChild(poly);
-
-            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            text.setAttribute('x', x);
-            text.setAttribute('y', y + HEX_SIZE / 1.5);
-            text.setAttribute('text-anchor', 'middle');
-            text.setAttribute('class', 'hex-text');
-            const globalC = c + (sectorX * cols);
-            const globalR = r + (sectorY * rows);
-            text.textContent = `${formatGlobalCoord(globalC)}${formatGlobalCoord(globalR)}`;
-            g.appendChild(text);
-
-            if (system) {
-                ensureSystemStarFields(system);
-                const stars = getSystemStars(system);
-                const primary = stars[0];
-                const baseRadius = getStarMarkerRadius(primary.class);
-                const offsets = getStarOffsets(stars.length, baseRadius);
-
-                stars.forEach((star, index) => {
-                    const gradientId = ensureStarGradient(svg, star.class);
-                    const offset = offsets[index] || offsets[0];
-                    const cx = x + offset.dx;
-                    const cy = y + offset.dy;
-                    const rSize = Math.max(3, Math.round(getStarMarkerRadius(star.class) * (index === 0 ? 1 : 0.78)));
-                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                    circle.setAttribute('cx', String(cx));
-                    circle.setAttribute('cy', String(cy));
-                    circle.setAttribute('r', String(rSize));
-                    circle.setAttribute('fill', `url(#${gradientId})`);
-                    circle.setAttribute('class', 'star-circle');
-                    if (star.class === 'Black Hole') {
-                        circle.setAttribute('stroke', 'white');
-                        circle.setAttribute('stroke-width', '1');
-                    }
-                    circle.style.filter = `drop-shadow(0 0 8px ${star.glow || star.color})`;
-                    g.appendChild(circle);
-                });
-
-                if (isPinned) {
-                    const pinRing = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                    pinRing.setAttribute('cx', x);
-                    pinRing.setAttribute('cy', y);
-                    pinRing.setAttribute('r', String(baseRadius + (stars.length > 1 ? 8 : 4)));
-                    pinRing.setAttribute('fill', 'none');
-                    pinRing.setAttribute('stroke', '#2dd4bf');
-                    pinRing.setAttribute('stroke-width', '1.4');
-                    pinRing.setAttribute('stroke-dasharray', '2 2');
-                    pinRing.setAttribute('class', 'star-circle');
-                    g.appendChild(pinRing);
-                }
-            }
-
+            const g = createHexGroup(svg, c, r, cols, rows, sectorX, sectorY);
             viewport.appendChild(g);
         }
     }

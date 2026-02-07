@@ -1,13 +1,14 @@
-function normalizeType(type) {
-    return String(type || '').trim();
+export function normalizeBodyType(type) {
+    const normalized = String(type || '').trim();
+    return normalized === 'Lava' ? 'Volcanic' : normalized;
 }
 
 export function isArtificialBodyType(type) {
-    return normalizeType(type) === 'Artificial';
+    return normalizeBodyType(type) === 'Artificial';
 }
 
 export function isBeltOrFieldBodyType(type) {
-    return /belt|field/i.test(normalizeType(type));
+    return /belt|field/i.test(normalizeBodyType(type));
 }
 
 export function isPlanetaryBodyType(type) {

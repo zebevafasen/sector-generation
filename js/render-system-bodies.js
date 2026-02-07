@@ -1,11 +1,11 @@
 import { state } from './config.js';
-import { getBodyIconMarkup, normalizeBodyType } from './body-icons.js';
+import { getBodyIconMarkup } from './body-icons.js';
 import { EVENTS, emitEvent } from './events.js';
 import { reportSystemInvariantIssues } from './invariants.js';
 import { generatePlanetEnvironment } from './planet-environment.js';
 import { refreshSystemPlanetPopulation } from './planet-population.js';
 import { refreshSystemPlanetTags } from './planet-tags.js';
-import { countSystemBodies, isArtificialBodyType, isBeltOrFieldBodyType, isPlanetaryBodyType } from './body-classification.js';
+import { countSystemBodies, isArtificialBodyType, isBeltOrFieldBodyType, isPlanetaryBodyType, normalizeBodyType } from './body-classification.js';
 import { positionBodyDetailsPanel, resetBodyDetailsPanel, showBodyDetailsPanel } from './render-body-details.js';
 import { escapeHtml, setBodySummaryLabels, setButtonAction, setInhabitButtonStyle } from './info-panel-ui.js';
 import { rand } from './core.js';

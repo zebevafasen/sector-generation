@@ -4,6 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "lint": "eslint js tests playwright.config.js",
+    "lint:dead": "node scripts/check-unused-exports.cjs",
     "test": "npm run test:e2e",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed"
@@ -13,6 +15,7 @@
   "license": "ISC",
   "devDependencies": {
     "@playwright/test": "^1.58.2",
+    "eslint": "^9.39.2",
     "http-server": "^14.1.1",
     "playwright": "^1.58.2"
   }

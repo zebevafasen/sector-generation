@@ -1,6 +1,5 @@
-import { normalizeBodyType } from './body-icons.js';
 import { getDefaultPlanetEnvironment } from './planet-environment.js';
-import { isPlanetaryBodyType } from './body-classification.js';
+import { isPlanetaryBodyType, normalizeBodyType } from './body-classification.js';
 import { formatPopulationBillions } from './planet-population.js';
 import { escapeHtml, setButtonAction, setInhabitButtonStyle } from './info-panel-ui.js';
 
