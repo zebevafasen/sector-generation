@@ -717,8 +717,6 @@ export function rerollSelectedPlanet() {
         showStatusMessage('Only planets can be rerolled.', 'warn');
         return;
     }
-    const selectionToken = `sel-${Date.now()}-${Math.floor(rand() * 1_000_000)}`;
-    targetPlanet.__selectionToken = selectionToken;
 
     const config = getGenerationConfigSnapshot();
     const hasOtherTerrestrial = system.planets.some((body, idx) =>
@@ -756,11 +754,7 @@ export function rerollSelectedPlanet() {
     }
     reconcilePlanetaryBodies(system);
 
-    let updatedIndex = system.planets.findIndex(body => body && body.__selectionToken === selectionToken);
-    system.planets.forEach((body) => {
-        if (body && body.__selectionToken === selectionToken) delete body.__selectionToken;
-    });
-    if (updatedIndex < 0) updatedIndex = system.planets.indexOf(targetPlanet);
+    const updatedIndex = system.planets.indexOf(targetPlanet);
     state.selectedBodyIndex = updatedIndex >= 0 ? updatedIndex : null;
     refreshHexInfo(selectedHexId, state.selectedBodyIndex);
     reportSystemInvariantIssues(system, 'reroll-planet');
