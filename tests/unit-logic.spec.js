@@ -103,4 +103,44 @@ test.describe('pure logic modules', () => {
       temperature: 'Unknown'
     });
   });
+
+  test('sector payload validator rejects invalid shapes and sanitizes valid payloads', async ({ page }) => {
+    await page.goto('/sector_generator.html');
+
+    const result = await page.evaluate(async () => {
+      const mod = await import('/js/sector-payload-validation.js');
+
+      const invalid = mod.validateSectorPayload({ dimensions: { width: 8, height: 10 }, sectors: [] });
+      const valid = mod.validateSectorPayload({
+        dimensions: { width: 3, height: 3 },
+        sectors: {
+          '0-0': { name: 'Alpha', planets: [{ type: 'Terrestrial' }, { type: '' }, null] },
+          '99-99': { name: 'OutOfBounds', planets: [] }
+        },
+        selectedHexId: '99-99',
+        pinnedHexIds: ['0-0', '99-99'],
+        manualRange: { min: 12, max: 2 }
+      });
+
+      return {
+        invalidOk: invalid.ok,
+        validOk: valid.ok,
+        validWarning: valid.warning,
+        validSectors: valid.ok ? Object.keys(valid.payload.sectors) : [],
+        validSelectedHexId: valid.ok ? valid.payload.selectedHexId : null,
+        validPinnedHexIds: valid.ok ? valid.payload.pinnedHexIds : [],
+        validManualRange: valid.ok ? valid.payload.manualRange : null,
+        secondPlanetType: valid.ok ? valid.payload.sectors['0-0'].planets[1].type : null
+      };
+    });
+
+    expect(result.invalidOk).toBeFalsy();
+    expect(result.validOk).toBeTruthy();
+    expect(result.validWarning).toContain('invalid entries were ignored');
+    expect(result.validSectors).toEqual(['0-0']);
+    expect(result.validSelectedHexId).toBeNull();
+    expect(result.validPinnedHexIds).toEqual(['0-0']);
+    expect(result.validManualRange).toEqual({ min: 2, max: 12 });
+    expect(result.secondPlanetType).toBe('Barren');
+  });
 });

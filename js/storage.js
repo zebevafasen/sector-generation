@@ -9,6 +9,7 @@ import { normalizeDensityPresetKey } from './generation-data.js';
 import { getGlobalHexDisplayId } from './render-shared.js';
 import { clearInfoPanel, drawGrid, selectHex } from './render.js';
 import { readGenerationConfigFromUi } from './sector-config.js';
+import { validateSectorPayload } from './sector-payload-validation.js';
 import { ensureSystemStarFields, getSystemStars } from './star-system.js';
 import { sortHexIds } from './utils.js';
 
@@ -228,8 +229,9 @@ export function restoreCachedSectorState() {
         const raw = window.localStorage.getItem(LOCAL_STORAGE_KEY);
         if (!raw) return false;
         const payload = JSON.parse(raw);
-        if (!payload || !payload.dimensions || !payload.sectors) return false;
-        applySectorPayload(payload);
+        const validation = validateSectorPayload(payload);
+        if (!validation.ok) return false;
+        applySectorPayload(validation.payload);
         return true;
     } catch (err) {
         console.error(err);
@@ -268,7 +270,16 @@ export function loadSectorLocal() {
             return;
         }
         const payload = JSON.parse(raw);
-        applySectorPayload(payload);
+        const validation = validateSectorPayload(payload);
+        if (!validation.ok) {
+            showStatusMessage(`Saved sector is invalid: ${validation.error}`, 'error');
+            return;
+        }
+        applySectorPayload(validation.payload);
+        if (validation.warning) {
+            showStatusMessage(`Loaded saved sector with warnings: ${validation.warning}`, 'warn');
+            return;
+        }
         showStatusMessage('Loaded saved sector.', 'success');
     } catch (err) {
         console.error(err);
@@ -399,7 +410,16 @@ export function handleImportFile(event) {
     reader.onload = (e) => {
         try {
             const payload = JSON.parse(e.target.result);
-            applySectorPayload(payload);
+            const validation = validateSectorPayload(payload);
+            if (!validation.ok) {
+                showStatusMessage(`Invalid sector file: ${validation.error}`, 'error');
+                return;
+            }
+            applySectorPayload(validation.payload);
+            if (validation.warning) {
+                showStatusMessage(`Imported sector with warnings: ${validation.warning}`, 'warn');
+                return;
+            }
             showStatusMessage('Imported sector data.', 'success');
         } catch (err) {
             console.error(err);
@@ -410,93 +430,95 @@ export function handleImportFile(event) {
 }
 
 export function applySectorPayload(payload) {
-    if (!payload || !payload.dimensions || !payload.sectors) {
-        showStatusMessage('Sector file missing required data.', 'error');
+    const validation = validateSectorPayload(payload);
+    if (!validation.ok) {
+        showStatusMessage(`Sector file invalid: ${validation.error}`, 'error');
         return;
     }
+    const nextPayload = validation.payload;
 
     const refs = getStorageUiRefs();
-    if (payload.sizePreset && payload.sizePreset !== 'custom' && refs.sizePresetSelect) {
-        refs.sizePresetSelect.value = payload.sizePreset;
+    if (nextPayload.sizePreset && nextPayload.sizePreset !== 'custom' && refs.sizePresetSelect) {
+        refs.sizePresetSelect.value = nextPayload.sizePreset;
     }
-    if (payload.sizeMode) {
-        setSizeMode(payload.sizeMode);
+    if (nextPayload.sizeMode) {
+        setSizeMode(nextPayload.sizeMode);
     }
 
-    const width = parseInt(payload.dimensions.width, 10) || 1;
-    const height = parseInt(payload.dimensions.height, 10) || 1;
+    const width = parseInt(nextPayload.dimensions.width, 10) || 1;
+    const height = parseInt(nextPayload.dimensions.height, 10) || 1;
     refs.gridWidthInput.value = width;
     refs.gridHeightInput.value = height;
 
-    if (payload.generationProfile && refs.generationProfileSelect) {
-        refs.generationProfileSelect.value = payload.generationProfile;
+    if (nextPayload.generationProfile && refs.generationProfileSelect) {
+        refs.generationProfileSelect.value = nextPayload.generationProfile;
     }
     syncDensityPresetForProfile(refs.generationProfileSelect ? refs.generationProfileSelect.value : 'high_adventure');
-    if (payload.densityMode) {
-        setDensityMode(payload.densityMode);
+    if (nextPayload.densityMode) {
+        setDensityMode(nextPayload.densityMode);
     }
     if (refs.densityPresetSelect) {
-        refs.densityPresetSelect.value = normalizeDensityPresetKey(payload.densityPreset);
+        refs.densityPresetSelect.value = normalizeDensityPresetKey(nextPayload.densityPreset);
     }
-    if (payload.manualRange) {
-        if (typeof payload.manualRange.min === 'number') {
-            refs.manualMinInput.value = payload.manualRange.min;
+    if (nextPayload.manualRange) {
+        if (typeof nextPayload.manualRange.min === 'number') {
+            refs.manualMinInput.value = nextPayload.manualRange.min;
         }
-        if (typeof payload.manualRange.max === 'number') {
-            refs.manualMaxInput.value = payload.manualRange.max;
+        if (typeof nextPayload.manualRange.max === 'number') {
+            refs.manualMaxInput.value = nextPayload.manualRange.max;
         }
     }
-    if (typeof payload.autoSeed === 'boolean') {
-        if (refs.autoSeedToggle) refs.autoSeedToggle.checked = payload.autoSeed;
+    if (typeof nextPayload.autoSeed === 'boolean') {
+        if (refs.autoSeedToggle) refs.autoSeedToggle.checked = nextPayload.autoSeed;
     }
-    if (typeof payload.realisticPlanetWeights === 'boolean') {
-        if (refs.realisticWeightsToggle) refs.realisticWeightsToggle.checked = payload.realisticPlanetWeights;
+    if (typeof nextPayload.realisticPlanetWeights === 'boolean') {
+        if (refs.realisticWeightsToggle) refs.realisticWeightsToggle.checked = nextPayload.realisticPlanetWeights;
     }
-    if (refs.seedInput) refs.seedInput.value = payload.seed || '';
+    if (refs.seedInput) refs.seedInput.value = nextPayload.seed || '';
 
-    if (payload.seed) {
-        setSeed(payload.seed);
+    if (nextPayload.seed) {
+        setSeed(nextPayload.seed);
     } else {
         state.currentSeed = '';
         state.seededRandomFn = () => Math.random();
     }
-    state.layoutSeed = String(payload.layoutSeed || payload.seed || state.currentSeed || '');
-    state.rerollIteration = Number.isFinite(Number(payload.rerollIteration)) ? Number(payload.rerollIteration) : 0;
+    state.layoutSeed = String(nextPayload.layoutSeed || nextPayload.seed || state.currentSeed || '');
+    state.rerollIteration = Number.isFinite(Number(nextPayload.rerollIteration)) ? Number(nextPayload.rerollIteration) : 0;
 
-    state.sectors = payload.sectors || {};
+    state.sectors = nextPayload.sectors || {};
     Object.values(state.sectors).forEach((system) => ensureSystemStarFields(system));
-    state.pinnedHexIds = Array.isArray(payload.pinnedHexIds)
-        ? payload.pinnedHexIds.filter(hexId => !!state.sectors[hexId])
+    state.pinnedHexIds = Array.isArray(nextPayload.pinnedHexIds)
+        ? nextPayload.pinnedHexIds.filter(hexId => !!state.sectors[hexId])
         : [];
-    state.sectorConfigSnapshot = payload.sectorConfigSnapshot || {
-        sizeMode: payload.sizeMode || state.sizeMode,
-        sizePreset: payload.sizePreset || 'standard',
+    state.sectorConfigSnapshot = nextPayload.sectorConfigSnapshot || {
+        sizeMode: nextPayload.sizeMode || state.sizeMode,
+        sizePreset: nextPayload.sizePreset || 'standard',
         width,
         height,
-        densityMode: payload.densityMode || state.densityMode,
-        densityPreset: normalizeDensityPresetKey(payload.densityPreset),
-        manualMin: payload.manualRange && typeof payload.manualRange.min === 'number' ? payload.manualRange.min : 0,
-        manualMax: payload.manualRange && typeof payload.manualRange.max === 'number' ? payload.manualRange.max : 0,
-        generationProfile: payload.generationProfile || 'high_adventure',
-        realisticPlanetWeights: !!payload.realisticPlanetWeights
+        densityMode: nextPayload.densityMode || state.densityMode,
+        densityPreset: normalizeDensityPresetKey(nextPayload.densityPreset),
+        manualMin: nextPayload.manualRange && typeof nextPayload.manualRange.min === 'number' ? nextPayload.manualRange.min : 0,
+        manualMax: nextPayload.manualRange && typeof nextPayload.manualRange.max === 'number' ? nextPayload.manualRange.max : 0,
+        generationProfile: nextPayload.generationProfile || 'high_adventure',
+        realisticPlanetWeights: !!nextPayload.realisticPlanetWeights
     };
     state.selectedHexId = null;
     clearInfoPanel();
     drawGrid(width, height);
-    if (payload.selectedHexId && state.sectors[payload.selectedHexId]) {
-        const group = document.querySelector(`.hex-group[data-id="${payload.selectedHexId}"]`);
-        if (group) selectHex(payload.selectedHexId, group);
+    if (nextPayload.selectedHexId && state.sectors[nextPayload.selectedHexId]) {
+        const group = document.querySelector(`.hex-group[data-id="${nextPayload.selectedHexId}"]`);
+        if (group) selectHex(nextPayload.selectedHexId, group);
     }
 
-    const totalHexes = payload.stats && Number.isFinite(payload.stats.totalHexes) ? payload.stats.totalHexes : width * height;
-    const systemCount = payload.stats && Number.isFinite(payload.stats.totalSystems) ? payload.stats.totalSystems : Object.keys(state.sectors).length;
+    const totalHexes = nextPayload.stats && Number.isFinite(nextPayload.stats.totalHexes) ? nextPayload.stats.totalHexes : width * height;
+    const systemCount = nextPayload.stats && Number.isFinite(nextPayload.stats.totalSystems) ? nextPayload.stats.totalSystems : Object.keys(state.sectors).length;
     updateStatusLabels(refs, totalHexes, systemCount);
     state.lastSectorSnapshot = buildSectorPayload({ width, height, totalHexes, systemCount });
-    if (payload.generatedAt) {
-        state.lastSectorSnapshot.generatedAt = payload.generatedAt;
+    if (nextPayload.generatedAt) {
+        state.lastSectorSnapshot.generatedAt = nextPayload.generatedAt;
     }
-    if (payload.multiSector && typeof payload.multiSector === 'object') {
-        state.multiSector = payload.multiSector;
+    if (nextPayload.multiSector && typeof nextPayload.multiSector === 'object') {
+        state.multiSector = nextPayload.multiSector;
     } else {
         state.multiSector = {
             currentKey: '0,0',
