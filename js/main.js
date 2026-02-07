@@ -3,6 +3,7 @@ import { randomizeSeed } from './core.js';
 import { EVENTS } from './events.js';
 import { state } from './config.js';
 import { addBodyToSelectedSystem, addSystemAtHex, deleteSelectedBody, deleteSelectedSystem, generateSector, rerollSelectedPlanet, rerollSelectedSystem, rerollUnpinnedSystems, setEditMode, toggleEditMode, togglePinSelectedSystem } from './generation.js';
+import { setupFactionOverlay } from './factions.js';
 import { captureHistorySnapshot, setupHistory } from './history.js';
 import { setupSearchPanel } from './search.js';
 import { setupRoutePlanner } from './route-planner.js';
@@ -160,7 +161,7 @@ function bindUiEvents() {
 
     const persistOnChangeIds = [
         'sizePreset', 'gridWidth', 'gridHeight', 'densityPreset', 'manualMin', 'manualMax',
-        'seedInput', 'autoSeedToggle', 'realisticPlanetWeightsToggle', 'generationProfile'
+        'seedInput', 'autoSeedToggle', 'realisticPlanetWeightsToggle', 'generationProfile', 'factionOverlayToggle'
     ];
     persistOnChangeIds.forEach((id) => {
         const el = document.getElementById(id);
@@ -229,6 +230,7 @@ window.onload = function() {
     setupHistory();
     setupSearchPanel();
     setupRoutePlanner();
+    setupFactionOverlay();
     const importInput = document.getElementById('importFileInput');
     if (importInput) importInput.addEventListener('change', handleImportFile);
     setSizeMode('preset');

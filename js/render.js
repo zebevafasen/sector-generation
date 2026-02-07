@@ -2,6 +2,7 @@
 import { formatStarAgeValue, generateStarAge, getStarClassInfo, hideStarClassInfo, rand } from './core.js';
 import { getBodyIconMarkup, normalizeBodyType } from './body-icons.js';
 import { EVENTS, emitEvent } from './events.js';
+import { getFactionById, getFactionClaimForHex, isFactionOverlayEnabled, isSystemBorderHex, isSystemContestedHex } from './factions.js';
 import { reportSystemInvariantIssues } from './invariants.js';
 import { generatePlanetEnvironment, getDefaultPlanetEnvironment, isPlanetaryBodyType } from './planet-environment.js';
 import { formatPopulationBillions, refreshSystemPlanetPopulation } from './planet-population.js';
@@ -511,6 +512,30 @@ export function drawGrid(cols, rows, options = {}) {
             poly.setAttribute('stroke', '#334155');
             poly.setAttribute('stroke-width', '1');
             if (isPinned) poly.classList.add('pinned');
+            if (isFactionOverlayEnabled()) {
+                const claim = getFactionClaimForHex(hexId);
+                if (claim && claim.factionId) {
+                    const faction = getFactionById(claim.factionId);
+                    if (faction) {
+                        const isSystemClaim = claim.source === 'system';
+                        poly.setAttribute('fill', faction.color);
+                        poly.setAttribute('fill-opacity', isSystemClaim ? '0.23' : '0.12');
+                        poly.setAttribute('stroke', faction.color);
+                        poly.setAttribute('stroke-opacity', isSystemClaim ? '0.8' : '0.45');
+                        poly.setAttribute('stroke-width', isSystemClaim ? (isSystemBorderHex(hexId) ? '2' : '1.2') : '1');
+                        if (isSystemClaim && isSystemContestedHex(hexId)) {
+                            poly.setAttribute('stroke', '#e2e8f0');
+                            poly.setAttribute('stroke-dasharray', '4 2');
+                        }
+                    }
+                } else if (claim && claim.contested) {
+                    poly.setAttribute('fill', '#94a3b8');
+                    poly.setAttribute('fill-opacity', '0.08');
+                    poly.setAttribute('stroke', '#cbd5e1');
+                    poly.setAttribute('stroke-opacity', '0.25');
+                    poly.setAttribute('stroke-dasharray', '2 2');
+                }
+            }
             g.appendChild(poly);
 
             const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');

@@ -5,6 +5,7 @@
 import { isAutoSeedEnabled, isRealisticPlanetWeightingEnabled, setSeed, showStatusMessage } from './core.js';
 import { setDensityMode, setSizeMode } from './controls.js';
 import { EVENTS, emitEvent } from './events.js';
+import { applyFactionOverlayFromPayload, readFactionOverlayEnabledFromUi } from './factions.js';
 import { clearInfoPanel, drawGrid, selectHex } from './render.js';
 
 function getStorageUiRefs() {
@@ -18,6 +19,7 @@ function getStorageUiRefs() {
         generationProfileSelect: document.getElementById('generationProfile'),
         autoSeedToggle: document.getElementById('autoSeedToggle'),
         realisticWeightsToggle: document.getElementById('realisticPlanetWeightsToggle'),
+        factionOverlayToggle: document.getElementById('factionOverlayToggle'),
         seedInput: document.getElementById('seedInput'),
         statusTotalHexes: document.getElementById('statusTotalHexes'),
         statusTotalSystems: document.getElementById('statusTotalSystems')
@@ -52,6 +54,7 @@ export function buildSectorPayload(meta = {}) {
         },
         autoSeed: isAutoSeedEnabled(),
         realisticPlanetWeights: isRealisticPlanetWeightingEnabled(),
+        factionOverlayEnabled: readFactionOverlayEnabledFromUi(),
         generationProfile: refs.generationProfileSelect ? refs.generationProfileSelect.value : 'cinematic',
         sectorConfigSnapshot: state.sectorConfigSnapshot || null,
         pinnedHexIds: Array.isArray(state.pinnedHexIds) ? state.pinnedHexIds : [],
@@ -212,6 +215,11 @@ export function applySectorPayload(payload) {
     }
     if (typeof payload.realisticPlanetWeights === 'boolean') {
         if (refs.realisticWeightsToggle) refs.realisticWeightsToggle.checked = payload.realisticPlanetWeights;
+    }
+    if (typeof payload.factionOverlayEnabled === 'boolean') {
+        applyFactionOverlayFromPayload(payload.factionOverlayEnabled);
+    } else {
+        applyFactionOverlayFromPayload(false);
     }
     if (payload.generationProfile && refs.generationProfileSelect) {
         refs.generationProfileSelect.value = payload.generationProfile;

@@ -113,6 +113,13 @@ export const GRID_PRESETS = {
     dominion: { label: 'Dominion Net', width: 12, height: 16 }
 };
 
+export const FACTION_DEFINITIONS = [
+    { id: 'auric', name: 'Auric Combine', color: '#f59e0b' },
+    { id: 'helion', name: 'Helion Pact', color: '#22c55e' },
+    { id: 'nyx', name: 'Nyx Directorate', color: '#a78bfa' },
+    { id: 'vanguard', name: 'Vanguard Union', color: '#38bdf8' }
+];
+
 export const LOCAL_STORAGE_KEY = 'hex-star-sector-gen';
 
 export const NAME_PREFIX = SYSTEM_NAME_PREFIX;
@@ -133,6 +140,7 @@ export const state = {
     pinnedHexIds: [],
     statusMessageTimer: null,
     starTooltipPinned: false,
+    factionOverlayEnabled: false,
     routePlanner: {
         startHexId: null,
         endHexId: null,
