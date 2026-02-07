@@ -83,7 +83,7 @@ const DEEP_SPACE_POI_TEMPLATES = [
         summary: 'A functioning gate nexus that can sling ships across major corridor distances.',
         risk: 'Low',
         rewardHint: 'Can open rapid transit options between distant regions.',
-        weight: 0.45
+        weight: 0.14
     },
     {
         kind: 'Navigation',
@@ -91,7 +91,7 @@ const DEEP_SPACE_POI_TEMPLATES = [
         summary: 'A dormant gate structure with partial telemetry and unstable startup traces.',
         risk: 'Medium',
         rewardHint: 'Potential to restore long-range transit if reactivated.',
-        weight: 0.9
+        weight: 0.32
     },
     {
         kind: 'Navigation',
@@ -337,17 +337,63 @@ function countNeighborSystems(hexId, sectors) {
     return count;
 }
 
-function createDeepSpacePoi() {
-    const totalWeight = DEEP_SPACE_POI_TEMPLATES.reduce((sum, template) =>
-        sum + (Number.isFinite(template.weight) && template.weight > 0 ? template.weight : 1), 0);
+function oddrToCube(col, row) {
+    const x = col - ((row - (row & 1)) / 2);
+    const z = row;
+    const y = -x - z;
+    return { x, y, z };
+}
+
+function cubeDistance(a, b) {
+    return Math.max(
+        Math.abs(a.x - b.x),
+        Math.abs(a.y - b.y),
+        Math.abs(a.z - b.z)
+    );
+}
+
+function hexDistanceById(hexA, hexB) {
+    const parsedA = parseHexId(hexA);
+    const parsedB = parseHexId(hexB);
+    if (!parsedA || !parsedB) return Number.POSITIVE_INFINITY;
+    return cubeDistance(
+        oddrToCube(parsedA.col, parsedA.row),
+        oddrToCube(parsedB.col, parsedB.row)
+    );
+}
+
+function getJumpGateEdgeWeightMultiplier(edgeDistance) {
+    if (edgeDistance <= 1) return 1.8;
+    if (edgeDistance <= 2) return 1.35;
+    if (edgeDistance <= 3) return 1.05;
+    return 0.28;
+}
+
+function createDeepSpacePoi(options = {}) {
+    const edgeDistance = Number.isFinite(options.edgeDistance) ? options.edgeDistance : Number.POSITIVE_INFINITY;
+    const allowJumpGates = options.allowJumpGates !== false;
+    const weightedTemplates = DEEP_SPACE_POI_TEMPLATES.filter((template) =>
+        allowJumpGates || !/jump-gate/i.test(String(template.name || ''))
+    ).map((template) => {
+        const baseWeight = Number.isFinite(template.weight) && template.weight > 0 ? template.weight : 1;
+        const isJumpGate = /jump-gate/i.test(String(template.name || ''));
+        const edgeAdjustedWeight = isJumpGate
+            ? baseWeight * getJumpGateEdgeWeightMultiplier(edgeDistance)
+            : baseWeight;
+        return {
+            template,
+            weight: edgeAdjustedWeight
+        };
+    });
+
+    const totalWeight = weightedTemplates.reduce((sum, entry) => sum + entry.weight, 0);
     let roll = rand() * totalWeight;
-    let template = DEEP_SPACE_POI_TEMPLATES[DEEP_SPACE_POI_TEMPLATES.length - 1];
-    for (let i = 0; i < DEEP_SPACE_POI_TEMPLATES.length; i++) {
-        const candidate = DEEP_SPACE_POI_TEMPLATES[i];
-        const weight = Number.isFinite(candidate.weight) && candidate.weight > 0 ? candidate.weight : 1;
-        roll -= weight;
+    let template = weightedTemplates[weightedTemplates.length - 1].template;
+    for (let i = 0; i < weightedTemplates.length; i++) {
+        const candidate = weightedTemplates[i];
+        roll -= candidate.weight;
         if (roll <= 0) {
-            template = candidate;
+            template = candidate.template;
             break;
         }
     }
@@ -362,8 +408,17 @@ function createDeepSpacePoi() {
     };
 }
 
+function isJumpGatePoi(poi) {
+    if (!poi) return false;
+    return /jump-gate/i.test(String(poi.name || ''));
+}
+
 function generateDeepSpacePois(width, height, sectors) {
     const pois = {};
+    const jumpGateHexes = [];
+    const maxJumpGatesPerSector = 2;
+    const minJumpGateSeparation = 4;
+
     for (let c = 0; c < width; c++) {
         for (let r = 0; r < height; r++) {
             const hexId = `${c}-${r}`;
@@ -375,7 +430,21 @@ function generateDeepSpacePois(width, height, sectors) {
             const remoteBoost = nearbySystems === 0 ? 0.015 : 0;
             const spawnChance = baseChance + nearbyBoost + remoteBoost;
             if (rand() > spawnChance) continue;
-            pois[hexId] = createDeepSpacePoi();
+            const edgeDistance = Math.min(c, r, (width - 1) - c, (height - 1) - r);
+            let poi = createDeepSpacePoi({ edgeDistance });
+            if (isJumpGatePoi(poi)) {
+                const isAtGateCap = jumpGateHexes.length >= maxJumpGatesPerSector;
+                const isTooCloseToOtherGate = jumpGateHexes.some(otherHexId =>
+                    hexDistanceById(otherHexId, hexId) < minJumpGateSeparation
+                );
+                if (isAtGateCap || isTooCloseToOtherGate) {
+                    poi = createDeepSpacePoi({ edgeDistance, allowJumpGates: false });
+                }
+            }
+            if (isJumpGatePoi(poi)) {
+                jumpGateHexes.push(hexId);
+            }
+            pois[hexId] = poi;
         }
     }
     return pois;
