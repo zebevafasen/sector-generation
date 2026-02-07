@@ -620,12 +620,12 @@ function renderSystemBodyLists(refs, system, id, preselectedBodyIndex) {
                 refs.editInhabitPlanetRow.classList.toggle('hidden', !canEditInhabit);
                 if (canEditInhabit) {
                     const alreadyInhabited = !!(system.planets[bodyIndex] && system.planets[bodyIndex].habitable);
-                    refs.editInhabitPlanetBtn.innerText = alreadyInhabited ? 'Planet Inhabited' : 'Inhabit Planet';
-                    refs.editInhabitPlanetBtn.disabled = alreadyInhabited;
-                    refs.editInhabitPlanetBtn.onclick = alreadyInhabited ? null : () => {
+                    refs.editInhabitPlanetBtn.innerText = alreadyInhabited ? 'Uninhabit Planet' : 'Inhabit Planet';
+                    refs.editInhabitPlanetBtn.disabled = false;
+                    refs.editInhabitPlanetBtn.onclick = () => {
                         const targetSystem = state.sectors[id];
                         if (!targetSystem || !targetSystem.planets[bodyIndex]) return;
-                        targetSystem.planets[bodyIndex].habitable = true;
+                        targetSystem.planets[bodyIndex].habitable = !alreadyInhabited;
                         reportSystemInvariantIssues(targetSystem, 'edit-inhabit-planet');
                         notifySectorDataChanged();
                         updateInfoPanel(id, bodyIndex);
