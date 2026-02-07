@@ -1,9 +1,27 @@
-﻿export function shuffleArray(array, randFn) {
+export function shuffleArray(array, randFn) {
     const random = randFn || Math.random;
     for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(random() * (i + 1));
         [array[i], array[j]] = [array[j], array[i]];
     }
+}
+
+export function pickWeighted(items, randomFn = Math.random, getWeight = (item) => item.weight) {
+    if (!Array.isArray(items) || !items.length) return null;
+    const total = items.reduce((sum, item) => {
+        const weight = Number(getWeight(item));
+        return weight > 0 ? sum + weight : sum;
+    }, 0);
+    if (!(total > 0)) return null;
+
+    let roll = randomFn() * total;
+    for (const item of items) {
+        const weight = Number(getWeight(item));
+        if (!(weight > 0)) continue;
+        roll -= weight;
+        if (roll <= 0) return item;
+    }
+    return items[items.length - 1];
 }
 
 export function romanize(num) {

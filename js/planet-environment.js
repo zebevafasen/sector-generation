@@ -1,15 +1,8 @@
-function pickWeighted(candidates, randomFn) {
-    const total = candidates.reduce((sum, item) => sum + item.weight, 0);
-    let roll = randomFn() * total;
-    for (const item of candidates) {
-        roll -= item.weight;
-        if (roll <= 0) return item.label;
-    }
-    return candidates[candidates.length - 1].label;
-}
+import { isPlanetaryBodyType as isPlanetaryType } from './body-classification.js';
+import { pickWeighted } from './utils.js';
 
 export function isPlanetaryBodyType(type) {
-    return type !== 'Artificial' && !/belt|field/i.test(type || '');
+    return isPlanetaryType(type);
 }
 
 export function generatePlanetEnvironment(type, randomFn = Math.random) {
@@ -136,8 +129,8 @@ export function generatePlanetEnvironment(type, randomFn = Math.random) {
     };
 
     return {
-        atmosphere: pickWeighted(profile.atmosphere, randomFn),
-        temperature: pickWeighted(profile.temperature, randomFn)
+        atmosphere: (pickWeighted(profile.atmosphere, randomFn)?.label) || 'Unknown',
+        temperature: (pickWeighted(profile.temperature, randomFn)?.label) || 'Unknown'
     };
 }
 

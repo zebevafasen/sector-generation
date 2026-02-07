@@ -5,7 +5,8 @@ import {
     HABITABLE_WORLD_SUFFIXES,
     STAR_CLASS_PLANET_WEIGHTS
 } from './generation-data.js';
-import { romanize, shuffleArray } from './utils.js';
+import { isPlanetaryBody as isPlanetaryBodyShared } from './body-classification.js';
+import { pickWeighted, romanize, shuffleArray } from './utils.js';
 
 function pickWeightedType(weights, rand, excludedTypes = new Set()) {
     const candidates = PLANET_TYPES
@@ -28,13 +29,7 @@ function pickWeightedType(weights, rand, excludedTypes = new Set()) {
 }
 
 function pickWeightedLabel(candidates, rand) {
-    const total = candidates.reduce((sum, item) => sum + item.weight, 0);
-    let roll = rand() * total;
-    for (const item of candidates) {
-        roll -= item.weight;
-        if (roll <= 0) return item.label;
-    }
-    return candidates[candidates.length - 1].label;
+    return (pickWeighted(candidates, rand)?.label) || candidates[candidates.length - 1].label;
 }
 
 function getHabitabilityTypeWeight(type, profile) {
@@ -50,13 +45,8 @@ function pickWeightedCandidateIndex(candidateIndexes, planets, profile, rand) {
         index,
         weight: getHabitabilityTypeWeight(planets[index].type, profile)
     }));
-    const total = weightedCandidates.reduce((sum, item) => sum + item.weight, 0);
-    let roll = rand() * total;
-    for (const item of weightedCandidates) {
-        roll -= item.weight;
-        if (roll <= 0) return item.index;
-    }
-    return weightedCandidates[weightedCandidates.length - 1].index;
+    return (pickWeighted(weightedCandidates, rand)?.index)
+        ?? weightedCandidates[weightedCandidates.length - 1].index;
 }
 
 function getUniqueHabitableSuffixes(count, rand) {
@@ -138,7 +128,7 @@ export function assignSystemHabitability(planets, profile, rand) {
 }
 
 export function isPlanetaryBody(body) {
-    return !!body && body.type !== 'Artificial' && !/belt|field/i.test(body.type);
+    return isPlanetaryBodyShared(body);
 }
 
 export function applyPlanetaryOrderAndNames(systemName, bodies, rand) {

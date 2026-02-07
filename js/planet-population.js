@@ -1,9 +1,7 @@
+import { isPlanetaryBody } from './body-classification.js';
+
 function normalizeLabel(value) {
     return String(value || '').trim().toLowerCase();
-}
-
-function isPlanetaryBody(body) {
-    return body && body.type !== 'Artificial' && !/belt|field/i.test(body.type || '');
 }
 
 function ensureFeaturesArray(body) {

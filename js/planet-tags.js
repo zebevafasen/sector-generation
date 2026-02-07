@@ -1,25 +1,15 @@
 import { formatPopulationBillions } from './planet-population.js';
+import { isPlanetaryBody } from './body-classification.js';
+import { pickWeighted } from './utils.js';
 
 function normalizeLabel(value) {
     return String(value || '').trim().toLowerCase();
 }
 
-function isPlanetaryBody(body) {
-    return !!body && body.type !== 'Artificial' && !/belt|field/i.test(body.type || '');
-}
-
 function weightedPick(items, randomFn, excluded = new Set()) {
     const candidates = items
         .filter(item => item.weight > 0 && !excluded.has(item.tag));
-    if (!candidates.length) return null;
-
-    const total = candidates.reduce((sum, item) => sum + item.weight, 0);
-    let roll = randomFn() * total;
-    for (const item of candidates) {
-        roll -= item.weight;
-        if (roll <= 0) return item.tag;
-    }
-    return candidates[candidates.length - 1].tag;
+    return pickWeighted(candidates, randomFn)?.tag || null;
 }
 
 function weightedPickCompatible(items, randomFn, selectedTags) {

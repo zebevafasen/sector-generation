@@ -13,6 +13,7 @@ import {
 import { EVENTS, emitEvent } from './events.js';
 import { reportSystemInvariantIssues } from './invariants.js';
 import { generateStarAge, generateSeedString, isAutoSeedEnabled, rand, setSeed, showStatusMessage } from './core.js';
+import { isArtificialBodyType, isBeltOrFieldBodyType } from './body-classification.js';
 import { generatePlanetEnvironment } from './planet-environment.js';
 import { refreshSystemPlanetPopulation } from './planet-population.js';
 import { refreshSystemPlanetTags } from './planet-tags.js';
@@ -499,7 +500,7 @@ export function addBodyToSelectedSystem(kind) {
         });
         reconcilePlanetaryBodies(system);
     } else if (kind === 'belt') {
-        const existing = system.planets.filter(body => /belt|field/i.test(body.type)).length;
+        const existing = system.planets.filter(body => isBeltOrFieldBodyType(body.type)).length;
         system.planets.push({
             name: `${system.name} Belt ${romanize(existing + 1)}`,
             type: rand() > 0.6 ? 'Debris Field' : 'Asteroid Belt',
@@ -507,7 +508,7 @@ export function addBodyToSelectedSystem(kind) {
             pop: 0
         });
     } else if (kind === 'station') {
-        const existing = system.planets.filter(body => body.type === 'Artificial').length;
+        const existing = system.planets.filter(body => isArtificialBodyType(body.type)).length;
         system.planets.push({
             name: `Station ${system.name} ${romanize(existing + 1)}`,
             type: 'Artificial',

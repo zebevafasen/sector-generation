@@ -1,3 +1,5 @@
+import { isBeltOrFieldBodyType } from './body-classification.js';
+
 export function normalizeBodyType(type) {
     return type === 'Lava' ? 'Volcanic' : type;
 }
@@ -6,7 +8,7 @@ export function getBodyIconMarkup(type) {
     const normalizedType = normalizeBodyType(type);
     const base = 'inline-block w-4 h-4 md:w-[18px] md:h-[18px] shrink-0';
 
-    if (/belt|field/i.test(normalizedType)) {
+    if (isBeltOrFieldBodyType(normalizedType)) {
         return `<svg class="${base}" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="#8b5cf6" opacity="0.25"/><circle cx="8" cy="12" r="1.7" fill="#ddd6fe"/><circle cx="12" cy="9" r="1.4" fill="#c4b5fd"/><circle cx="15.5" cy="13.5" r="1.6" fill="#e9d5ff"/><circle cx="10.5" cy="15.2" r="1.1" fill="#a78bfa"/></svg>`;
     }
 
