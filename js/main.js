@@ -1,4 +1,4 @@
-import { setDensityMode, setSizeMode, setupStarClassTooltip } from './controls.js';
+import { setDensityMode, setSizeMode, setupFieldInfoTooltips, setupStarClassTooltip } from './controls.js';
 import { randomizeSeed } from './core.js';
 import { EVENTS } from './events.js';
 import { state } from './config.js';
@@ -212,6 +212,7 @@ window.onload = function() {
     setEditMode(false);
     updateEditModeUi();
     setupStarClassTooltip();
+    setupFieldInfoTooltips();
     if (!restoreCachedSectorState()) {
         generateSector();
     }

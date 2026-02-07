@@ -65,7 +65,12 @@ function resetBodyDetailsPanel() {
     }
     if (content) content.classList.add('hidden');
     if (name) name.innerText = 'Body';
-    if (type) type.innerText = 'Type';
+    if (type) {
+        type.innerText = 'Type';
+        type.removeAttribute('data-field-tooltip');
+        type.removeAttribute('data-field-value');
+        type.classList.remove('cursor-help', 'underline', 'decoration-dotted', 'decoration-slate-500/70', 'underline-offset-2');
+    }
     setButtonAction(renameBodyBtn, false);
     setButtonAction(quickDeleteBodyBtn, false);
     if (editPlanetTypeRow) editPlanetTypeRow.classList.add('hidden');
@@ -121,17 +126,32 @@ function showBodyDetailsPanel(body, anchorEl) {
     if (empty) empty.classList.add('hidden');
     if (content) content.classList.remove('hidden');
     if (name) name.innerText = body.name;
-    if (type) type.innerText = normalizedType;
+    if (type) {
+        type.innerText = normalizedType;
+        if (isPlanetaryBodyType(normalizedType)) {
+            type.setAttribute('data-field-tooltip', 'planet-type');
+            type.setAttribute('data-field-value', normalizedType);
+            type.classList.add('cursor-help', 'underline', 'decoration-dotted', 'decoration-slate-500/70', 'underline-offset-2');
+        } else {
+            type.removeAttribute('data-field-tooltip');
+            type.removeAttribute('data-field-value');
+            type.classList.remove('cursor-help', 'underline', 'decoration-dotted', 'decoration-slate-500/70', 'underline-offset-2');
+        }
+    }
     if (envRow && atmosphereValue && temperatureValue) {
         if (isPlanetaryBodyType(normalizedType)) {
             const fallback = getDefaultPlanetEnvironment(normalizedType);
             atmosphereValue.innerText = body.atmosphere || fallback.atmosphere;
             temperatureValue.innerText = body.temperature || fallback.temperature;
+            atmosphereValue.setAttribute('data-field-value', atmosphereValue.innerText);
+            temperatureValue.setAttribute('data-field-value', temperatureValue.innerText);
             envRow.classList.remove('hidden');
         } else {
             envRow.classList.add('hidden');
             atmosphereValue.innerText = '--';
             temperatureValue.innerText = '--';
+            atmosphereValue.removeAttribute('data-field-value');
+            temperatureValue.removeAttribute('data-field-value');
         }
     }
     if (placeholder) placeholder.innerText = 'Detailed stats coming soon.';
@@ -573,9 +593,7 @@ function renderSystemBodyLists(refs, system, id, preselectedBodyIndex) {
         const normalizedType = normalizeBodyType(body.type);
         const bodyIcon = getBodyIconMarkup(normalizedType);
         const isPlanetary = normalizedType !== 'Artificial' && !/belt|field/i.test(normalizedType);
-        const sizeAndTypeLabel = isPlanetary
-            ? `${body.size || 'Medium'} · ${normalizedType}`
-            : normalizedType;
+        const sizeLabel = body.size || 'Medium';
 
         let html = `<div class="flex justify-between items-center font-semibold text-sky-100"><span class="inline-flex items-center gap-2">${bodyIcon}${body.name}</span><button class="body-rename-btn w-5 h-5 inline-flex items-center justify-center text-[10px] rounded bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:border-sky-500 transition-colors" title="Rename object" aria-label="Rename object">✎</button></div>`;
         html += '<div class="mt-1 flex items-end justify-between">';
@@ -584,7 +602,15 @@ function renderSystemBodyLists(refs, system, id, preselectedBodyIndex) {
         } else {
             html += '<span></span>';
         }
-        html += `<span class="text-xs text-slate-500 font-normal text-right">${sizeAndTypeLabel}</span>`;
+        if (isPlanetary) {
+            html += `<span class="text-xs text-slate-500 font-normal text-right inline-flex items-center gap-1.5">`
+                + `<span class="cursor-help underline decoration-dotted decoration-slate-500/70 underline-offset-2" data-field-tooltip="size" data-field-value="${sizeLabel}">${sizeLabel}</span>`
+                + `<span>·</span>`
+                + `<span class="cursor-help underline decoration-dotted decoration-slate-500/70 underline-offset-2" data-field-tooltip="planet-type" data-field-value="${normalizedType}">${normalizedType}</span>`
+                + `</span>`;
+        } else {
+            html += `<span class="text-xs text-slate-500 font-normal text-right">${normalizedType}</span>`;
+        }
         html += '</div>';
         li.innerHTML = html;
         const inlineRenameBtn = li.querySelector('.body-rename-btn');

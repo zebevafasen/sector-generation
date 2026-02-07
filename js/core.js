@@ -154,3 +154,109 @@ export function hideStarClassInfo(force = false) {
         panel.style.opacity = '0';
     }
 }
+
+function normalizeLookupKey(value) {
+    return String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '-');
+}
+
+function getPlanetTypeTooltip(type) {
+    const key = normalizeLookupKey(type);
+    const entries = {
+        terrestrial: 'Rocky world with a solid surface. Most likely class to support Earth-like conditions.',
+        oceanic: 'Water-dominated world with deep global oceans, often humid and cloud-heavy.',
+        volcanic: 'Geologically active world with widespread volcanism, high heat, and unstable surface conditions.',
+        desert: 'Dry rocky world with scarce surface water and large day-night temperature swings.',
+        barren: 'Air-poor or inactive rocky world with limited surface activity and little to no biosphere.',
+        arctic: 'Ice-dominated world with persistent low temperatures and widespread frozen terrain.',
+        'gas-giant': 'Massive gaseous planet with no solid surface and extreme pressure at depth.',
+        'asteroid-belt': 'Band of small rocky bodies and debris orbiting the star.',
+        'debris-field': 'Diffuse field of fragmented material from collisions, breakups, or ancient impacts.',
+        artificial: 'Constructed object such as a station or habitat.'
+    };
+    return entries[key] || 'Category of celestial body detected in this system.';
+}
+
+function getPlanetSizeTooltip(size) {
+    const key = normalizeLookupKey(size);
+    const entries = {
+        tiny: 'Very small world, usually with weak gravity and limited atmosphere retention.',
+        small: 'Below-average planetary mass and gravity.',
+        medium: 'Mid-sized world near baseline terrestrial scale.',
+        large: 'High-mass world with stronger gravity and deeper potential atmosphere.',
+        huge: 'Very massive world, often with extreme gravity and thick envelopes.'
+    };
+    return entries[key] || 'Relative planetary size class.';
+}
+
+function getAtmosphereTooltip(atmosphere) {
+    const key = normalizeLookupKey(atmosphere);
+    const entries = {
+        breathable: 'Atmosphere supports unassisted human breathing under normal pressure conditions.',
+        humid: 'Moisture-rich atmosphere with high water vapor content.',
+        dense: 'High-pressure atmosphere that can intensify weather and drag.',
+        thin: 'Low-pressure atmosphere with reduced shielding and breathable volume.',
+        toxic: 'Contains gases harmful to humans without sealed life support.',
+        corrosive: 'Chemically aggressive atmosphere that damages exposed materials.',
+        dry: 'Very low humidity atmosphere with limited water cycling.',
+        trace: 'Extremely sparse atmosphere with little practical weather or protection.',
+        none: 'No meaningful atmosphere present.',
+        crushing: 'Extreme atmospheric pressure that rapidly destroys unprotected craft and life.'
+    };
+    return entries[key] || 'Dominant atmospheric condition observed for this body.';
+}
+
+function getTemperatureTooltip(temperature) {
+    const key = normalizeLookupKey(temperature);
+    const entries = {
+        frozen: 'Persistently icy conditions with widespread solid volatiles.',
+        freezing: 'Extremely cold climate with long-term subzero surface conditions.',
+        cold: 'Low-temperature climate; survival often needs thermal support.',
+        temperate: 'Moderate climate range with the best chance for stable surface activity.',
+        warm: 'Elevated baseline heat but not consistently extreme.',
+        hot: 'High sustained temperatures that stress life support and equipment.',
+        scorching: 'Very severe heat with frequent surface thermal hazards.',
+        burning: 'Extreme, near-sterilizing heat dominated by intense thermal exposure.'
+    };
+    return entries[key] || 'Estimated broad thermal regime for this body.';
+}
+
+export function showFieldInfoTooltip(event, field, value) {
+    const panel = document.getElementById('fieldInfoTooltip');
+    if (!panel) return;
+
+    const fieldKey = normalizeLookupKey(field);
+    let label = 'Field';
+    let description = 'No additional data available.';
+    if (fieldKey === 'planet-type') {
+        label = 'Planet Type';
+        description = getPlanetTypeTooltip(value);
+    } else if (fieldKey === 'size') {
+        label = 'Size';
+        description = getPlanetSizeTooltip(value);
+    } else if (fieldKey === 'atmosphere') {
+        label = 'Atmosphere';
+        description = getAtmosphereTooltip(value);
+    } else if (fieldKey === 'temperature') {
+        label = 'Temperature';
+        description = getTemperatureTooltip(value);
+    }
+
+    panel.innerHTML = `
+        <div class="font-semibold text-sky-300 mb-1">${label}</div>
+        <div class="text-slate-400 mb-1">Value: <span class="text-slate-200">${value || 'Unknown'}</span></div>
+        <div class="text-slate-300 leading-snug">${description}</div>
+    `;
+    panel.classList.remove('hidden');
+    panel.style.opacity = '1';
+    positionStarTooltip(event, panel);
+}
+
+export function hideFieldInfoTooltip() {
+    const panel = document.getElementById('fieldInfoTooltip');
+    if (!panel) return;
+    panel.classList.add('hidden');
+    panel.style.opacity = '0';
+}

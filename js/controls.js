@@ -1,5 +1,5 @@
 ﻿import { GRID_PRESETS, state } from './config.js';
-import { hideStarClassInfo, showStarClassInfo } from './core.js';
+import { hideFieldInfoTooltip, hideStarClassInfo, showFieldInfoTooltip, showStarClassInfo } from './core.js';
 
 const controlsRefsCache = {};
 
@@ -110,5 +110,49 @@ export function setupStarClassTooltip() {
             state.starTooltipPinned = false;
             hideStarClassInfo(true);
         }
+    });
+}
+
+export function setupFieldInfoTooltips() {
+    const selector = '[data-field-tooltip]';
+    let activeTarget = null;
+
+    const showFromEvent = (event, target) => {
+        const field = target.getAttribute('data-field-tooltip');
+        const value = target.getAttribute('data-field-value') || target.textContent || '';
+        if (!field || !value) return;
+        showFieldInfoTooltip(event, field, value.trim());
+    };
+
+    document.addEventListener('mouseover', (event) => {
+        const target = event.target instanceof Element ? event.target.closest(selector) : null;
+        if (!target) return;
+        activeTarget = target;
+        showFromEvent(event, target);
+    });
+
+    document.addEventListener('mousemove', (event) => {
+        if (!activeTarget) return;
+        showFromEvent(event, activeTarget);
+    });
+
+    document.addEventListener('mouseout', (event) => {
+        if (!activeTarget) return;
+        const leavingFrom = event.target instanceof Element ? event.target.closest(selector) : null;
+        if (!leavingFrom || leavingFrom !== activeTarget) return;
+        const related = event.relatedTarget;
+        if (related instanceof Node && activeTarget.contains(related)) return;
+        activeTarget = null;
+        hideFieldInfoTooltip();
+    });
+
+    document.addEventListener('click', () => {
+        activeTarget = null;
+        hideFieldInfoTooltip();
+    });
+
+    window.addEventListener('blur', () => {
+        activeTarget = null;
+        hideFieldInfoTooltip();
     });
 }
