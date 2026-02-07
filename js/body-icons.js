@@ -1,8 +1,4 @@
-import { isBeltOrFieldBodyType } from './body-classification.js';
-
-export function normalizeBodyType(type) {
-    return type === 'Lava' ? 'Volcanic' : type;
-}
+import { isBeltOrFieldBodyType, normalizeBodyType } from './body-classification.js';
 
 export function getBodyIconMarkup(type) {
     const normalizedType = normalizeBodyType(type);
