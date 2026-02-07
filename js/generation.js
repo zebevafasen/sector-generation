@@ -657,6 +657,17 @@ export function addSystemAtHex(hexId) {
     const config = getGenerationConfigSnapshot();
     if (!isHexIdInBounds(hexId, config.width, config.height)) return;
     if (state.sectors[hexId]) return;
+    const deepSpacePoi = state.deepSpacePois && state.deepSpacePois[hexId] ? state.deepSpacePois[hexId] : null;
+    if (deepSpacePoi) {
+        const canPrompt = typeof window !== 'undefined' && typeof window.confirm === 'function';
+        const shouldProceed = canPrompt
+            ? window.confirm(`This hex contains a deep-space POI (${deepSpacePoi.name || deepSpacePoi.kind || 'Unknown Site'}). Place a star system here anyway?`)
+            : true;
+        if (!shouldProceed) {
+            showStatusMessage('System placement cancelled. Deep-space POI preserved.', 'info');
+            return;
+        }
+    }
 
     const usedNames = new Set(
         Object.values(state.sectors)

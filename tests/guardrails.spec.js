@@ -97,3 +97,47 @@ test('edit mode allows deleting a selected body', async ({ page }) => {
   const planetCountAfter = parseInt(await page.locator('#infoPlanetCount').innerText(), 10);
   expect(planetCountAfter).toBeLessThan(planetCountBefore);
 });
+
+test('edit mode warns before replacing a deep-space POI with a system', async ({ page }) => {
+  await page.goto('/sector_generator.html');
+  await page.locator('#sizePreset').selectOption('dominion');
+  await page.locator('#generateSectorBtn').click();
+
+  let poiCount = await page.locator('polygon.deep-space-poi-marker').count();
+  for (let attempt = 0; attempt < 3 && poiCount === 0; attempt++) {
+    await page.locator('#generateSectorBtn').click();
+    poiCount = await page.locator('polygon.deep-space-poi-marker').count();
+  }
+  expect(poiCount).toBeGreaterThan(0);
+
+  await page.locator('#editModeToggleBtn').click();
+  await expect(page.locator('#editModeToggleBtn')).toContainText('EDIT MODE: ON');
+
+  const poiHex = page.locator('.hex-group').filter({
+    has: page.locator('polygon.deep-space-poi-marker')
+  }).first();
+  await poiHex.evaluate((el) => {
+    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+  });
+  await expect(page.locator('#addSystemHereBtn')).toBeVisible();
+
+  const systemsBefore = parseCountFromLabel(await page.locator('#statusTotalSystems').innerText());
+
+  await Promise.all([
+    page.waitForEvent('dialog').then((dialog) => dialog.dismiss()),
+    page.locator('#addSystemHereBtn').click()
+  ]);
+
+  await expect(page.locator('#statusMessage')).toContainText('cancelled');
+  const systemsAfterCancel = parseCountFromLabel(await page.locator('#statusTotalSystems').innerText());
+  expect(systemsAfterCancel).toBe(systemsBefore);
+
+  await Promise.all([
+    page.waitForEvent('dialog').then((dialog) => dialog.accept()),
+    page.locator('#addSystemHereBtn').click()
+  ]);
+
+  await expect(page.locator('#statusMessage')).toContainText('Added system');
+  const systemsAfterAccept = parseCountFromLabel(await page.locator('#statusTotalSystems').innerText());
+  expect(systemsAfterAccept).toBeGreaterThan(systemsBefore);
+});
