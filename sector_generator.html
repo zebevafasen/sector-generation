@@ -33,7 +33,7 @@
 
                 <!-- Size Preset UI -->
                 <div id="sizePresetContainer">
-                    <label class="block text-xs text-slate-500 mb-1">Sector Size</label>
+                    <label class="flex items-center gap-1 text-xs text-slate-500 mb-1">Sector Size <span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-slate-600 text-[10px] text-slate-400 cursor-help" title="Preset sector dimensions. Custom mode lets you set width and height manually.">?</span></label>
                     <select id="sizePreset" class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm focus:border-sky-500 focus:outline-none">
                         <option value="scout">Scout Run (4 x 6)</option>
                         <option value="frontier">Frontier Drift (6 x 8)</option>
@@ -46,12 +46,12 @@
                 <!-- Custom Size UI -->
                 <div id="sizeCustomContainer" class="hidden grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs text-slate-500 mb-1">Width</label>
+                        <label class="flex items-center gap-1 text-xs text-slate-500 mb-1">Width <span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-slate-600 text-[10px] text-slate-400 cursor-help" title="Number of hex columns in the sector grid.">?</span></label>
                         <input type="number" id="gridWidth" value="8" 
                             class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm focus:border-sky-500 focus:outline-none transition-colors">
                     </div>
                     <div>
-                        <label class="block text-xs text-slate-500 mb-1">Height</label>
+                        <label class="flex items-center gap-1 text-xs text-slate-500 mb-1">Height <span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-slate-600 text-[10px] text-slate-400 cursor-help" title="Number of hex rows in the sector grid.">?</span></label>
                         <input type="number" id="gridHeight" value="10" 
                             class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm focus:border-sky-500 focus:outline-none transition-colors">
                     </div>
@@ -69,7 +69,7 @@
 
                 <!-- Preset UI -->
                 <div id="densityPresetContainer">
-                    <label class="block text-xs text-slate-500 mb-1">Density Level</label>
+                    <label class="flex items-center gap-1 text-xs text-slate-500 mb-1">Density Level <span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-slate-600 text-[10px] text-slate-400 cursor-help" title="Target share of hexes that contain star systems.">?</span></label>
                     <select id="densityPreset" class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm focus:border-sky-500 focus:outline-none">
                         <option value="0.05">Void (5%)</option>
                         <option value="0.15">Sparse (15%)</option>
@@ -83,12 +83,12 @@
                 <!-- Manual UI -->
                 <div id="densityManualContainer" class="hidden grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs text-slate-500 mb-1">Min Systems</label>
+                        <label class="flex items-center gap-1 text-xs text-slate-500 mb-1">Min Systems <span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-slate-600 text-[10px] text-slate-400 cursor-help" title="Lower bound when using custom density mode.">?</span></label>
                         <input type="number" id="manualMin" min="0" value="5" 
                             class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm focus:border-sky-500 focus:outline-none">
                     </div>
                     <div>
-                        <label class="block text-xs text-slate-500 mb-1">Max Systems</label>
+                        <label class="flex items-center gap-1 text-xs text-slate-500 mb-1">Max Systems <span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-slate-600 text-[10px] text-slate-400 cursor-help" title="Upper bound when using custom density mode.">?</span></label>
                         <input type="number" id="manualMax" min="1" value="15" 
                             class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm focus:border-sky-500 focus:outline-none">
                     </div>
@@ -99,7 +99,7 @@
             <div class="space-y-3">
                 <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wide">Seed & Data</h2>
                 <div>
-                    <label class="block text-xs text-slate-500 mb-1">Generation Profile</label>
+                    <label class="flex items-center gap-1 text-xs text-slate-500 mb-1">Generation Profile <span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-slate-600 text-[10px] text-slate-400 cursor-help" title="Cinematic favors dramatic worlds, Hard Sci-Fi favors realism, High Adventure favors activity and hooks.">?</span></label>
                     <select id="generationProfile" class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm focus:border-sky-500 focus:outline-none">
                         <option value="cinematic" selected>Cinematic</option>
                         <option value="hard_scifi">Hard Sci-Fi</option>
@@ -107,7 +107,7 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs text-slate-500 mb-1">Seed</label>
+                    <label class="flex items-center gap-1 text-xs text-slate-500 mb-1">Seed <span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-slate-600 text-[10px] text-slate-400 cursor-help" title="Same seed and settings reproduce the same sector layout.">?</span></label>
                     <div class="flex gap-2">
                         <input type="text" id="seedInput" placeholder="Auto" 
                             class="flex-1 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm focus:border-sky-500 focus:outline-none transition-colors">
@@ -123,10 +123,12 @@
                 <label class="flex items-center gap-2 text-xs text-slate-400">
                     <input type="checkbox" id="autoSeedToggle" class="accent-sky-500 bg-slate-800 border-slate-600 rounded">
                     Auto-new seed on generate
+                    <span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-slate-600 text-[10px] text-slate-400 cursor-help" title="Generates a fresh random seed each time you click Generate Sector.">?</span>
                 </label>
                 <label class="flex items-center gap-2 text-xs text-slate-400">
                     <input type="checkbox" id="realisticPlanetWeightsToggle" class="accent-sky-500 bg-slate-800 border-slate-600 rounded" checked>
                     Realistic planet weighting by star class
+                    <span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-slate-600 text-[10px] text-slate-400 cursor-help" title="When enabled, planet types are weighted by star class instead of uniform random.">?</span>
                 </label>
                 <input type="file" id="importFileInput" accept="application/json,.json" class="hidden" />
             </div>
