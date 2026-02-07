@@ -2,6 +2,7 @@ import { state } from './config.js';
 import { createSectorRecord } from './generation.js';
 import { showStatusMessage } from './core.js';
 import { EVENTS, emitEvent } from './events.js';
+import { normalizeDensityPresetKey } from './generation-data.js';
 import { applySectorPayload } from './storage.js';
 import { selectHex, updateViewTransform } from './render.js';
 
@@ -58,7 +59,7 @@ function getCurrentConfig() {
         width: parseInt(document.getElementById('gridWidth')?.value || '8', 10) || 8,
         height: parseInt(document.getElementById('gridHeight')?.value || '10', 10) || 10,
         densityMode: 'preset',
-        densityPreset: parseFloat(document.getElementById('densityPreset')?.value || '0.2'),
+        densityPreset: normalizeDensityPresetKey(document.getElementById('densityPreset')?.value || 'standard'),
         manualMin: parseInt(document.getElementById('manualMin')?.value || '0', 10) || 0,
         manualMax: parseInt(document.getElementById('manualMax')?.value || '0', 10) || 0,
         generationProfile: document.getElementById('generationProfile')?.value || 'high_adventure',

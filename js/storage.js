@@ -3,8 +3,9 @@
     state
 } from './config.js';
 import { isAutoSeedEnabled, isRealisticPlanetWeightingEnabled, setSeed, showStatusMessage } from './core.js';
-import { setDensityMode, setSizeMode } from './controls.js';
+import { setDensityMode, setSizeMode, syncDensityPresetForProfile } from './controls.js';
 import { EVENTS, emitEvent } from './events.js';
+import { normalizeDensityPresetKey } from './generation-data.js';
 import { getGlobalHexDisplayId } from './render-shared.js';
 import { clearInfoPanel, drawGrid, selectHex } from './render.js';
 
@@ -436,11 +437,15 @@ export function applySectorPayload(payload) {
     refs.gridWidthInput.value = width;
     refs.gridHeightInput.value = height;
 
+    if (payload.generationProfile && refs.generationProfileSelect) {
+        refs.generationProfileSelect.value = payload.generationProfile;
+    }
+    syncDensityPresetForProfile(refs.generationProfileSelect ? refs.generationProfileSelect.value : 'high_adventure');
     if (payload.densityMode) {
         setDensityMode(payload.densityMode);
     }
-    if (payload.densityPreset && refs.densityPresetSelect) {
-        refs.densityPresetSelect.value = payload.densityPreset;
+    if (refs.densityPresetSelect) {
+        refs.densityPresetSelect.value = normalizeDensityPresetKey(payload.densityPreset);
     }
     if (payload.manualRange) {
         if (typeof payload.manualRange.min === 'number') {
@@ -456,10 +461,6 @@ export function applySectorPayload(payload) {
     if (typeof payload.realisticPlanetWeights === 'boolean') {
         if (refs.realisticWeightsToggle) refs.realisticWeightsToggle.checked = payload.realisticPlanetWeights;
     }
-    if (payload.generationProfile && refs.generationProfileSelect) {
-        refs.generationProfileSelect.value = payload.generationProfile;
-    }
-
     if (refs.seedInput) refs.seedInput.value = payload.seed || '';
 
     if (payload.seed) {
@@ -481,7 +482,7 @@ export function applySectorPayload(payload) {
         width,
         height,
         densityMode: payload.densityMode || state.densityMode,
-        densityPreset: payload.densityPreset,
+        densityPreset: normalizeDensityPresetKey(payload.densityPreset),
         manualMin: payload.manualRange && typeof payload.manualRange.min === 'number' ? payload.manualRange.min : 0,
         manualMax: payload.manualRange && typeof payload.manualRange.max === 'number' ? payload.manualRange.max : 0,
         generationProfile: payload.generationProfile || 'high_adventure',

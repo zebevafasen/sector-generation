@@ -1,4 +1,11 @@
-import { setDensityMode, setSizeMode, setupFieldInfoTooltips, setupStarClassTooltip, syncManualDensityLimits } from './controls.js';
+import {
+    setDensityMode,
+    setSizeMode,
+    setupFieldInfoTooltips,
+    setupStarClassTooltip,
+    syncDensityPresetForProfile,
+    syncManualDensityLimits
+} from './controls.js';
 import { randomizeSeed } from './core.js';
 import { EVENTS } from './events.js';
 import { state } from './config.js';
@@ -208,6 +215,9 @@ function bindUiEvents() {
     refs.modePresetBtn?.addEventListener('click', autoSaveSectorState);
     refs.modeManualBtn?.addEventListener('click', autoSaveSectorState);
     refs.randomizeSeedBtn?.addEventListener('click', autoSaveSectorState);
+    refs.generationProfile?.addEventListener('change', () => {
+        syncDensityPresetForProfile(refs.generationProfile.value);
+    });
     window.addEventListener(EVENTS.SECTOR_DATA_CHANGED, autoSaveSectorState);
     window.addEventListener(EVENTS.REQUEST_ADD_SYSTEM_AT_HEX, (event) => {
         if (!state.editMode) return;
@@ -267,6 +277,7 @@ window.onload = function() {
     const importInput = document.getElementById('importFileInput');
     if (importInput) importInput.addEventListener('change', handleImportFile);
     setSizeMode('preset');
+    syncDensityPresetForProfile();
     syncManualDensityLimits();
     setEditMode(false);
     updateEditModeUi();

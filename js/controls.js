@@ -1,5 +1,6 @@
 import { state } from './config.js';
 import { hideFieldInfoTooltip, hideStarClassInfo, showFieldInfoTooltip, showStarClassInfo } from './core.js';
+import { getDensityRatioForPreset, normalizeDensityPresetKey } from './generation-data.js';
 
 const controlsRefsCache = {};
 
@@ -7,6 +8,7 @@ function getControlsRefs() {
     if (!controlsRefsCache.modePresetBtn) {
         controlsRefsCache.modePresetBtn = document.getElementById('modePresetBtn');
         controlsRefsCache.modeManualBtn = document.getElementById('modeManualBtn');
+        controlsRefsCache.densityPresetSelect = document.getElementById('densityPreset');
         controlsRefsCache.densityPresetContainer = document.getElementById('densityPresetContainer');
         controlsRefsCache.densityManualContainer = document.getElementById('densityManualContainer');
         controlsRefsCache.modeSizePresetBtn = document.getElementById('modeSizePresetBtn');
@@ -21,6 +23,35 @@ function getControlsRefs() {
         controlsRefsCache.infoStarClass = document.getElementById('infoStarClass');
     }
     return controlsRefsCache;
+}
+
+export function syncDensityPresetForProfile(profileKey = null) {
+    const refs = getControlsRefs();
+    const densitySelect = refs.densityPresetSelect;
+    if (!densitySelect) return;
+
+    const activeProfile = profileKey || document.getElementById('generationProfile')?.value || 'high_adventure';
+    const normalizedSelection = normalizeDensityPresetKey(densitySelect.value || 'standard');
+    if (densitySelect.value !== normalizedSelection) {
+        densitySelect.value = normalizedSelection;
+    }
+
+    const labels = {
+        void: 'Void',
+        sparse: 'Sparse',
+        standard: 'Standard',
+        busy: 'Busy',
+        dense: 'Dense',
+        core: 'Core'
+    };
+
+    Array.from(densitySelect.options).forEach((option) => {
+        const preset = normalizeDensityPresetKey(option.value);
+        const label = labels[preset];
+        if (!label) return;
+        const percent = Math.round(getDensityRatioForPreset(preset, activeProfile) * 100);
+        option.textContent = `${label} (${percent}%)`;
+    });
 }
 
 export function syncManualDensityLimits() {

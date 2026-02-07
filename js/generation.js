@@ -8,7 +8,9 @@ import {
 } from './config.js';
 import {
     ADJACENT_DUPLICATE_NAME_CHANCE,
-    GENERATION_PROFILES
+    GENERATION_PROFILES,
+    getDensityRatioForPreset,
+    normalizeDensityPresetKey
 } from './generation-data.js';
 import { EVENTS, emitEvent } from './events.js';
 import { reportSystemInvariantIssues } from './invariants.js';
@@ -55,7 +57,7 @@ function readGenerationConfigFromUi() {
         width: parseInt(document.getElementById('gridWidth')?.value || '8', 10),
         height: parseInt(document.getElementById('gridHeight')?.value || '10', 10),
         densityMode: state.densityMode || 'preset',
-        densityPreset: densityPresetSelect ? parseFloat(densityPresetSelect.value) : 0.2,
+        densityPreset: normalizeDensityPresetKey(densityPresetSelect ? densityPresetSelect.value : 'standard'),
         manualMin: manualMinInput ? parseInt(manualMinInput.value, 10) : 0,
         manualMax: manualMaxInput ? parseInt(manualMaxInput.value, 10) : 0,
         generationProfile: profileSelect ? profileSelect.value : 'high_adventure',
@@ -78,9 +80,7 @@ function normalizeGenerationConfig(config) {
     if (!Number.isFinite(height) || height < 1) height = GRID_PRESETS.standard.height;
 
     const densityMode = source.densityMode === 'manual' ? 'manual' : 'preset';
-    let densityPreset = parseFloat(source.densityPreset);
-    if (!Number.isFinite(densityPreset)) densityPreset = 0.2;
-    densityPreset = Math.min(Math.max(densityPreset, 0), 1);
+    const densityPreset = normalizeDensityPresetKey(source.densityPreset);
 
     let manualMin = parseInt(source.manualMin, 10);
     let manualMax = parseInt(source.manualMax, 10);
@@ -180,7 +180,8 @@ function generateSystemName(coordId, usedNames, sectorsByCoord) {
 
 function computeSystemCount(totalHexes, config) {
     if (config.densityMode === 'preset') {
-        return Math.floor(totalHexes * config.densityPreset);
+        const densityRatio = getDensityRatioForPreset(config.densityPreset, config.generationProfile);
+        return Math.floor(totalHexes * densityRatio);
     }
 
     let min = config.manualMin;

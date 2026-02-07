@@ -27,6 +27,62 @@ export const HABITABLE_WORLD_SUFFIXES = [
     'Prospect', 'Utopia', 'Arcadia', 'New Dawn', 'Greenfall', 'Crossing'
 ];
 
+export const DENSITY_PRESET_BASE_RATIOS = {
+    void: 0.05,
+    sparse: 0.15,
+    busy: 0.33,
+    dense: 0.50,
+    core: 0.70
+};
+
+export const DENSITY_PRESET_RATIOS_BY_PROFILE = {
+    high_adventure: {
+        void: 0.05,
+        sparse: 0.15,
+        standard: 0.20,
+        busy: 0.33,
+        dense: 0.50,
+        core: 0.70
+    },
+    hard_scifi: {
+        void: 0.03,
+        sparse: 0.10,
+        standard: 0.15,
+        busy: 0.25,
+        dense: 0.40,
+        core: 0.55
+    },
+    cinematic: {
+        void: 0.08,
+        sparse: 0.20,
+        standard: 0.33,
+        busy: 0.50,
+        dense: 0.70,
+        core: 0.85
+    }
+};
+
+export function normalizeDensityPresetKey(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    if (raw in DENSITY_PRESET_BASE_RATIOS || raw === 'standard') return raw;
+
+    const numeric = Number.parseFloat(raw);
+    if (!Number.isFinite(numeric)) return 'standard';
+    if (Math.abs(numeric - 0.05) < 0.001) return 'void';
+    if (Math.abs(numeric - 0.15) < 0.001) return 'sparse';
+    if (Math.abs(numeric - 0.20) < 0.001) return 'standard';
+    if (Math.abs(numeric - 0.33) < 0.001) return 'busy';
+    if (Math.abs(numeric - 0.50) < 0.001) return 'dense';
+    if (Math.abs(numeric - 0.70) < 0.001) return 'core';
+    return 'standard';
+}
+
+export function getDensityRatioForPreset(presetKey, profileKey) {
+    const normalizedPreset = normalizeDensityPresetKey(presetKey);
+    const profileRatios = DENSITY_PRESET_RATIOS_BY_PROFILE[profileKey] || DENSITY_PRESET_RATIOS_BY_PROFILE.high_adventure;
+    return profileRatios[normalizedPreset] || DENSITY_PRESET_BASE_RATIOS[normalizedPreset] || DENSITY_PRESET_RATIOS_BY_PROFILE.high_adventure.standard;
+}
+
 export const GENERATION_PROFILES = {
     cinematic: {
         inhabitedChance: 0.45,
