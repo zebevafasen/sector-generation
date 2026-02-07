@@ -3,6 +3,20 @@ import { hideFieldInfoTooltip, hideStarClassInfo, showFieldInfoTooltip, showStar
 import { getDensityRatioForPreset, normalizeDensityPresetKey } from './generation-data.js';
 
 const controlsRefsCache = {};
+const MODE_BUTTON_BASE_CLASSES = ['flex-1', 'py-1', 'text-xs', 'rounded', 'transition-all'];
+const MODE_BUTTON_ACTIVE_CLASSES = ['bg-sky-600', 'text-white', 'shadow'];
+const MODE_BUTTON_INACTIVE_CLASSES = ['text-slate-400', 'hover:text-white'];
+
+function setModeButtonState(button, isActive) {
+    if (!button) return;
+    button.classList.add(...MODE_BUTTON_BASE_CLASSES);
+    button.classList.remove(...MODE_BUTTON_ACTIVE_CLASSES, ...MODE_BUTTON_INACTIVE_CLASSES);
+    if (isActive) {
+        button.classList.add(...MODE_BUTTON_ACTIVE_CLASSES);
+    } else {
+        button.classList.add(...MODE_BUTTON_INACTIVE_CLASSES);
+    }
+}
 
 function getControlsRefs() {
     if (!controlsRefsCache.modePresetBtn) {
@@ -87,13 +101,13 @@ export function setDensityMode(mode) {
     const divManual = refs.densityManualContainer;
 
     if (mode === 'preset') {
-        btnPreset.className = 'flex-1 py-1 text-xs rounded bg-sky-600 text-white shadow transition-all';
-        btnManual.className = 'flex-1 py-1 text-xs rounded text-slate-400 hover:text-white transition-all';
+        setModeButtonState(btnPreset, true);
+        setModeButtonState(btnManual, false);
         divPreset.classList.remove('hidden');
         divManual.classList.add('hidden');
     } else {
-        btnManual.className = 'flex-1 py-1 text-xs rounded bg-sky-600 text-white shadow transition-all';
-        btnPreset.className = 'flex-1 py-1 text-xs rounded text-slate-400 hover:text-white transition-all';
+        setModeButtonState(btnManual, true);
+        setModeButtonState(btnPreset, false);
         divPreset.classList.add('hidden');
         divManual.classList.remove('hidden');
     }
@@ -108,13 +122,13 @@ export function setSizeMode(mode) {
     const customContainer = refs.sizeCustomContainer;
 
     if (mode === 'preset') {
-        btnPreset.className = 'flex-1 py-1 text-xs rounded bg-sky-600 text-white shadow transition-all';
-        btnCustom.className = 'flex-1 py-1 text-xs rounded text-slate-400 hover:text-white transition-all';
+        setModeButtonState(btnPreset, true);
+        setModeButtonState(btnCustom, false);
         presetContainer.classList.remove('hidden');
         customContainer.classList.add('hidden');
     } else {
-        btnCustom.className = 'flex-1 py-1 text-xs rounded bg-sky-600 text-white shadow transition-all';
-        btnPreset.className = 'flex-1 py-1 text-xs rounded text-slate-400 hover:text-white transition-all';
+        setModeButtonState(btnCustom, true);
+        setModeButtonState(btnPreset, false);
         presetContainer.classList.add('hidden');
         customContainer.classList.remove('hidden');
     }
