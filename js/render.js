@@ -392,6 +392,12 @@ export function updateInfoPanel(id) {
                 li.innerHTML = html;
 
                 const selectBody = () => {
+                    if (selectedBodyEl === li) {
+                        li.classList.remove('ring-1', 'ring-sky-500/70', 'border-sky-500/70');
+                        selectedBodyEl = null;
+                        resetBodyDetailsPanel();
+                        return;
+                    }
                     if (selectedBodyEl) {
                         selectedBodyEl.classList.remove('ring-1', 'ring-sky-500/70', 'border-sky-500/70');
                     }
