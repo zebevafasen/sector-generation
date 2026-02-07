@@ -185,11 +185,8 @@
                     </div>
                     <p id="selectedSystemPinState" class="text-[11px] text-slate-500">Pinned: No</p>
                     <div id="editModeControls" class="hidden grid grid-cols-2 gap-2">
-                        <button id="editAddPlanetBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-emerald-500 transition-colors">Add Planet</button>
-                        <button id="editAddBeltBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-violet-500 transition-colors">Add Belt</button>
-                        <button id="editAddStationBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-fuchsia-500 transition-colors">Add Station</button>
                         <button id="editDeleteBodyBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-rose-500 transition-colors">Delete Object</button>
-                        <button id="editDeleteSystemBtn" class="col-span-2 py-1.5 text-xs rounded bg-rose-900/35 border border-rose-700 text-rose-200 hover:bg-rose-800/40 hover:border-rose-500 transition-colors">Delete System</button>
+                        <button id="editDeleteSystemBtn" class="py-1.5 text-xs rounded bg-rose-900/35 border border-rose-700 text-rose-200 hover:bg-rose-800/40 hover:border-rose-500 transition-colors">Delete System</button>
                     </div>
 
                     <!-- Star Info -->
@@ -199,11 +196,25 @@
                             <div class="flex-1">
                                 <div class="flex items-center justify-between gap-2">
                                     <h3 id="infoSystemName" class="font-bold text-sky-300">System Name</h3>
-                                    <button id="renameSystemBtn" class="px-2 py-0.5 text-[10px] rounded bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:border-sky-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Rename</button>
+                                    <button id="renameSystemBtn" class="w-6 h-6 inline-flex items-center justify-center text-xs rounded bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:border-sky-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Rename system" aria-label="Rename system">✎</button>
                                 </div>
                                 <div class="flex flex-wrap gap-3 text-xs mt-0.5">
                                     <p id="infoStarClass" class="text-slate-400">Class G2V</p>
                                     <p id="infoStarAge" class="text-slate-500">Age: --</p>
+                                </div>
+                                <div id="editStarClassRow" class="hidden mt-2">
+                                    <label class="block text-[10px] text-slate-500 mb-1">Star Type</label>
+                                    <select id="editStarClassSelect" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 focus:border-sky-500 focus:outline-none">
+                                        <option value="O">O</option>
+                                        <option value="B">B</option>
+                                        <option value="A">A</option>
+                                        <option value="F">F</option>
+                                        <option value="G">G</option>
+                                        <option value="K">K</option>
+                                        <option value="M">M</option>
+                                        <option value="Neutron">Neutron</option>
+                                        <option value="Black Hole">Black Hole</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -224,19 +235,28 @@
                     <!-- Bodies List -->
                     <div class="space-y-3 pr-1">
                         <details open class="bg-slate-900/30 rounded border border-slate-800 p-2">
-                            <summary id="infoPlanetSummary" class="text-xs font-bold text-slate-500 uppercase cursor-pointer select-none">Planets (0)</summary>
+                            <summary id="infoPlanetSummary" class="text-xs font-bold text-slate-500 uppercase cursor-pointer select-none flex items-center justify-between gap-2">
+                                <span id="infoPlanetSummaryLabel">Planets (0)</span>
+                                <button id="editAddPlanetInSectionBtn" class="hidden w-5 h-5 inline-flex items-center justify-center rounded border border-slate-600 text-slate-300 hover:text-white hover:border-emerald-500" title="Add planet" aria-label="Add planet">+</button>
+                            </summary>
                             <ul id="infoPlanetList" class="space-y-2 text-sm text-slate-300 mt-2">
                                 <!-- Populated by JS -->
                             </ul>
                         </details>
                         <details open class="bg-slate-900/30 rounded border border-slate-800 p-2">
-                            <summary id="infoBeltSummary" class="text-xs font-bold text-slate-500 uppercase cursor-pointer select-none">Belts &amp; Fields (0)</summary>
+                            <summary id="infoBeltSummary" class="text-xs font-bold text-slate-500 uppercase cursor-pointer select-none flex items-center justify-between gap-2">
+                                <span id="infoBeltSummaryLabel">Belts &amp; Fields (0)</span>
+                                <button id="editAddBeltInSectionBtn" class="hidden w-5 h-5 inline-flex items-center justify-center rounded border border-slate-600 text-slate-300 hover:text-white hover:border-violet-500" title="Add belt or field" aria-label="Add belt or field">+</button>
+                            </summary>
                             <ul id="infoBeltList" class="space-y-2 text-sm text-slate-300 mt-2">
                                 <!-- Populated by JS -->
                             </ul>
                         </details>
                         <details open class="bg-slate-900/30 rounded border border-slate-800 p-2">
-                            <summary id="infoStationSummary" class="text-xs font-bold text-slate-500 uppercase cursor-pointer select-none">Stations (0)</summary>
+                            <summary id="infoStationSummary" class="text-xs font-bold text-slate-500 uppercase cursor-pointer select-none flex items-center justify-between gap-2">
+                                <span id="infoStationSummaryLabel">Stations (0)</span>
+                                <button id="editAddStationInSectionBtn" class="hidden w-5 h-5 inline-flex items-center justify-center rounded border border-slate-600 text-slate-300 hover:text-white hover:border-fuchsia-500" title="Add station" aria-label="Add station">+</button>
+                            </summary>
                             <ul id="infoStationList" class="space-y-2 text-sm text-slate-300 mt-2">
                                 <!-- Populated by JS -->
                             </ul>
@@ -265,8 +285,20 @@
                 <span id="infoBodyDetailsType" class="text-[11px] text-slate-400">Type</span>
             </div>
             <div class="mt-2 flex items-center gap-2">
-                <button id="renameBodyBtn" class="px-2 py-0.5 text-[10px] rounded bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:border-sky-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Rename</button>
+                <button id="renameBodyBtn" class="w-6 h-6 inline-flex items-center justify-center text-xs rounded bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:border-sky-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Rename object" aria-label="Rename object">✎</button>
                 <button id="quickDeleteBodyBtn" class="hidden w-6 h-6 inline-flex items-center justify-center text-xs rounded bg-rose-900/35 border border-rose-700 text-rose-200 hover:bg-rose-800/40 hover:border-rose-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Delete object" aria-label="Delete object">🗑</button>
+            </div>
+            <div id="editPlanetTypeRow" class="hidden mt-2">
+                <label class="block text-[10px] text-slate-500 mb-1">Planet Type</label>
+                <select id="editPlanetTypeSelect" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 focus:border-sky-500 focus:outline-none">
+                    <option value="Gas Giant">Gas Giant</option>
+                    <option value="Terrestrial">Terrestrial</option>
+                    <option value="Oceanic">Oceanic</option>
+                    <option value="Volcanic">Volcanic</option>
+                    <option value="Desert">Desert</option>
+                    <option value="Barren">Barren</option>
+                    <option value="Arctic">Arctic</option>
+                </select>
             </div>
             <p id="infoBodyDetailsPlaceholder" class="text-xs text-slate-400 mt-2">Detailed stats coming soon.</p>
         </div>
