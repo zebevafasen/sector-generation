@@ -1,5 +1,5 @@
-import { SYSTEM_NAME_PREFIX } from './system_name_prefix.js';
-import { SYSTEM_NAME_SUFFIX } from './system_name_suffix.js';
+import { SYSTEM_NAME_PREFIX } from '../names/system_names/system_name_prefix.js';
+import { SYSTEM_NAME_SUFFIX } from '../names/system_names/system_name_suffix.js';
 export const HEX_SIZE = 40;
 export const HEX_WIDTH = Math.sqrt(3) * HEX_SIZE;
 export const HEX_HEIGHT = 2 * HEX_SIZE;
