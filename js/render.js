@@ -2,6 +2,7 @@
 import { formatStarAgeValue, generateStarAge, getStarClassInfo, hideStarClassInfo } from './core.js';
 import { getBodyIconMarkup, normalizeBodyType } from './body-icons.js';
 import { EVENTS, emitEvent } from './events.js';
+import { reportSystemInvariantIssues } from './invariants.js';
 
 const STAR_GRADIENT_CACHE = {};
 
@@ -427,6 +428,7 @@ function configureSystemHeaderAndStar(refs, system, id, preselectedBodyIndex) {
                     current.color = nextPalette.core;
                     current.glow = nextPalette.halo;
                     current.starAge = generateStarAge(nextClass);
+                    reportSystemInvariantIssues(current, 'edit-star-class');
                     notifySectorDataChanged();
                     redrawAndReselect(id, state.selectedBodyIndex);
                 };
@@ -533,6 +535,7 @@ function renderSystemBodyLists(refs, system, id, preselectedBodyIndex) {
                         const targetSystem = state.sectors[id];
                         if (!targetSystem || !targetSystem.planets[bodyIndex]) return;
                         targetSystem.planets[bodyIndex].type = refs.editPlanetTypeSelect.value;
+                        reportSystemInvariantIssues(targetSystem, 'edit-planet-type');
                         notifySectorDataChanged();
                         updateInfoPanel(id, bodyIndex);
                     };

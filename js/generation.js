@@ -16,6 +16,7 @@ import {
     STAR_CLASS_PLANET_WEIGHTS
 } from './generation-data.js';
 import { EVENTS, emitEvent } from './events.js';
+import { reportSystemInvariantIssues } from './invariants.js';
 import { generateStarAge, generateSeedString, isAutoSeedEnabled, rand, setSeed, showStatusMessage } from './core.js';
 import { autoSaveSectorState, buildSectorPayload } from './storage.js';
 import { redrawGridAndReselect, refreshHexInfo, clearSelectionInfo } from './ui-sync.js';
@@ -405,6 +406,7 @@ function applyPlanetaryOrderAndNames(systemName, bodies) {
 function reconcilePlanetaryBodies(system) {
     if (!system || !Array.isArray(system.planets)) return;
     system.planets = applyPlanetaryOrderAndNames(system.name, system.planets);
+    reportSystemInvariantIssues(system, 'reconcile');
 }
 
 export function generateSector() {
@@ -516,7 +518,7 @@ export function generateSystemData(config = null, context = null) {
     }
 
     const visuals = STAR_VISUALS[sClass] || STAR_VISUALS.default;
-    return {
+    const generatedSystem = {
         name,
         starClass: sClass,
         color: visuals.core,
@@ -526,6 +528,8 @@ export function generateSystemData(config = null, context = null) {
         planets,
         totalPop: population > 0 ? `${population} Billion` : 'None'
     };
+    reportSystemInvariantIssues(generatedSystem, 'generate');
+    return generatedSystem;
 }
 
 function notifyEditModeChanged() {
@@ -558,6 +562,7 @@ export function addSystemAtHex(hexId) {
         usedNames,
         sectorsByCoord: state.sectors
     });
+    reportSystemInvariantIssues(state.sectors[hexId], 'add-system');
 
     redrawGridAndReselect(config.width, config.height, { selectedHexId: hexId });
     sanitizePinnedHexes(config.width, config.height);
@@ -628,6 +633,7 @@ export function addBodyToSelectedSystem(kind) {
 
     state.selectedBodyIndex = null;
     refreshHexInfo(selectedHexId);
+    reportSystemInvariantIssues(system, 'add-body');
     const config = getGenerationConfigSnapshot();
     refreshSectorSnapshot(config, config.width, config.height);
     showStatusMessage('Added new object.', 'success');
@@ -652,6 +658,7 @@ export function deleteSelectedBody() {
     }
 
     refreshHexInfo(selectedHexId);
+    reportSystemInvariantIssues(system, 'delete-body');
     const config = getGenerationConfigSnapshot();
     refreshSectorSnapshot(config, config.width, config.height);
     showStatusMessage('Deleted selected object.', 'success');
@@ -678,6 +685,7 @@ export function rerollSelectedSystem() {
         usedNames,
         sectorsByCoord: otherSystems
     });
+    reportSystemInvariantIssues(state.sectors[selectedHexId], 'reroll-selected');
 
     redrawGridAndReselect(config.width, config.height, { selectedHexId });
     sanitizePinnedHexes(config.width, config.height);
