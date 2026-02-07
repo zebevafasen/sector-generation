@@ -105,14 +105,8 @@ function resetBodyDetailsPanel() {
     if (content) content.classList.add('hidden');
     if (name) name.innerText = 'Body';
     if (type) type.innerText = 'Type';
-    if (renameBodyBtn) {
-        renameBodyBtn.disabled = true;
-        renameBodyBtn.onclick = null;
-    }
-    if (quickDeleteBodyBtn) {
-        quickDeleteBodyBtn.disabled = true;
-        quickDeleteBodyBtn.onclick = null;
-    }
+    setButtonAction(renameBodyBtn, false);
+    setButtonAction(quickDeleteBodyBtn, false);
     if (editPlanetTypeRow) editPlanetTypeRow.classList.add('hidden');
     if (editPlanetTypeSelect) editPlanetTypeSelect.onchange = null;
     if (placeholder) placeholder.innerText = 'Detailed stats coming soon.';
@@ -166,6 +160,12 @@ function setPinButtonStyle(button, isPinned) {
     } else {
         button.className = `${base} bg-emerald-900/30 border-emerald-700 text-emerald-200 hover:bg-emerald-800/40 hover:border-emerald-500`;
     }
+}
+
+function setButtonAction(button, enabled, onClick = null) {
+    if (!button) return;
+    button.disabled = !enabled;
+    button.onclick = enabled ? onClick : null;
 }
 
 function getInfoPanelRefs() {
@@ -463,8 +463,7 @@ export function updateInfoPanel(id, preselectedBodyIndex = null) {
 
         refs.systemName.innerText = system.name;
         if (refs.renameSystemBtn) {
-            refs.renameSystemBtn.disabled = false;
-            refs.renameSystemBtn.onclick = () => {
+            setButtonAction(refs.renameSystemBtn, true, () => {
                 const nextNameRaw = prompt('Rename system', system.name);
                 if (nextNameRaw === null) return;
                 const nextName = nextNameRaw.trim();
@@ -472,7 +471,7 @@ export function updateInfoPanel(id, preselectedBodyIndex = null) {
                 system.name = nextName;
                 notifySectorDataChanged();
                 updateInfoPanel(id, preselectedBodyIndex);
-            };
+            });
         }
         if (refs.editStarClassRow) {
             const canEditStar = state.editMode;
@@ -563,14 +562,8 @@ export function updateInfoPanel(id, preselectedBodyIndex = null) {
                         li.classList.remove('ring-1', 'ring-sky-500/70', 'border-sky-500/70');
                         selectedBodyEl = null;
                         state.selectedBodyIndex = null;
-                        if (refs.renameBodyBtn) {
-                            refs.renameBodyBtn.disabled = true;
-                            refs.renameBodyBtn.onclick = null;
-                        }
-                        if (refs.quickDeleteBodyBtn) {
-                            refs.quickDeleteBodyBtn.disabled = true;
-                            refs.quickDeleteBodyBtn.onclick = null;
-                        }
+                        setButtonAction(refs.renameBodyBtn, false);
+                        setButtonAction(refs.quickDeleteBodyBtn, false);
                         resetBodyDetailsPanel();
                         return;
                     }
@@ -582,8 +575,7 @@ export function updateInfoPanel(id, preselectedBodyIndex = null) {
                     state.selectedBodyIndex = bodyIndex;
                     showBodyDetailsPanel(body, li);
                     if (refs.renameBodyBtn) {
-                        refs.renameBodyBtn.disabled = false;
-                        refs.renameBodyBtn.onclick = () => {
+                        setButtonAction(refs.renameBodyBtn, true, () => {
                             const currentName = system.planets[bodyIndex] ? system.planets[bodyIndex].name : body.name;
                             const nextNameRaw = prompt('Rename object', currentName);
                             if (nextNameRaw === null) return;
@@ -592,7 +584,7 @@ export function updateInfoPanel(id, preselectedBodyIndex = null) {
                             system.planets[bodyIndex].name = nextName;
                             notifySectorDataChanged();
                             updateInfoPanel(id, bodyIndex);
-                        };
+                        });
                     }
                     if (refs.editPlanetTypeRow && refs.editPlanetTypeSelect) {
                         const isPlanetary = normalizedType !== 'Artificial' && !/belt|field/i.test(normalizedType);
@@ -612,12 +604,11 @@ export function updateInfoPanel(id, preselectedBodyIndex = null) {
                         }
                     }
                     if (refs.quickDeleteBodyBtn && state.editMode) {
-                        refs.quickDeleteBodyBtn.disabled = false;
-                        refs.quickDeleteBodyBtn.onclick = () => {
+                        setButtonAction(refs.quickDeleteBodyBtn, true, () => {
                             if (typeof window !== 'undefined') {
                                 window.dispatchEvent(new Event('requestDeleteSelectedBody'));
                             }
-                        };
+                        });
                     }
                 };
 
@@ -686,19 +677,10 @@ export function updateInfoPanel(id, preselectedBodyIndex = null) {
                 refs.addSystemHereBtn.onclick = null;
             }
         }
-        if (refs.renameSystemBtn) {
-            refs.renameSystemBtn.disabled = true;
-            refs.renameSystemBtn.onclick = null;
-        }
+        setButtonAction(refs.renameSystemBtn, false);
         disableStarEditControls(refs);
-        if (refs.renameBodyBtn) {
-            refs.renameBodyBtn.disabled = true;
-            refs.renameBodyBtn.onclick = null;
-        }
-        if (refs.quickDeleteBodyBtn) {
-            refs.quickDeleteBodyBtn.disabled = true;
-            refs.quickDeleteBodyBtn.onclick = null;
-        }
+        setButtonAction(refs.renameBodyBtn, false);
+        setButtonAction(refs.quickDeleteBodyBtn, false);
         disablePlanetTypeControls(refs);
         setBodySummaryLabels(refs, 0, 0, 0);
         if (refs.pinSelectedSystemBtn) {
@@ -729,18 +711,9 @@ export function clearInfoPanel() {
     }
 
     if (refs.starAgeLabel) refs.starAgeLabel.innerText = 'Age: --';
-    if (refs.renameSystemBtn) {
-        refs.renameSystemBtn.disabled = true;
-        refs.renameSystemBtn.onclick = null;
-    }
-    if (refs.renameBodyBtn) {
-        refs.renameBodyBtn.disabled = true;
-        refs.renameBodyBtn.onclick = null;
-    }
-    if (refs.quickDeleteBodyBtn) {
-        refs.quickDeleteBodyBtn.disabled = true;
-        refs.quickDeleteBodyBtn.onclick = null;
-    }
+    setButtonAction(refs.renameSystemBtn, false);
+    setButtonAction(refs.renameBodyBtn, false);
+    setButtonAction(refs.quickDeleteBodyBtn, false);
     if (refs.addSystemHereBtn) {
         refs.addSystemHereBtn.classList.add('hidden');
         refs.addSystemHereBtn.onclick = null;

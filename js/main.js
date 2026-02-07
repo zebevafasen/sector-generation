@@ -131,8 +131,8 @@ function bindUiEvents() {
         if (!state.editMode) return;
         deleteSelectedBody();
     });
-    window.addEventListener('editModeChanged', updateEditModeUi);
     window.addEventListener('editModeChanged', () => {
+        updateEditModeUi();
         if (state.selectedHexId) {
             updateInfoPanel(state.selectedHexId, state.selectedBodyIndex);
         }
