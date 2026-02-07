@@ -125,6 +125,7 @@ function bindUiEvents() {
 function updateEditModeUi() {
     const toggleBtn = document.getElementById('editModeToggleBtn');
     const editControls = document.getElementById('editModeControls');
+    const quickDeleteBodyBtn = document.getElementById('quickDeleteBodyBtn');
     if (toggleBtn) {
         toggleBtn.innerText = state.editMode ? 'EDIT MODE: ON' : 'EDIT MODE: OFF';
         toggleBtn.className = state.editMode
@@ -133,6 +134,13 @@ function updateEditModeUi() {
     }
     if (editControls) {
         editControls.classList.toggle('hidden', !state.editMode);
+    }
+    if (quickDeleteBodyBtn) {
+        quickDeleteBodyBtn.classList.toggle('hidden', !state.editMode);
+        if (!state.editMode) {
+            quickDeleteBodyBtn.disabled = true;
+            quickDeleteBodyBtn.onclick = null;
+        }
     }
 }
 

@@ -506,7 +506,7 @@ export function updateInfoPanel(id, preselectedBodyIndex = null) {
                             updateInfoPanel(id, bodyIndex);
                         };
                     }
-                    if (quickDeleteBodyBtn) {
+                    if (quickDeleteBodyBtn && state.editMode) {
                         quickDeleteBodyBtn.disabled = false;
                         quickDeleteBodyBtn.onclick = () => {
                             if (typeof window !== 'undefined') {
