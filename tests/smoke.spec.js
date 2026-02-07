@@ -24,3 +24,39 @@ test('can generate sector and reroll a selected planet from details panel', asyn
   await expect(page.locator('#infoBodyDetailsContent')).toBeVisible();
   await expect(page.locator('#infoBodyDetailsName')).not.toHaveText('Body');
 });
+
+test('renaming a system can rename linked planet names', async ({ page }) => {
+  await page.goto('/sector_generator.html');
+  await page.locator('#generateSectorBtn').click();
+
+  const populatedHex = page.locator('.hex-group').filter({
+    has: page.locator('circle.star-circle')
+  }).first();
+  await populatedHex.click();
+
+  await expect(page.locator('#systemDetails')).toBeVisible();
+
+  const newSystemName = 'Renamed Test System';
+  page.on('dialog', async (dialog) => {
+    const message = dialog.message();
+    if (message.startsWith('Rename system')) {
+      await dialog.accept(newSystemName);
+      return;
+    }
+    if (message.startsWith('Also rename linked planets/objects')) {
+      await dialog.accept();
+      return;
+    }
+    await dialog.dismiss();
+  });
+
+  const firstPlanetNameBefore = (await page.locator('#infoPlanetList li .inline-flex.items-center.gap-2').first().innerText()).trim();
+  await page.locator('#renameSystemBtn').click();
+
+  await expect(page.locator('#infoSystemName')).toHaveText(newSystemName);
+
+  const firstPlanetNameAfter = (await page.locator('#infoPlanetList li .inline-flex.items-center.gap-2').first().innerText()).trim();
+  if (firstPlanetNameBefore.includes(' ')) {
+    await expect(firstPlanetNameAfter.startsWith(`${newSystemName} `)).toBeTruthy();
+  }
+});

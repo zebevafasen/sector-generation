@@ -2,6 +2,7 @@ import { state } from './config.js';
 import { showStatusMessage } from './core.js';
 import { EVENTS } from './events.js';
 import { selectHex } from './render.js';
+import { countSystemBodies, isPlanetaryBody } from './body-classification.js';
 
 function getSearchRefs() {
     return {
@@ -16,10 +17,6 @@ function getSearchRefs() {
         resultsCount: document.getElementById('searchResultsCount'),
         resultsList: document.getElementById('searchResultsList')
     };
-}
-
-function isPlanetaryBody(body) {
-    return !!body && body.type !== 'Artificial' && !/belt|field/i.test(body.type || '');
 }
 
 function normalize(value) {
@@ -48,19 +45,7 @@ function systemHasTag(system, tagValue) {
 }
 
 function getBodyCounts(system) {
-    if (!system || !Array.isArray(system.planets)) return { planets: 0, belts: 0, stations: 0 };
-    return system.planets.reduce((acc, body) => {
-        if (body.type === 'Artificial') {
-            acc.stations += 1;
-            return acc;
-        }
-        if (/belt|field/i.test(body.type || '')) {
-            acc.belts += 1;
-            return acc;
-        }
-        acc.planets += 1;
-        return acc;
-    }, { planets: 0, belts: 0, stations: 0 });
+    return countSystemBodies(system);
 }
 
 function readFilters(refs) {

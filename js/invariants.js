@@ -1,6 +1,4 @@
-function isPlanetaryBody(body) {
-    return !!body && body.type !== 'Artificial' && !/belt|field/i.test(body.type);
-}
+import { isPlanetaryBody } from './body-classification.js';
 
 export function validateSystemInvariants(system) {
     const issues = [];
