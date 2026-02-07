@@ -206,6 +206,15 @@ function setInhabitButtonStyle(button, isUninhabit) {
     }
 }
 
+function escapeHtml(value) {
+    return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 function renameBodiesForSystemNameChange(system, oldName, newName) {
     if (!system || !Array.isArray(system.planets)) return;
     const oldSystemPrefix = `${oldName} `;
@@ -617,8 +626,11 @@ function renderSystemBodyLists(refs, system, id, preselectedBodyIndex) {
         const bodyIcon = getBodyIconMarkup(normalizedType);
         const isPlanetary = normalizedType !== 'Artificial' && !/belt|field/i.test(normalizedType);
         const sizeLabel = body.size || 'Medium';
+        const safeName = escapeHtml(body.name);
+        const safeType = escapeHtml(normalizedType);
+        const safeSize = escapeHtml(sizeLabel);
 
-        let html = `<div class="flex justify-between items-center font-semibold text-sky-100"><span class="inline-flex items-center gap-2">${bodyIcon}${body.name}</span><button class="body-rename-btn w-5 h-5 inline-flex items-center justify-center text-[10px] rounded bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:border-sky-500 transition-colors" title="Rename object" aria-label="Rename object">✎</button></div>`;
+        let html = `<div class="flex justify-between items-center font-semibold text-sky-100"><span class="inline-flex items-center gap-2">${bodyIcon}${safeName}</span><button class="body-rename-btn w-5 h-5 inline-flex items-center justify-center text-[10px] rounded bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:border-sky-500 transition-colors" title="Rename object" aria-label="Rename object">✎</button></div>`;
         html += '<div class="mt-1 flex items-end justify-between">';
         if (isPlanetary && body.habitable) {
             html += '<span class="inline-block px-1.5 py-0.5 rounded border text-[11px] text-emerald-300 border-emerald-600/60 bg-emerald-900/25">Inhabitated</span>';
@@ -627,12 +639,12 @@ function renderSystemBodyLists(refs, system, id, preselectedBodyIndex) {
         }
         if (isPlanetary) {
             html += `<span class="text-xs text-slate-500 font-normal text-right inline-flex items-center gap-1.5">`
-                + `<span class="cursor-help underline decoration-dotted decoration-slate-500/70 underline-offset-2" data-field-tooltip="size" data-field-value="${sizeLabel}">${sizeLabel}</span>`
+                + `<span class="cursor-help underline decoration-dotted decoration-slate-500/70 underline-offset-2" data-field-tooltip="size" data-field-value="${safeSize}">${safeSize}</span>`
                 + `<span>·</span>`
-                + `<span class="cursor-help underline decoration-dotted decoration-slate-500/70 underline-offset-2" data-field-tooltip="planet-type" data-field-value="${normalizedType}">${normalizedType}</span>`
+                + `<span class="cursor-help underline decoration-dotted decoration-slate-500/70 underline-offset-2" data-field-tooltip="planet-type" data-field-value="${safeType}">${safeType}</span>`
                 + `</span>`;
         } else {
-            html += `<span class="text-xs text-slate-500 font-normal text-right">${normalizedType}</span>`;
+            html += `<span class="text-xs text-slate-500 font-normal text-right">${safeType}</span>`;
         }
         html += '</div>';
         li.innerHTML = html;
