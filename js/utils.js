@@ -6,6 +6,10 @@ export function shuffleArray(array, randFn) {
     }
 }
 
+export function deepClone(value) {
+    return JSON.parse(JSON.stringify(value));
+}
+
 export function parseHexId(hexId) {
     const [cRaw, rRaw] = String(hexId || '').split('-');
     const col = parseInt(cRaw, 10);

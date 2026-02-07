@@ -96,6 +96,7 @@ export function renderRouteOverlay(viewport) {
     });
 
     const pathLine = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+    pathLine.setAttribute('class', 'route-overlay');
     pathLine.setAttribute('points', adjustedLinePoints.join(' '));
     pathLine.setAttribute('fill', 'none');
     pathLine.setAttribute('stroke', '#38bdf8');
@@ -111,6 +112,7 @@ export function renderRouteOverlay(viewport) {
         { pos: endMarkerPos, fill: '#f43f5e' }
     ].forEach((markerData) => {
         const marker = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        marker.setAttribute('class', 'route-overlay');
         marker.setAttribute('cx', String(markerData.pos.x));
         marker.setAttribute('cy', String(markerData.pos.y));
         marker.setAttribute('r', '5');

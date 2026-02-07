@@ -2,6 +2,7 @@ import { state } from './config.js';
 import { showStatusMessage } from './core.js';
 import { EVENTS } from './events.js';
 import { applySectorPayload, buildSectorPayload } from './storage.js';
+import { deepClone } from './utils.js';
 
 const MAX_HISTORY_ENTRIES = 60;
 
@@ -11,10 +12,6 @@ const historyState = {
     restoring: false,
     sequence: 0
 };
-
-function deepClone(value) {
-    return JSON.parse(JSON.stringify(value));
-}
 
 function buildFingerprint(payload) {
     return JSON.stringify({

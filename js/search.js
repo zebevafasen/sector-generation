@@ -3,6 +3,7 @@ import { showStatusMessage } from './core.js';
 import { EVENTS } from './events.js';
 import { selectHex } from './render.js';
 import { countSystemBodies, isPlanetaryBody } from './body-classification.js';
+import { escapeHtml } from './info-panel-ui.js';
 
 function getSearchRefs() {
     return {
@@ -101,11 +102,15 @@ function renderResults(refs, matches) {
         const classes = active
             ? 'w-full text-left rounded border border-sky-600 bg-sky-900/30 px-2 py-1.5'
             : 'w-full text-left rounded border border-slate-700 bg-slate-800/60 hover:border-sky-500 px-2 py-1.5';
+        const safeName = escapeHtml(item.system.name || 'Unnamed System');
+        const safeHexId = escapeHtml(item.hexId);
+        const safeStarClass = escapeHtml(item.system.starClass || '--');
+        const safePopLabel = escapeHtml(popLabel);
         return `
             <li>
                 <button type="button" class="${classes}" data-search-hex-id="${item.hexId}">
-                    <div class="text-xs text-sky-200 font-semibold">${item.system.name}</div>
-                    <div class="text-[10px] text-slate-400">${item.hexId} - Class ${item.system.starClass} - Pop ${popLabel}</div>
+                    <div class="text-xs text-sky-200 font-semibold">${safeName}</div>
+                    <div class="text-[10px] text-slate-400">${safeHexId} - Class ${safeStarClass} - Pop ${safePopLabel}</div>
                     <div class="text-[10px] text-slate-500">${item.bodyCounts.planets}P / ${item.bodyCounts.belts}B / ${item.bodyCounts.stations}S</div>
                 </button>
             </li>

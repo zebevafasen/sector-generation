@@ -1,10 +1,11 @@
 import { state } from './config.js';
 import { createSectorRecord } from './generation.js';
-import { showStatusMessage } from './core.js';
+import { isAutoSeedEnabled, showStatusMessage } from './core.js';
 import { EVENTS, emitEvent } from './events.js';
-import { normalizeDensityPresetKey } from './generation-data.js';
+import { readGenerationConfigFromUi } from './sector-config.js';
 import { applySectorPayload } from './storage.js';
 import { selectHex, updateViewTransform } from './render.js';
+import { deepClone } from './utils.js';
 
 const DIRECTIONS = {
     north: { dx: 0, dy: -1 },
@@ -12,10 +13,6 @@ const DIRECTIONS = {
     west: { dx: -1, dy: 0 },
     east: { dx: 1, dy: 0 }
 };
-
-function deepClone(value) {
-    return JSON.parse(JSON.stringify(value));
-}
 
 function getRefs() {
     return {
@@ -53,18 +50,18 @@ function mapSelectedHexForDirection(selectedHexId) {
 function getCurrentConfig() {
     const snapshot = state.sectorConfigSnapshot || (state.lastSectorSnapshot && state.lastSectorSnapshot.sectorConfigSnapshot);
     if (snapshot) return deepClone(snapshot);
-    return {
-        sizeMode: 'preset',
+    return readGenerationConfigFromUi({
+        sizeMode: state.sizeMode || 'preset',
         sizePreset: 'standard',
-        width: parseInt(document.getElementById('gridWidth')?.value || '8', 10) || 8,
-        height: parseInt(document.getElementById('gridHeight')?.value || '10', 10) || 10,
-        densityMode: 'preset',
-        densityPreset: normalizeDensityPresetKey(document.getElementById('densityPreset')?.value || 'standard'),
-        manualMin: parseInt(document.getElementById('manualMin')?.value || '0', 10) || 0,
-        manualMax: parseInt(document.getElementById('manualMax')?.value || '0', 10) || 0,
-        generationProfile: document.getElementById('generationProfile')?.value || 'high_adventure',
-        realisticPlanetWeights: !!document.getElementById('realisticPlanetWeightsToggle')?.checked
-    };
+        width: 8,
+        height: 10,
+        densityMode: state.densityMode || 'preset',
+        densityPreset: 'standard',
+        manualMin: 0,
+        manualMax: 0,
+        generationProfile: 'high_adventure',
+        realisticPlanetWeights: false
+    });
 }
 
 function ensureState() {
@@ -112,7 +109,7 @@ function applySectorRecord(key, record, options = {}) {
             min: record.config.manualMin || 0,
             max: record.config.manualMax || 0
         },
-        autoSeed: !!document.getElementById('autoSeedToggle')?.checked,
+        autoSeed: isAutoSeedEnabled(),
         realisticPlanetWeights: !!record.config.realisticPlanetWeights,
         generationProfile: record.config.generationProfile || 'high_adventure',
         sectorConfigSnapshot: deepClone(record.config),

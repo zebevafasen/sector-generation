@@ -32,11 +32,7 @@ import { autoSaveSectorState, buildSectorPayload } from './storage.js';
 import { readGenerationConfigFromUi } from './sector-config.js';
 import { ensureSystemStarFields } from './star-system.js';
 import { redrawGridAndReselect, refreshHexInfo, clearSelectionInfo } from './ui-sync.js';
-import { isHexIdInBounds, parseHexId, romanize, shuffleArray, sortHexIds } from './utils.js';
-
-function deepClone(value) {
-    return JSON.parse(JSON.stringify(value));
-}
+import { deepClone, isHexIdInBounds, parseHexId, romanize, shuffleArray, sortHexIds } from './utils.js';
 
 function normalizeGenerationConfig(config) {
     const source = config || {};
