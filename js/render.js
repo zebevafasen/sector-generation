@@ -51,12 +51,14 @@ function getBodyIconMarkup(type) {
 }
 
 function resetBodyDetailsPanel() {
+    const panel = document.getElementById('infoBodyDetailsPanel');
     const empty = document.getElementById('infoBodyDetailsEmpty');
     const content = document.getElementById('infoBodyDetailsContent');
     const name = document.getElementById('infoBodyDetailsName');
     const type = document.getElementById('infoBodyDetailsType');
     const placeholder = document.getElementById('infoBodyDetailsPlaceholder');
 
+    if (panel) panel.classList.add('hidden');
     if (empty) {
         empty.classList.remove('hidden');
         empty.innerText = 'Select a planet, belt, or station to inspect.';
@@ -67,7 +69,30 @@ function resetBodyDetailsPanel() {
     if (placeholder) placeholder.innerText = 'Detailed stats coming soon.';
 }
 
-function showBodyDetailsPanel(body) {
+function positionBodyDetailsPanel(panel, anchorEl) {
+    const anchorRect = anchorEl.getBoundingClientRect();
+    const panelRect = panel.getBoundingClientRect();
+    const margin = 10;
+    let left = anchorRect.left - panelRect.width - margin;
+    let top = anchorRect.top + (anchorRect.height / 2) - (panelRect.height / 2);
+
+    if (left < 8) {
+        left = anchorRect.right + margin;
+    }
+    if (left + panelRect.width > window.innerWidth - 8) {
+        left = window.innerWidth - panelRect.width - 8;
+    }
+    if (top < 8) top = 8;
+    if (top + panelRect.height > window.innerHeight - 8) {
+        top = window.innerHeight - panelRect.height - 8;
+    }
+
+    panel.style.left = `${left}px`;
+    panel.style.top = `${top}px`;
+}
+
+function showBodyDetailsPanel(body, anchorEl) {
+    const panel = document.getElementById('infoBodyDetailsPanel');
     const empty = document.getElementById('infoBodyDetailsEmpty');
     const content = document.getElementById('infoBodyDetailsContent');
     const name = document.getElementById('infoBodyDetailsName');
@@ -75,11 +100,13 @@ function showBodyDetailsPanel(body) {
     const placeholder = document.getElementById('infoBodyDetailsPlaceholder');
     const normalizedType = normalizeBodyType(body.type);
 
+    if (panel) panel.classList.remove('hidden');
     if (empty) empty.classList.add('hidden');
     if (content) content.classList.remove('hidden');
     if (name) name.innerText = body.name;
     if (type) type.innerText = normalizedType;
     if (placeholder) placeholder.innerText = 'Detailed stats coming soon.';
+    if (panel && anchorEl) positionBodyDetailsPanel(panel, anchorEl);
 }
 
 export function ensureStarGradient(svg, starClass) {
@@ -370,7 +397,7 @@ export function updateInfoPanel(id) {
                     }
                     li.classList.add('ring-1', 'ring-sky-500/70', 'border-sky-500/70');
                     selectedBodyEl = li;
-                    showBodyDetailsPanel(body);
+                    showBodyDetailsPanel(body, li);
                 };
 
                 li.addEventListener('click', selectBody);
