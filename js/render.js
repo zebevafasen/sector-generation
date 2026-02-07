@@ -71,6 +71,7 @@ function resetBodyDetailsPanel() {
         editInhabitPlanetBtn.disabled = true;
         editInhabitPlanetBtn.onclick = null;
         editInhabitPlanetBtn.innerText = 'Inhabit Planet';
+        setInhabitButtonStyle(editInhabitPlanetBtn, false);
     }
     if (placeholder) placeholder.innerText = 'Detailed stats coming soon.';
 }
@@ -129,6 +130,16 @@ function setButtonAction(button, enabled, onClick = null) {
     if (!button) return;
     button.disabled = !enabled;
     button.onclick = enabled ? onClick : null;
+}
+
+function setInhabitButtonStyle(button, isUninhabit) {
+    if (!button) return;
+    const base = 'w-full py-1.5 text-xs rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
+    if (isUninhabit) {
+        button.className = `${base} bg-rose-900/35 border border-rose-700 text-rose-200 hover:bg-rose-800/40 hover:border-rose-500`;
+    } else {
+        button.className = `${base} bg-emerald-900/35 border border-emerald-700 text-emerald-200 hover:bg-emerald-800/40 hover:border-emerald-500`;
+    }
 }
 
 function renameBodiesForSystemNameChange(system, oldName, newName) {
@@ -210,6 +221,7 @@ function disableInhabitControls(refs) {
         refs.editInhabitPlanetBtn.disabled = true;
         refs.editInhabitPlanetBtn.onclick = null;
         refs.editInhabitPlanetBtn.innerText = 'Inhabit Planet';
+        setInhabitButtonStyle(refs.editInhabitPlanetBtn, false);
     }
 }
 
@@ -621,6 +633,7 @@ function renderSystemBodyLists(refs, system, id, preselectedBodyIndex) {
                 if (canEditInhabit) {
                     const alreadyInhabited = !!(system.planets[bodyIndex] && system.planets[bodyIndex].habitable);
                     refs.editInhabitPlanetBtn.innerText = alreadyInhabited ? 'Uninhabit Planet' : 'Inhabit Planet';
+                    setInhabitButtonStyle(refs.editInhabitPlanetBtn, alreadyInhabited);
                     refs.editInhabitPlanetBtn.disabled = false;
                     refs.editInhabitPlanetBtn.onclick = () => {
                         const targetSystem = state.sectors[id];
@@ -634,6 +647,7 @@ function renderSystemBodyLists(refs, system, id, preselectedBodyIndex) {
                     refs.editInhabitPlanetBtn.disabled = true;
                     refs.editInhabitPlanetBtn.onclick = null;
                     refs.editInhabitPlanetBtn.innerText = 'Inhabit Planet';
+                    setInhabitButtonStyle(refs.editInhabitPlanetBtn, false);
                 }
             }
             if (refs.quickDeleteBodyBtn && state.editMode) {
