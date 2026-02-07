@@ -335,12 +335,13 @@
                     <span class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-600" id="infoType">Empty Space</span>
                 </div>
                 
+                <div class="grid grid-cols-2 gap-2 mb-2">
+                    <button id="pinSelectedSystemBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-amber-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Pin system" aria-label="Pin system">📌</button>
+                    <button id="rerollSelectedSystemBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Reroll system" aria-label="Reroll system">🎲</button>
+                </div>
+                <p id="selectedSystemPinState" class="text-[11px] text-slate-500 mb-3">Pinned: No</p>
+
                 <div id="systemDetails" class="hidden space-y-4">
-                    <div class="grid grid-cols-2 gap-2">
-                        <button id="pinSelectedSystemBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-amber-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Pin system" aria-label="Pin system">📌</button>
-                        <button id="rerollSelectedSystemBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Reroll system" aria-label="Reroll system">🎲</button>
-                    </div>
-                    <p id="selectedSystemPinState" class="text-[11px] text-slate-500">Pinned: No</p>
                     <div id="editModeControls" class="hidden grid grid-cols-2 gap-2">
                         <button id="editDeleteBodyBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-rose-500 transition-colors">Delete Object</button>
                         <button id="editDeleteSystemBtn" class="py-1.5 text-xs rounded bg-rose-900/35 border border-rose-700 text-rose-200 hover:bg-rose-800/40 hover:border-rose-500 transition-colors">Delete System</button>
@@ -432,7 +433,7 @@
                 <button id="addSystemHereBtn" class="hidden mt-3 w-full py-1.5 text-xs rounded bg-emerald-900/35 border border-emerald-700 text-emerald-200 hover:bg-emerald-800/40 hover:border-emerald-500 transition-colors">
                     Add System Here
                 </button>
-                <button id="addPoiHereBtn" class="hidden mt-2 w-full py-1.5 text-xs rounded bg-violet-900/35 border border-violet-700 text-violet-200 hover:bg-violet-800/40 hover:border-violet-500 transition-colors">
+                <button id="addPoiHereBtn" class="hidden mt-2 w-full py-1.5 text-xs rounded bg-emerald-900/35 border border-emerald-700 text-emerald-200 hover:bg-emerald-800/40 hover:border-emerald-500 transition-colors">
                     Add POI Here
                 </button>
                 <button id="deletePoiHereBtn" class="hidden mt-2 w-full py-1.5 text-xs rounded bg-rose-900/35 border border-rose-700 text-rose-200 hover:bg-rose-800/40 hover:border-rose-500 transition-colors">

@@ -77,7 +77,8 @@ function createHexGroup(svg, col, row, cols, rows, sectorX, sectorY) {
     const x = (col * HEX_WIDTH) + xOffset + (HEX_WIDTH / 2);
     const y = (row * (HEX_HEIGHT * 0.75)) + (HEX_HEIGHT / 2);
 
-    const isPinned = !!(system && state.pinnedHexIds && state.pinnedHexIds.includes(hexId));
+    const hasPinTarget = !!system || !!deepSpacePoi;
+    const isPinned = !!(hasPinTarget && state.pinnedHexIds && state.pinnedHexIds.includes(hexId));
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     g.setAttribute('class', 'hex-group');
     if (system) g.classList.add('route-eligible');

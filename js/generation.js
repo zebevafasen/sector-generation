@@ -491,8 +491,12 @@ function buildSectorFromConfig(config, fixedSystems = {}) {
     };
 }
 
+function hasPinnedContentAtHex(hexId) {
+    return !!(state.sectors && state.sectors[hexId]) || !!(state.deepSpacePois && state.deepSpacePois[hexId]);
+}
+
 function sanitizePinnedHexes(width, height) {
-    state.pinnedHexIds = (state.pinnedHexIds || []).filter(hexId => isHexIdInBounds(hexId, width, height) && !!state.sectors[hexId]);
+    state.pinnedHexIds = (state.pinnedHexIds || []).filter(hexId => isHexIdInBounds(hexId, width, height) && hasPinnedContentAtHex(hexId));
 }
 
 function reconcilePlanetaryBodies(system) {
@@ -745,10 +749,30 @@ export function deletePoiAtHex(hexId) {
     }
 
     delete state.deepSpacePois[hexId];
+    state.pinnedHexIds = (state.pinnedHexIds || []).filter(id => id !== hexId);
 
     redrawHexAndSelectHex(hexId);
     refreshSectorSnapshot(config, config.width, config.height, 'Delete POI');
     showStatusMessage(`Deleted POI at ${hexId}.`, 'success');
+}
+
+export function renamePoiAtHex(hexId) {
+    const config = getGenerationConfigSnapshot();
+    if (!isHexIdInBounds(hexId, config.width, config.height)) return;
+    const poi = state.deepSpacePois && state.deepSpacePois[hexId] ? state.deepSpacePois[hexId] : null;
+    if (!poi) {
+        showStatusMessage('No POI found to rename.', 'warn');
+        return;
+    }
+    const nextNameRaw = prompt('Rename POI', poi.name || 'Deep-Space Site');
+    if (nextNameRaw === null) return;
+    const nextName = nextNameRaw.trim();
+    if (!nextName || nextName === poi.name) return;
+    poi.name = nextName;
+
+    redrawHexAndSelectHex(hexId);
+    refreshSectorSnapshot(config, config.width, config.height, 'Rename POI');
+    showStatusMessage(`Renamed POI at ${hexId}.`, 'success');
 }
 
 export function addBodyToSelectedSystem(kind) {
@@ -896,12 +920,25 @@ export function rerollSelectedPlanet() {
 
 export function rerollSelectedSystem() {
     const selectedHexId = state.selectedHexId;
-    if (!selectedHexId || !state.sectors[selectedHexId]) {
-        showStatusMessage('Select an existing system before rerolling.', 'warn');
+    if (!selectedHexId) {
+        showStatusMessage('Select a system or POI before rerolling.', 'warn');
         return;
     }
 
     const config = getGenerationConfigSnapshot();
+    const selectedPoi = state.deepSpacePois && state.deepSpacePois[selectedHexId] ? state.deepSpacePois[selectedHexId] : null;
+    if (selectedPoi && !state.sectors[selectedHexId]) {
+        state.deepSpacePois[selectedHexId] = createDeepSpacePoi();
+        redrawHexAndSelectHex(selectedHexId);
+        refreshSectorSnapshot(config, config.width, config.height, 'Reroll POI');
+        showStatusMessage(`Rerolled POI at ${selectedHexId}.`, 'success');
+        return;
+    }
+    if (!state.sectors[selectedHexId]) {
+        showStatusMessage('Select an existing system before rerolling.', 'warn');
+        return;
+    }
+
     const seedUsed = setAndUseNewSeed(false);
     const otherSystems = { ...state.sectors };
     delete otherSystems[selectedHexId];
@@ -925,18 +962,24 @@ export function rerollSelectedSystem() {
 
 export function togglePinSelectedSystem() {
     const selectedHexId = state.selectedHexId;
-    if (!selectedHexId || !state.sectors[selectedHexId]) {
-        showStatusMessage('Select a populated system to pin.', 'warn');
+    if (!selectedHexId) {
+        showStatusMessage('Select a system or POI to pin.', 'warn');
+        return;
+    }
+    const isSystem = !!state.sectors[selectedHexId];
+    const isPoi = !!(state.deepSpacePois && state.deepSpacePois[selectedHexId]);
+    if (!isSystem && !isPoi) {
+        showStatusMessage('Select a system or POI to pin.', 'warn');
         return;
     }
 
     const pinned = new Set(state.pinnedHexIds || []);
     if (pinned.has(selectedHexId)) {
         pinned.delete(selectedHexId);
-        showStatusMessage(`Unpinned system ${selectedHexId}.`, 'info');
+        showStatusMessage(`Unpinned ${isSystem ? 'system' : 'POI'} ${selectedHexId}.`, 'info');
     } else {
         pinned.add(selectedHexId);
-        showStatusMessage(`Pinned system ${selectedHexId}.`, 'success');
+        showStatusMessage(`Pinned ${isSystem ? 'system' : 'POI'} ${selectedHexId}.`, 'success');
     }
 
     state.pinnedHexIds = Array.from(pinned);
@@ -963,9 +1006,13 @@ export function rerollUnpinnedSystems() {
     const height = config.height;
 
     const fixedSystems = {};
+    const fixedPois = {};
     (state.pinnedHexIds || []).forEach(hexId => {
         if (isHexIdInBounds(hexId, width, height) && state.sectors[hexId]) {
             fixedSystems[hexId] = state.sectors[hexId];
+        }
+        if (isHexIdInBounds(hexId, width, height) && state.deepSpacePois && state.deepSpacePois[hexId] && !state.sectors[hexId]) {
+            fixedPois[hexId] = state.deepSpacePois[hexId];
         }
     });
 
@@ -1000,6 +1047,11 @@ export function rerollUnpinnedSystems() {
     state.currentSeed = layoutSeed;
     state.sectors = nextSectors;
     state.deepSpacePois = generateDeepSpacePois(width, height, nextSectors);
+    Object.entries(fixedPois).forEach(([hexId, poi]) => {
+        if (!state.sectors[hexId]) {
+            state.deepSpacePois[hexId] = deepClone(poi);
+        }
+    });
     sanitizePinnedHexes(width, height);
 
     redrawGridAndReselect(width, height, { selectedHexId });

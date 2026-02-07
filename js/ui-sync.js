@@ -32,7 +32,9 @@ export function redrawGridAndReselect(width, height, options = {}) {
 }
 
 export function refreshHexInfo(hexId, preselectedBodyIndex = null) {
-    if (!hexId || !state.sectors[hexId]) {
+    const hasSystem = !!(hexId && state.sectors[hexId]);
+    const hasPoi = !!(hexId && state.deepSpacePois && state.deepSpacePois[hexId]);
+    if (!hexId || (!hasSystem && !hasPoi)) {
         clearInfoPanel();
         return;
     }

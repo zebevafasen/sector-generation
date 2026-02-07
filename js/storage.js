@@ -523,7 +523,7 @@ export function applySectorPayload(payload) {
     state.deepSpacePois = nextPayload.deepSpacePois || {};
     Object.values(state.sectors).forEach((system) => ensureSystemStarFields(system));
     state.pinnedHexIds = Array.isArray(nextPayload.pinnedHexIds)
-        ? nextPayload.pinnedHexIds.filter(hexId => !!state.sectors[hexId])
+        ? nextPayload.pinnedHexIds.filter(hexId => !!state.sectors[hexId] || !!state.deepSpacePois[hexId])
         : [];
     state.sectorConfigSnapshot = nextPayload.sectorConfigSnapshot || {
         sizeMode: nextPayload.sizeMode || state.sizeMode,
@@ -541,7 +541,7 @@ export function applySectorPayload(payload) {
     state.selectedHexId = null;
     clearInfoPanel();
     drawGrid(width, height);
-    if (nextPayload.selectedHexId && state.sectors[nextPayload.selectedHexId]) {
+    if (nextPayload.selectedHexId && (state.sectors[nextPayload.selectedHexId] || state.deepSpacePois[nextPayload.selectedHexId])) {
         const group = document.querySelector(`.hex-group[data-id="${nextPayload.selectedHexId}"]`);
         if (group) selectHex(nextPayload.selectedHexId, group);
     }

@@ -165,8 +165,14 @@ export function configureSystemHeaderAndStar({ refs, system, id, preselectedBody
         refs.pinSelectedSystemBtn.disabled = false;
         setPinButtonContent(refs.pinSelectedSystemBtn, isPinned);
         setPinButtonStyle(refs.pinSelectedSystemBtn, isPinned);
+        refs.pinSelectedSystemBtn.title = isPinned ? 'Unpin system' : 'Pin system';
+        refs.pinSelectedSystemBtn.setAttribute('aria-label', isPinned ? 'Unpin system' : 'Pin system');
     }
-    if (refs.rerollSelectedSystemBtn) refs.rerollSelectedSystemBtn.disabled = false;
+    if (refs.rerollSelectedSystemBtn) {
+        refs.rerollSelectedSystemBtn.disabled = false;
+        refs.rerollSelectedSystemBtn.title = 'Reroll system';
+        refs.rerollSelectedSystemBtn.setAttribute('aria-label', 'Reroll system');
+    }
     if (refs.selectedSystemPinState) refs.selectedSystemPinState.innerText = `Pinned: ${isPinned ? 'Yes' : 'No'}`;
     if (refs.starClassLabel) {
         refs.starClassLabel.innerText = `Class ${primaryStar.class} Star`;
@@ -251,7 +257,10 @@ export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
     if (deepSpacePoi) {
         refs.emptyDetails.innerHTML = `
             <div class="space-y-2 text-left">
-                <p class="text-sm text-slate-200 font-semibold">${escapeHtml(deepSpacePoi.name || 'Deep-Space Site')}</p>
+                <div class="flex items-center justify-between gap-2">
+                    <p class="text-sm text-slate-200 font-semibold">${escapeHtml(deepSpacePoi.name || 'Deep-Space Site')}</p>
+                    <button type="button" id="renamePoiBtn" class="${state.editMode ? '' : 'hidden '}w-6 h-6 inline-flex items-center justify-center text-xs rounded bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:border-violet-500 transition-colors" title="Rename POI" aria-label="Rename POI">✎</button>
+                </div>
                 <p class="text-xs text-slate-400">${escapeHtml(deepSpacePoi.summary || 'Uncatalogued deep-space contact.')}</p>
                 <div class="grid grid-cols-2 gap-2 text-[11px]">
                     <div class="rounded border border-slate-700 bg-slate-900/35 px-2 py-1">
@@ -325,6 +334,14 @@ export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
             refs.deletePoiHereBtn.onclick = null;
         }
     }
+    if (state.editMode && id && !!deepSpacePoi) {
+        const renamePoiBtn = refs.emptyDetails.querySelector('#renamePoiBtn');
+        if (renamePoiBtn) {
+            renamePoiBtn.onclick = () => {
+                emitEvent(EVENTS.REQUEST_RENAME_POI_AT_HEX, { hexId: id });
+            };
+        }
+    }
     setButtonAction(refs.renameSystemBtn, false);
     setButtonAction(refs.deletePrimaryStarBtn, false);
     if (refs.deletePrimaryStarBtn) refs.deletePrimaryStarBtn.classList.add('hidden');
@@ -338,12 +355,21 @@ export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
     disablePlanetTypeControls(refs);
     disableInhabitControls(refs);
     setBodySummaryLabels(refs, 0, 0, 0);
+    const canPinOrRerollPoi = !!deepSpacePoi;
+    const isPinned = !!(id && state.pinnedHexIds && state.pinnedHexIds.includes(id));
     if (refs.pinSelectedSystemBtn) {
-        refs.pinSelectedSystemBtn.disabled = true;
-        setPinButtonContent(refs.pinSelectedSystemBtn, false);
-        setPinButtonStyle(refs.pinSelectedSystemBtn, false);
+        refs.pinSelectedSystemBtn.disabled = !canPinOrRerollPoi;
+        setPinButtonContent(refs.pinSelectedSystemBtn, isPinned);
+        setPinButtonStyle(refs.pinSelectedSystemBtn, isPinned);
+        const pinPoiLabel = isPinned ? 'Unpin POI' : 'Pin POI';
+        refs.pinSelectedSystemBtn.title = canPinOrRerollPoi ? pinPoiLabel : 'Pin system';
+        refs.pinSelectedSystemBtn.setAttribute('aria-label', canPinOrRerollPoi ? pinPoiLabel : 'Pin system');
     }
-    if (refs.rerollSelectedSystemBtn) refs.rerollSelectedSystemBtn.disabled = true;
-    if (refs.selectedSystemPinState) refs.selectedSystemPinState.innerText = 'Pinned: --';
+    if (refs.rerollSelectedSystemBtn) {
+        refs.rerollSelectedSystemBtn.disabled = !canPinOrRerollPoi;
+        refs.rerollSelectedSystemBtn.title = canPinOrRerollPoi ? 'Reroll POI' : 'Reroll system';
+        refs.rerollSelectedSystemBtn.setAttribute('aria-label', canPinOrRerollPoi ? 'Reroll POI' : 'Reroll system');
+    }
+    if (refs.selectedSystemPinState) refs.selectedSystemPinState.innerText = canPinOrRerollPoi ? `Pinned: ${isPinned ? 'Yes' : 'No'}` : 'Pinned: --';
     resetBodyDetailsPanel();
 }

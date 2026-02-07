@@ -163,6 +163,20 @@ test('edit mode can add and delete a deep-space POI from empty hexes', async ({ 
   const poiCountAfterAdd = await page.locator('polygon.deep-space-poi-marker').count();
   expect(poiCountAfterAdd).toBeGreaterThan(poiCountBefore);
   await expect(page.locator('#deletePoiHereBtn')).toBeVisible();
+  await expect(page.locator('#renamePoiBtn')).toBeVisible();
+
+  await page.locator('#pinSelectedSystemBtn').click();
+  await expect(page.locator('#selectedSystemPinState')).toContainText('Pinned: Yes');
+
+  await page.locator('#rerollSelectedSystemBtn').click();
+  await expect(page.locator('#statusMessage')).toContainText('Rerolled POI');
+
+  await Promise.all([
+    page.waitForEvent('dialog').then((dialog) => dialog.accept('Test POI Rename')),
+    page.locator('#renamePoiBtn').click()
+  ]);
+  await expect(page.locator('#statusMessage')).toContainText('Renamed POI');
+  await expect(page.locator('#emptyDetails')).toContainText('Test POI Rename');
 
   await page.locator('#deletePoiHereBtn').click();
   await expect(page.locator('#statusMessage')).toContainText('Deleted POI');

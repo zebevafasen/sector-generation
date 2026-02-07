@@ -143,9 +143,14 @@ export function validateSectorPayload(rawPayload) {
         sectors,
         deepSpacePois,
         pinnedHexIds: Array.isArray(rawPayload.pinnedHexIds)
-            ? rawPayload.pinnedHexIds.filter((hexId) => typeof hexId === 'string' && Object.prototype.hasOwnProperty.call(sectors, hexId))
+            ? rawPayload.pinnedHexIds.filter((hexId) =>
+                typeof hexId === 'string'
+                && (Object.prototype.hasOwnProperty.call(sectors, hexId) || Object.prototype.hasOwnProperty.call(deepSpacePois, hexId))
+            )
             : [],
-        selectedHexId: typeof rawPayload.selectedHexId === 'string' && Object.prototype.hasOwnProperty.call(sectors, rawPayload.selectedHexId)
+        selectedHexId: typeof rawPayload.selectedHexId === 'string'
+            && (Object.prototype.hasOwnProperty.call(sectors, rawPayload.selectedHexId)
+                || Object.prototype.hasOwnProperty.call(deepSpacePois, rawPayload.selectedHexId))
             ? rawPayload.selectedHexId
             : null,
         stats: {
