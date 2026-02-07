@@ -393,6 +393,244 @@ export function selectHex(id, groupElement) {
     updateInfoPanel(id);
 }
 
+function configureSystemHeaderAndStar(refs, system, id, preselectedBodyIndex) {
+    refs.systemDetails.classList.remove('hidden');
+    refs.emptyDetails.classList.add('hidden');
+    refs.typeLabel.innerText = 'Star System';
+    refs.typeLabel.className = 'text-xs px-2 py-0.5 rounded-full bg-sky-900 text-sky-200 border border-sky-600';
+
+    refs.systemName.innerText = system.name;
+    if (refs.renameSystemBtn) {
+        setButtonAction(refs.renameSystemBtn, true, () => {
+            const nextNameRaw = prompt('Rename system', system.name);
+            if (nextNameRaw === null) return;
+            const nextName = nextNameRaw.trim();
+            if (!nextName) return;
+            system.name = nextName;
+            notifySectorDataChanged();
+            updateInfoPanel(id, preselectedBodyIndex);
+        });
+    }
+    if (refs.editStarClassRow) {
+        const canEditStar = state.editMode;
+        refs.editStarClassRow.classList.toggle('hidden', !canEditStar);
+        if (refs.editStarClassSelect) {
+            if (canEditStar) {
+                refs.editStarClassSelect.value = system.starClass || 'G';
+                refs.editStarClassSelect.onchange = () => {
+                    const current = state.sectors[id];
+                    if (!current) return;
+                    const nextClass = refs.editStarClassSelect.value;
+                    const nextPalette = STAR_VISUALS[nextClass] || STAR_VISUALS.default;
+                    current.starClass = nextClass;
+                    current.palette = nextPalette;
+                    current.color = nextPalette.core;
+                    current.glow = nextPalette.halo;
+                    current.starAge = generateStarAge(nextClass);
+                    notifySectorDataChanged();
+                    redrawAndReselect(id, state.selectedBodyIndex);
+                };
+            } else {
+                refs.editStarClassSelect.onchange = null;
+            }
+        }
+    }
+    if (refs.addSystemHereBtn) {
+        refs.addSystemHereBtn.classList.add('hidden');
+        refs.addSystemHereBtn.onclick = null;
+    }
+    const isPinned = !!(state.pinnedHexIds && state.pinnedHexIds.includes(id));
+    if (refs.pinSelectedSystemBtn) {
+        refs.pinSelectedSystemBtn.disabled = false;
+        refs.pinSelectedSystemBtn.innerText = isPinned ? 'Unpin System' : 'Pin System';
+        setPinButtonStyle(refs.pinSelectedSystemBtn, isPinned);
+    }
+    if (refs.rerollSelectedSystemBtn) refs.rerollSelectedSystemBtn.disabled = false;
+    if (refs.selectedSystemPinState) refs.selectedSystemPinState.innerText = `Pinned: ${isPinned ? 'Yes' : 'No'}`;
+    if (refs.starClassLabel) {
+        refs.starClassLabel.innerText = `Class ${system.starClass} Star`;
+        refs.starClassLabel.classList.add('cursor-help', 'text-sky-300', 'star-class-hint');
+    }
+    if (refs.starAgeLabel) {
+        if (system.starAge && Number.isFinite(system.starAge.value) && system.starAge.unit) {
+            refs.starAgeLabel.innerText = `Age: ${formatStarAgeValue(system.starAge.value, system.starAge.unit)}`;
+        } else if (system.starAge && system.starAge.display) {
+            refs.starAgeLabel.innerText = `Age: ${system.starAge.display}`;
+        } else {
+            const info = getStarClassInfo(system.starClass);
+            refs.starAgeLabel.innerText = `Age: ${info.typicalAge || 'Unknown'}`;
+        }
+    }
+
+    if (refs.starVisual) {
+        const palette = system.palette || STAR_VISUALS[system.starClass] || STAR_VISUALS.default;
+        refs.starVisual.style.backgroundImage = `radial-gradient(circle at 40% 35%, ${system.color} 0%, ${palette.mid} 55%, ${system.glow || palette.halo} 100%)`;
+        refs.starVisual.style.backgroundColor = palette.core;
+        refs.starVisual.style.boxShadow = `0 0 12px ${system.glow || palette.halo}`;
+    }
+}
+
+function renderSystemBodyLists(refs, system, id, preselectedBodyIndex) {
+    if (!(refs.planetList && refs.beltList && refs.stationList)) return;
+    let selectedBodyEl = null;
+    refs.planetList.innerHTML = '';
+    refs.beltList.innerHTML = '';
+    refs.stationList.innerHTML = '';
+    resetBodyDetailsPanel();
+
+    const renderBody = (body, bodyIndex) => {
+        const li = document.createElement('li');
+        li.className = 'bg-slate-800/50 p-2 rounded border border-slate-700/50 flex flex-col cursor-pointer transition-colors hover:border-sky-600/60';
+        li.setAttribute('role', 'button');
+        li.setAttribute('tabindex', '0');
+        li.setAttribute('data-body-index', String(bodyIndex));
+
+        const normalizedType = normalizeBodyType(body.type);
+        const bodyIcon = getBodyIconMarkup(normalizedType);
+
+        let html = `<div class="flex justify-between font-semibold text-sky-100"><span class="inline-flex items-center gap-2">${bodyIcon}${body.name}</span> <span class="text-xs text-slate-500 font-normal">${normalizedType}</span></div>`;
+        if (normalizedType !== 'Artificial' && !/belt|field/i.test(normalizedType) && body.habitable) {
+            html += '<div class="text-[11px] mt-1 pl-5"><span class="inline-block px-1.5 py-0.5 rounded border text-emerald-300 border-emerald-600/60 bg-emerald-900/25">Inhabitated</span></div>';
+        }
+        li.innerHTML = html;
+
+        const selectBody = () => {
+            if (selectedBodyEl === li) {
+                li.classList.remove('ring-1', 'ring-sky-500/70', 'border-sky-500/70');
+                selectedBodyEl = null;
+                state.selectedBodyIndex = null;
+                setButtonAction(refs.renameBodyBtn, false);
+                setButtonAction(refs.quickDeleteBodyBtn, false);
+                resetBodyDetailsPanel();
+                return;
+            }
+            if (selectedBodyEl) {
+                selectedBodyEl.classList.remove('ring-1', 'ring-sky-500/70', 'border-sky-500/70');
+            }
+            li.classList.add('ring-1', 'ring-sky-500/70', 'border-sky-500/70');
+            selectedBodyEl = li;
+            state.selectedBodyIndex = bodyIndex;
+            showBodyDetailsPanel(body, li);
+            if (refs.renameBodyBtn) {
+                setButtonAction(refs.renameBodyBtn, true, () => {
+                    const currentName = system.planets[bodyIndex] ? system.planets[bodyIndex].name : body.name;
+                    const nextNameRaw = prompt('Rename object', currentName);
+                    if (nextNameRaw === null) return;
+                    const nextName = nextNameRaw.trim();
+                    if (!nextName || !system.planets[bodyIndex]) return;
+                    system.planets[bodyIndex].name = nextName;
+                    notifySectorDataChanged();
+                    updateInfoPanel(id, bodyIndex);
+                });
+            }
+            if (refs.editPlanetTypeRow && refs.editPlanetTypeSelect) {
+                const isPlanetary = normalizedType !== 'Artificial' && !/belt|field/i.test(normalizedType);
+                const canEditPlanetType = state.editMode && isPlanetary;
+                refs.editPlanetTypeRow.classList.toggle('hidden', !canEditPlanetType);
+                if (canEditPlanetType) {
+                    refs.editPlanetTypeSelect.value = normalizedType;
+                    refs.editPlanetTypeSelect.onchange = () => {
+                        const targetSystem = state.sectors[id];
+                        if (!targetSystem || !targetSystem.planets[bodyIndex]) return;
+                        targetSystem.planets[bodyIndex].type = refs.editPlanetTypeSelect.value;
+                        notifySectorDataChanged();
+                        updateInfoPanel(id, bodyIndex);
+                    };
+                } else {
+                    refs.editPlanetTypeSelect.onchange = null;
+                }
+            }
+            if (refs.quickDeleteBodyBtn && state.editMode) {
+                setButtonAction(refs.quickDeleteBodyBtn, true, () => {
+                    if (typeof window !== 'undefined') {
+                        window.dispatchEvent(new Event('requestDeleteSelectedBody'));
+                    }
+                });
+            }
+        };
+
+        li.addEventListener('click', selectBody);
+        li.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                selectBody();
+            }
+        });
+        return li;
+    };
+
+    system.planets.forEach((body, bodyIndex) => {
+        if (body.type === 'Artificial') {
+            refs.stationList.appendChild(renderBody(body, bodyIndex));
+        } else if (/belt|field/i.test(body.type)) {
+            refs.beltList.appendChild(renderBody(body, bodyIndex));
+        } else {
+            refs.planetList.appendChild(renderBody(body, bodyIndex));
+        }
+    });
+    if (Number.isInteger(preselectedBodyIndex) && preselectedBodyIndex >= 0) {
+        const node = document.querySelector(`[data-body-index="${preselectedBodyIndex}"]`);
+        if (node) node.click();
+    }
+
+    const planetCount = system.planets.filter(body => body.type !== 'Artificial' && !/belt|field/i.test(body.type)).length;
+    const beltCount = system.planets.filter(body => /belt|field/i.test(body.type)).length;
+    const stationCount = system.planets.filter(body => body.type === 'Artificial').length;
+    if (!refs.planetList.children.length) refs.planetList.innerHTML = '<li class="italic text-slate-600">No planets detected.</li>';
+    if (!refs.beltList.children.length) refs.beltList.innerHTML = '<li class="italic text-slate-600">No belts or fields detected.</li>';
+    if (!refs.stationList.children.length) refs.stationList.innerHTML = '<li class="italic text-slate-600">No stations detected.</li>';
+    setBodySummaryLabels(refs, planetCount, beltCount, stationCount);
+}
+
+function renderEmptyHexInfo(refs, id) {
+    refs.systemDetails.classList.add('hidden');
+    refs.emptyDetails.classList.remove('hidden');
+    refs.emptyDetails.innerText = 'Deep space scans indicate no major stellar masses in this sector.';
+    refs.typeLabel.innerText = 'Empty Void';
+    refs.typeLabel.className = 'text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-600';
+
+    if (refs.starClassLabel) {
+        refs.starClassLabel.innerText = 'Class Unknown';
+        refs.starClassLabel.classList.remove('cursor-help', 'text-sky-300', 'star-class-hint');
+    }
+    if (refs.starAgeLabel) refs.starAgeLabel.innerText = 'Age: --';
+    if (refs.starVisual) {
+        refs.starVisual.style.backgroundImage = 'none';
+        refs.starVisual.style.backgroundColor = '#1e293b';
+        refs.starVisual.style.boxShadow = 'none';
+    }
+    if (refs.planetList) refs.planetList.innerHTML = '';
+    if (refs.beltList) refs.beltList.innerHTML = '';
+    if (refs.stationList) refs.stationList.innerHTML = '';
+    if (refs.addSystemHereBtn) {
+        if (state.editMode && id) {
+            refs.addSystemHereBtn.classList.remove('hidden');
+            refs.addSystemHereBtn.onclick = () => {
+                if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('requestAddSystemAtHex', { detail: { hexId: id } }));
+                }
+            };
+        } else {
+            refs.addSystemHereBtn.classList.add('hidden');
+            refs.addSystemHereBtn.onclick = null;
+        }
+    }
+    setButtonAction(refs.renameSystemBtn, false);
+    disableStarEditControls(refs);
+    setButtonAction(refs.renameBodyBtn, false);
+    setButtonAction(refs.quickDeleteBodyBtn, false);
+    disablePlanetTypeControls(refs);
+    setBodySummaryLabels(refs, 0, 0, 0);
+    if (refs.pinSelectedSystemBtn) {
+        refs.pinSelectedSystemBtn.disabled = true;
+        refs.pinSelectedSystemBtn.innerText = 'Pin System';
+        setPinButtonStyle(refs.pinSelectedSystemBtn, false);
+    }
+    if (refs.rerollSelectedSystemBtn) refs.rerollSelectedSystemBtn.disabled = true;
+    if (refs.selectedSystemPinState) refs.selectedSystemPinState.innerText = 'Pinned: --';
+    resetBodyDetailsPanel();
+}
+
 export function updateInfoPanel(id, preselectedBodyIndex = null) {
     const system = state.sectors[id];
     state.selectedSystemData = system;
@@ -407,244 +645,14 @@ export function updateInfoPanel(id, preselectedBodyIndex = null) {
     panel.classList.remove('opacity-50', 'pointer-events-none');
     panel.classList.add('opacity-100');
     refs.hexId.innerText = displayId;
-    let selectedBodyEl = null;
-
     if (system) {
-        refs.systemDetails.classList.remove('hidden');
-        refs.emptyDetails.classList.add('hidden');
-        refs.typeLabel.innerText = 'Star System';
-        refs.typeLabel.className = 'text-xs px-2 py-0.5 rounded-full bg-sky-900 text-sky-200 border border-sky-600';
-
-        refs.systemName.innerText = system.name;
-        if (refs.renameSystemBtn) {
-            setButtonAction(refs.renameSystemBtn, true, () => {
-                const nextNameRaw = prompt('Rename system', system.name);
-                if (nextNameRaw === null) return;
-                const nextName = nextNameRaw.trim();
-                if (!nextName) return;
-                system.name = nextName;
-                notifySectorDataChanged();
-                updateInfoPanel(id, preselectedBodyIndex);
-            });
-        }
-        if (refs.editStarClassRow) {
-            const canEditStar = state.editMode;
-            refs.editStarClassRow.classList.toggle('hidden', !canEditStar);
-            if (refs.editStarClassSelect) {
-                if (canEditStar) {
-                    refs.editStarClassSelect.value = system.starClass || 'G';
-                    refs.editStarClassSelect.onchange = () => {
-                        const current = state.sectors[id];
-                        if (!current) return;
-                        const nextClass = refs.editStarClassSelect.value;
-                        const nextPalette = STAR_VISUALS[nextClass] || STAR_VISUALS.default;
-                        current.starClass = nextClass;
-                        current.palette = nextPalette;
-                        current.color = nextPalette.core;
-                        current.glow = nextPalette.halo;
-                        current.starAge = generateStarAge(nextClass);
-                        notifySectorDataChanged();
-                        redrawAndReselect(id, state.selectedBodyIndex);
-                    };
-                } else {
-                    refs.editStarClassSelect.onchange = null;
-                }
-            }
-        }
-        if (refs.addSystemHereBtn) {
-            refs.addSystemHereBtn.classList.add('hidden');
-            refs.addSystemHereBtn.onclick = null;
-        }
-        const isPinned = !!(state.pinnedHexIds && state.pinnedHexIds.includes(id));
-        if (refs.pinSelectedSystemBtn) {
-            refs.pinSelectedSystemBtn.disabled = false;
-            refs.pinSelectedSystemBtn.innerText = isPinned ? 'Unpin System' : 'Pin System';
-            setPinButtonStyle(refs.pinSelectedSystemBtn, isPinned);
-        }
-        if (refs.rerollSelectedSystemBtn) refs.rerollSelectedSystemBtn.disabled = false;
-        if (refs.selectedSystemPinState) refs.selectedSystemPinState.innerText = `Pinned: ${isPinned ? 'Yes' : 'No'}`;
-        if (refs.starClassLabel) {
-            refs.starClassLabel.innerText = `Class ${system.starClass} Star`;
-            refs.starClassLabel.classList.add('cursor-help', 'text-sky-300', 'star-class-hint');
-        }
-        if (refs.starAgeLabel) {
-            if (system.starAge && Number.isFinite(system.starAge.value) && system.starAge.unit) {
-                refs.starAgeLabel.innerText = `Age: ${formatStarAgeValue(system.starAge.value, system.starAge.unit)}`;
-            } else if (system.starAge && system.starAge.display) {
-                refs.starAgeLabel.innerText = `Age: ${system.starAge.display}`;
-            } else {
-                const info = getStarClassInfo(system.starClass);
-                refs.starAgeLabel.innerText = `Age: ${info.typicalAge || 'Unknown'}`;
-            }
-        }
-
-        if (refs.starVisual) {
-            const palette = system.palette || STAR_VISUALS[system.starClass] || STAR_VISUALS.default;
-            refs.starVisual.style.backgroundImage = `radial-gradient(circle at 40% 35%, ${system.color} 0%, ${palette.mid} 55%, ${system.glow || palette.halo} 100%)`;
-            refs.starVisual.style.backgroundColor = palette.core;
-            refs.starVisual.style.boxShadow = `0 0 12px ${system.glow || palette.halo}`;
-        }
-
+        configureSystemHeaderAndStar(refs, system, id, preselectedBodyIndex);
         refs.planetCountLabel.innerText =
             system.planets.filter(p => p.type !== 'Artificial' && !/belt|field/i.test(p.type)).length;
         refs.populationLabel.innerText = system.totalPop;
-
-        if (refs.planetList && refs.beltList && refs.stationList) {
-            refs.planetList.innerHTML = '';
-            refs.beltList.innerHTML = '';
-            refs.stationList.innerHTML = '';
-            resetBodyDetailsPanel();
-
-            const renderBody = (body, bodyIndex) => {
-                const li = document.createElement('li');
-                li.className = 'bg-slate-800/50 p-2 rounded border border-slate-700/50 flex flex-col cursor-pointer transition-colors hover:border-sky-600/60';
-                li.setAttribute('role', 'button');
-                li.setAttribute('tabindex', '0');
-                li.setAttribute('data-body-index', String(bodyIndex));
-
-                const normalizedType = normalizeBodyType(body.type);
-                const bodyIcon = getBodyIconMarkup(normalizedType);
-
-                let html = `<div class="flex justify-between font-semibold text-sky-100"><span class="inline-flex items-center gap-2">${bodyIcon}${body.name}</span> <span class="text-xs text-slate-500 font-normal">${normalizedType}</span></div>`;
-                if (normalizedType !== 'Artificial' && !/belt|field/i.test(normalizedType) && body.habitable) {
-                    html += '<div class="text-[11px] mt-1 pl-5"><span class="inline-block px-1.5 py-0.5 rounded border text-emerald-300 border-emerald-600/60 bg-emerald-900/25">Inhabitated</span></div>';
-                }
-                li.innerHTML = html;
-
-                const selectBody = () => {
-                    if (selectedBodyEl === li) {
-                        li.classList.remove('ring-1', 'ring-sky-500/70', 'border-sky-500/70');
-                        selectedBodyEl = null;
-                        state.selectedBodyIndex = null;
-                        setButtonAction(refs.renameBodyBtn, false);
-                        setButtonAction(refs.quickDeleteBodyBtn, false);
-                        resetBodyDetailsPanel();
-                        return;
-                    }
-                    if (selectedBodyEl) {
-                        selectedBodyEl.classList.remove('ring-1', 'ring-sky-500/70', 'border-sky-500/70');
-                    }
-                    li.classList.add('ring-1', 'ring-sky-500/70', 'border-sky-500/70');
-                    selectedBodyEl = li;
-                    state.selectedBodyIndex = bodyIndex;
-                    showBodyDetailsPanel(body, li);
-                    if (refs.renameBodyBtn) {
-                        setButtonAction(refs.renameBodyBtn, true, () => {
-                            const currentName = system.planets[bodyIndex] ? system.planets[bodyIndex].name : body.name;
-                            const nextNameRaw = prompt('Rename object', currentName);
-                            if (nextNameRaw === null) return;
-                            const nextName = nextNameRaw.trim();
-                            if (!nextName || !system.planets[bodyIndex]) return;
-                            system.planets[bodyIndex].name = nextName;
-                            notifySectorDataChanged();
-                            updateInfoPanel(id, bodyIndex);
-                        });
-                    }
-                    if (refs.editPlanetTypeRow && refs.editPlanetTypeSelect) {
-                        const isPlanetary = normalizedType !== 'Artificial' && !/belt|field/i.test(normalizedType);
-                        const canEditPlanetType = state.editMode && isPlanetary;
-                        refs.editPlanetTypeRow.classList.toggle('hidden', !canEditPlanetType);
-                        if (canEditPlanetType) {
-                            refs.editPlanetTypeSelect.value = normalizedType;
-                            refs.editPlanetTypeSelect.onchange = () => {
-                                const targetSystem = state.sectors[id];
-                                if (!targetSystem || !targetSystem.planets[bodyIndex]) return;
-                                targetSystem.planets[bodyIndex].type = refs.editPlanetTypeSelect.value;
-                                notifySectorDataChanged();
-                                updateInfoPanel(id, bodyIndex);
-                            };
-                        } else {
-                            refs.editPlanetTypeSelect.onchange = null;
-                        }
-                    }
-                    if (refs.quickDeleteBodyBtn && state.editMode) {
-                        setButtonAction(refs.quickDeleteBodyBtn, true, () => {
-                            if (typeof window !== 'undefined') {
-                                window.dispatchEvent(new Event('requestDeleteSelectedBody'));
-                            }
-                        });
-                    }
-                };
-
-                li.addEventListener('click', selectBody);
-                li.addEventListener('keydown', (event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        selectBody();
-                    }
-                });
-                return li;
-            };
-
-            system.planets.forEach((body, bodyIndex) => {
-                if (body.type === 'Artificial') {
-                    refs.stationList.appendChild(renderBody(body, bodyIndex));
-                } else if (/belt|field/i.test(body.type)) {
-                    refs.beltList.appendChild(renderBody(body, bodyIndex));
-                } else {
-                    refs.planetList.appendChild(renderBody(body, bodyIndex));
-                }
-            });
-            if (Number.isInteger(preselectedBodyIndex) && preselectedBodyIndex >= 0) {
-                const node = document.querySelector(`[data-body-index="${preselectedBodyIndex}"]`);
-                if (node) node.click();
-            }
-
-            const planetCount = system.planets.filter(body => body.type !== 'Artificial' && !/belt|field/i.test(body.type)).length;
-            const beltCount = system.planets.filter(body => /belt|field/i.test(body.type)).length;
-            const stationCount = system.planets.filter(body => body.type === 'Artificial').length;
-            if (!refs.planetList.children.length) refs.planetList.innerHTML = '<li class="italic text-slate-600">No planets detected.</li>';
-            if (!refs.beltList.children.length) refs.beltList.innerHTML = '<li class="italic text-slate-600">No belts or fields detected.</li>';
-            if (!refs.stationList.children.length) refs.stationList.innerHTML = '<li class="italic text-slate-600">No stations detected.</li>';
-            setBodySummaryLabels(refs, planetCount, beltCount, stationCount);
-        }
+        renderSystemBodyLists(refs, system, id, preselectedBodyIndex);
     } else {
-        refs.systemDetails.classList.add('hidden');
-        refs.emptyDetails.classList.remove('hidden');
-        refs.emptyDetails.innerText = 'Deep space scans indicate no major stellar masses in this sector.';
-        refs.typeLabel.innerText = 'Empty Void';
-        refs.typeLabel.className = 'text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-600';
-
-        if (refs.starClassLabel) {
-            refs.starClassLabel.innerText = 'Class Unknown';
-            refs.starClassLabel.classList.remove('cursor-help', 'text-sky-300', 'star-class-hint');
-        }
-        if (refs.starAgeLabel) refs.starAgeLabel.innerText = 'Age: --';
-        if (refs.starVisual) {
-            refs.starVisual.style.backgroundImage = 'none';
-            refs.starVisual.style.backgroundColor = '#1e293b';
-            refs.starVisual.style.boxShadow = 'none';
-        }
-        if (refs.planetList) refs.planetList.innerHTML = '';
-        if (refs.beltList) refs.beltList.innerHTML = '';
-        if (refs.stationList) refs.stationList.innerHTML = '';
-        if (refs.addSystemHereBtn) {
-            if (state.editMode && id) {
-                refs.addSystemHereBtn.classList.remove('hidden');
-                refs.addSystemHereBtn.onclick = () => {
-                    if (typeof window !== 'undefined') {
-                        window.dispatchEvent(new CustomEvent('requestAddSystemAtHex', { detail: { hexId: id } }));
-                    }
-                };
-            } else {
-                refs.addSystemHereBtn.classList.add('hidden');
-                refs.addSystemHereBtn.onclick = null;
-            }
-        }
-        setButtonAction(refs.renameSystemBtn, false);
-        disableStarEditControls(refs);
-        setButtonAction(refs.renameBodyBtn, false);
-        setButtonAction(refs.quickDeleteBodyBtn, false);
-        disablePlanetTypeControls(refs);
-        setBodySummaryLabels(refs, 0, 0, 0);
-        if (refs.pinSelectedSystemBtn) {
-            refs.pinSelectedSystemBtn.disabled = true;
-            refs.pinSelectedSystemBtn.innerText = 'Pin System';
-            setPinButtonStyle(refs.pinSelectedSystemBtn, false);
-        }
-        if (refs.rerollSelectedSystemBtn) refs.rerollSelectedSystemBtn.disabled = true;
-        if (refs.selectedSystemPinState) refs.selectedSystemPinState.innerText = 'Pinned: --';
-        resetBodyDetailsPanel();
+        renderEmptyHexInfo(refs, id);
     }
 }
 
