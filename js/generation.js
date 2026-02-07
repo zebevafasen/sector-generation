@@ -499,7 +499,7 @@ export function generateSystemData(config = null, context = null) {
         if (index === 0 && planet.habitable) {
             planet.name = `${name} Prime`;
         } else {
-            planet.name = `${name} ${romanize(index + 1)}`;
+            planet.name = `${name} ${romanize(index)}`;
         }
     });
 
