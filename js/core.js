@@ -1,4 +1,5 @@
 ﻿import { state, STAR_CLASS_INFO } from './config.js';
+import { getPrimaryStar, getSystemStars } from './star-system.js';
 import { xmur3, mulberry32 } from './utils.js';
 
 function escapeHtml(value) {
@@ -135,16 +136,26 @@ export function showStarClassInfo(event, pin = false) {
     if (!state.selectedSystemData) return;
     const panel = document.getElementById('starClassTooltip');
     if (!panel) return;
-    const cls = state.selectedSystemData.starClass;
+    const stars = getSystemStars(state.selectedSystemData);
+    const targetEl = event && event.target && event.target.closest ? event.target.closest('[data-star-index]') : null;
+    const requestedIndex = targetEl ? parseInt(targetEl.getAttribute('data-star-index') || '0', 10) : 0;
+    const starIndex = Number.isInteger(requestedIndex) && requestedIndex >= 0 ? requestedIndex : 0;
+    const selectedStar = stars[starIndex] || getPrimaryStar(state.selectedSystemData);
+    const cls = selectedStar.class;
     if (!cls) return;
     const info = getStarClassInfo(cls);
     const typicalAgeLabel = formatStarAgeRange(info.ageRange) || info.typicalAge || 'Age varies';
+    const companions = stars.filter((_, idx) => idx !== starIndex);
+    const companionLines = companions.length
+        ? `<div class="border-t border-slate-700/60 mt-2 pt-2 text-slate-400">Companions: <span class="text-slate-200">${escapeHtml(companions.map(star => star.class).join(' + '))}</span></div>`
+        : '';
     panel.innerHTML = `
         <div class="font-semibold text-sky-300 mb-1">${escapeHtml(info.name)}</div>
         <div class="text-slate-400 mb-0.5">Temp: <span class="text-slate-200">${escapeHtml(info.temp)}</span></div>
         <div class="text-slate-400 mb-0.5">Mass: <span class="text-slate-200">${escapeHtml(info.mass)}</span></div>
         <div class="text-slate-400 mb-1">Typical Age: <span class="text-slate-200">${escapeHtml(typicalAgeLabel)}</span></div>
         <div class="text-slate-300 leading-snug">${escapeHtml(info.notes)}</div>
+        ${companionLines}
     `;
     panel.classList.remove('hidden');
     panel.style.opacity = '1';

@@ -122,17 +122,32 @@ export function setSizeMode(mode) {
 }
 
 export function setupStarClassTooltip() {
-    const refs = getControlsRefs();
-    const starClassEl = refs.infoStarClass;
-    if (!starClassEl) return;
+    const selector = '.star-class-hint';
 
-    const handleEnter = (e) => showStarClassInfo(e);
-    const handleMove = (e) => showStarClassInfo(e);
-    const handleLeave = () => {
+    document.addEventListener('mouseover', (e) => {
+        const target = e.target instanceof Element ? e.target.closest(selector) : null;
+        if (!target) return;
+        showStarClassInfo(e);
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        const target = e.target instanceof Element ? e.target.closest(selector) : null;
+        if (!target) return;
+        showStarClassInfo(e);
+    });
+
+    document.addEventListener('mouseout', (e) => {
+        const leavingFrom = e.target instanceof Element ? e.target.closest(selector) : null;
+        if (!leavingFrom) return;
+        const related = e.relatedTarget;
+        if (related instanceof Node && leavingFrom.contains(related)) return;
         state.starTooltipPinned = false;
         hideStarClassInfo();
-    };
-    const handleClick = (e) => {
+    });
+
+    document.addEventListener('click', (e) => {
+        const target = e.target instanceof Element ? e.target.closest(selector) : null;
+        if (!target) return;
         e.stopPropagation();
         if (state.starTooltipPinned) {
             state.starTooltipPinned = false;
@@ -140,12 +155,7 @@ export function setupStarClassTooltip() {
         } else {
             showStarClassInfo(e, true);
         }
-    };
-
-    starClassEl.addEventListener('mouseenter', handleEnter);
-    starClassEl.addEventListener('mousemove', handleMove);
-    starClassEl.addEventListener('mouseleave', handleLeave);
-    starClassEl.addEventListener('click', handleClick);
+    });
 
     document.addEventListener('click', () => {
         if (state.starTooltipPinned) {

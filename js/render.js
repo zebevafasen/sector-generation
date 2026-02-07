@@ -3,6 +3,7 @@ import { hideStarClassInfo, rand } from './core.js';
 import { EVENTS, emitEvent } from './events.js';
 import { refreshSystemPlanetPopulation } from './planet-population.js';
 import { refreshSystemPlanetTags } from './planet-tags.js';
+import { ensureSystemStarFields, getSystemStars } from './star-system.js';
 import { countSystemBodies } from './body-classification.js';
 import { getCurrentGridDimensions, getGlobalHexDisplayId, renderRouteOverlay, formatGlobalCoord } from './render-shared.js';
 import { resetBodyDetailsPanel } from './render-body-details.js';
@@ -20,6 +21,26 @@ import {
 } from './info-panel-ui.js';
 
 const STAR_GRADIENT_CACHE = {};
+
+function getStarMarkerRadius(starClass) {
+    if (starClass === 'M' || starClass === 'Neutron') return 4;
+    if (starClass === 'O' || starClass === 'B') return 9;
+    if (starClass === 'Black Hole') return 5;
+    return 6;
+}
+
+function getStarOffsets(starCount, radius) {
+    const spread = radius + 4;
+    if (starCount === 2) return [{ dx: -spread * 0.6, dy: 0 }, { dx: spread * 0.6, dy: 0 }];
+    if (starCount >= 3) {
+        return [
+            { dx: 0, dy: -spread * 0.75 },
+            { dx: -spread * 0.75, dy: spread * 0.55 },
+            { dx: spread * 0.75, dy: spread * 0.55 }
+        ];
+    }
+    return [{ dx: 0, dy: 0 }];
+}
 
 function notifySectorDataChanged(label = 'Edit Sector') {
     emitEvent(EVENTS.SECTOR_DATA_CHANGED, { label });
@@ -153,31 +174,37 @@ export function drawGrid(cols, rows, options = {}) {
             g.appendChild(text);
 
             if (system) {
-                const gradientId = ensureStarGradient(svg, system.starClass);
-                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                circle.setAttribute('cx', x);
-                circle.setAttribute('cy', y);
+                ensureSystemStarFields(system);
+                const stars = getSystemStars(system);
+                const primary = stars[0];
+                const baseRadius = getStarMarkerRadius(primary.class);
+                const offsets = getStarOffsets(stars.length, baseRadius);
 
-                let rSize = 6;
-                if (system.starClass === 'M' || system.starClass === 'Neutron') rSize = 4;
-                if (system.starClass === 'O' || system.starClass === 'B') rSize = 9;
-                if (system.starClass === 'Black Hole') {
-                    rSize = 5;
-                    circle.setAttribute('stroke', 'white');
-                    circle.setAttribute('stroke-width', '1');
-                }
-
-                circle.setAttribute('r', rSize);
-                circle.setAttribute('fill', `url(#${gradientId})`);
-                circle.setAttribute('class', 'star-circle');
-                circle.style.filter = `drop-shadow(0 0 8px ${system.glow || system.color})`;
-                g.appendChild(circle);
+                stars.forEach((star, index) => {
+                    const gradientId = ensureStarGradient(svg, star.class);
+                    const offset = offsets[index] || offsets[0];
+                    const cx = x + offset.dx;
+                    const cy = y + offset.dy;
+                    const rSize = Math.max(3, Math.round(getStarMarkerRadius(star.class) * (index === 0 ? 1 : 0.78)));
+                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    circle.setAttribute('cx', String(cx));
+                    circle.setAttribute('cy', String(cy));
+                    circle.setAttribute('r', String(rSize));
+                    circle.setAttribute('fill', `url(#${gradientId})`);
+                    circle.setAttribute('class', 'star-circle');
+                    if (star.class === 'Black Hole') {
+                        circle.setAttribute('stroke', 'white');
+                        circle.setAttribute('stroke-width', '1');
+                    }
+                    circle.style.filter = `drop-shadow(0 0 8px ${star.glow || star.color})`;
+                    g.appendChild(circle);
+                });
 
                 if (isPinned) {
                     const pinRing = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
                     pinRing.setAttribute('cx', x);
                     pinRing.setAttribute('cy', y);
-                    pinRing.setAttribute('r', String(rSize + 4));
+                    pinRing.setAttribute('r', String(baseRadius + (stars.length > 1 ? 8 : 4)));
                     pinRing.setAttribute('fill', 'none');
                     pinRing.setAttribute('stroke', '#2dd4bf');
                     pinRing.setAttribute('stroke-width', '1.4');
@@ -297,6 +324,7 @@ export function selectHex(id, groupElement) {
 
 export function updateInfoPanel(id, preselectedBodyIndex = null) {
     const system = state.sectors[id];
+    if (system) ensureSystemStarFields(system);
     state.selectedSystemData = system;
     const displayId = getGlobalHexDisplayId(id);
 
@@ -353,6 +381,8 @@ export function clearInfoPanel() {
 
     if (refs.starAgeLabel) refs.starAgeLabel.innerText = 'Age: --';
     setButtonAction(refs.renameSystemBtn, false);
+    setButtonAction(refs.deletePrimaryStarBtn, false);
+    if (refs.deletePrimaryStarBtn) refs.deletePrimaryStarBtn.classList.add('hidden');
     setButtonAction(refs.renameBodyBtn, false);
     setButtonAction(refs.quickDeleteBodyBtn, false);
     if (refs.addSystemHereBtn) {

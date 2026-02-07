@@ -8,6 +8,7 @@ import { EVENTS, emitEvent } from './events.js';
 import { normalizeDensityPresetKey } from './generation-data.js';
 import { getGlobalHexDisplayId } from './render-shared.js';
 import { clearInfoPanel, drawGrid, selectHex } from './render.js';
+import { ensureSystemStarFields, getSystemStars } from './star-system.js';
 
 function getStorageUiRefs() {
     return {
@@ -170,7 +171,9 @@ function buildGmBrief(payload) {
 
         const globalHexId = getGlobalHexDisplayId(hexId);
         lines.push(`[${globalHexId}] ${system.name || 'Unnamed System'}${pinnedSet.has(hexId) ? ' [PINNED]' : ''}`);
-        lines.push(`Star: ${system.starClass || '--'} | Age: ${system.starAge || '--'} | Total Pop: ${system.totalPop || 'None'}`);
+        const stars = getSystemStars(system);
+        const starClassLabel = stars.map(star => star.class).join(' + ');
+        lines.push(`Stars: ${starClassLabel || '--'} | Primary Age: ${system.starAge || '--'} | Total Pop: ${system.totalPop || 'None'}`);
         lines.push(`Local Hex: ${hexId}`);
         lines.push(`Bodies: ${planetCount} planets (${habitableCount} habitable), ${beltCount} belts/fields, ${stationCount} stations`);
         if (tags.size) lines.push(`Tags: ${Array.from(tags).sort().join(', ')}`);
@@ -473,6 +476,7 @@ export function applySectorPayload(payload) {
     state.rerollIteration = Number.isFinite(Number(payload.rerollIteration)) ? Number(payload.rerollIteration) : 0;
 
     state.sectors = payload.sectors || {};
+    Object.values(state.sectors).forEach((system) => ensureSystemStarFields(system));
     state.pinnedHexIds = Array.isArray(payload.pinnedHexIds)
         ? payload.pinnedHexIds.filter(hexId => !!state.sectors[hexId])
         : [];
