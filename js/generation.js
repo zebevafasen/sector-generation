@@ -298,6 +298,19 @@ export function generateSector() {
     state.sectors = built.sectors;
     state.pinnedHexIds = [];
     state.selectedHexId = null;
+    state.multiSector = {
+        currentKey: '0,0',
+        sectorsByKey: {
+            '0,0': {
+                seed: seedUsed,
+                config: deepClone(config),
+                sectors: deepClone(built.sectors),
+                pinnedHexIds: [],
+                totalHexes: built.totalHexes,
+                systemCount: built.systemCount
+            }
+        }
+    };
     clearSelectionInfo();
 
     redrawGridAndReselect(built.width, built.height, { resetView: true });

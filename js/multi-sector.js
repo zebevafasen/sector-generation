@@ -192,7 +192,9 @@ function getOrCreateSectorRecord(targetKey, direction) {
     if (!fromRecord) return null;
 
     const continuityFixed = buildEdgeContinuityFixedSystems(fromRecord, direction);
-    const seed = `${fromRecord.seed || 'sector'}-${targetKey}`;
+    const homeSeed = state.multiSector.sectorsByKey['0,0']?.seed || '';
+    const baseSeed = homeSeed || fromRecord.seed || 'sector';
+    const seed = `${baseSeed} / ${targetKey}`;
     const record = createSectorRecord({
         config: fromRecord.config,
         seed,
@@ -239,7 +241,7 @@ function renderSectorLinksUi() {
 
 export function setupMultiSectorLinks() {
     const refs = getRefs();
-    if (!refs.currentLabel) return;
+    if (!refs.northBtn || !refs.southBtn || !refs.westBtn || !refs.eastBtn || !refs.homeBtn) return;
     ensureState();
     if (!state.multiSector.sectorsByKey[state.multiSector.currentKey]) {
         saveCurrentSectorRecord();
