@@ -519,15 +519,19 @@ function renderSystemBodyLists(refs, system, id, preselectedBodyIndex) {
 
         const normalizedType = normalizeBodyType(body.type);
         const bodyIcon = getBodyIconMarkup(normalizedType);
+        const isPlanetary = normalizedType !== 'Artificial' && !/belt|field/i.test(normalizedType);
+        const sizeAndTypeLabel = isPlanetary
+            ? `${body.size || 'Medium'} · ${normalizedType}`
+            : normalizedType;
 
         let html = `<div class="flex justify-between items-center font-semibold text-sky-100"><span class="inline-flex items-center gap-2">${bodyIcon}${body.name}</span><button class="body-rename-btn w-5 h-5 inline-flex items-center justify-center text-[10px] rounded bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:border-sky-500 transition-colors" title="Rename object" aria-label="Rename object">✎</button></div>`;
         html += '<div class="mt-1 flex items-end justify-between">';
-        if (normalizedType !== 'Artificial' && !/belt|field/i.test(normalizedType) && body.habitable) {
+        if (isPlanetary && body.habitable) {
             html += '<span class="inline-block px-1.5 py-0.5 rounded border text-[11px] text-emerald-300 border-emerald-600/60 bg-emerald-900/25">Inhabitated</span>';
         } else {
             html += '<span></span>';
         }
-        html += `<span class="text-xs text-slate-500 font-normal text-right">${normalizedType}</span>`;
+        html += `<span class="text-xs text-slate-500 font-normal text-right">${sizeAndTypeLabel}</span>`;
         html += '</div>';
         li.innerHTML = html;
         const inlineRenameBtn = li.querySelector('.body-rename-btn');
@@ -576,7 +580,6 @@ function renderSystemBodyLists(refs, system, id, preselectedBodyIndex) {
                 });
             }
             if (refs.editPlanetTypeRow && refs.editPlanetTypeSelect) {
-                const isPlanetary = normalizedType !== 'Artificial' && !/belt|field/i.test(normalizedType);
                 const canEditPlanetType = state.editMode && isPlanetary;
                 refs.editPlanetTypeRow.classList.toggle('hidden', !canEditPlanetType);
                 if (canEditPlanetType) {

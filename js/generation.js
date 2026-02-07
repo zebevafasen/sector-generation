@@ -136,6 +136,33 @@ function pickRandomPlanetType(excludedTypes = new Set()) {
     return candidates[Math.floor(rand() * candidates.length)];
 }
 
+function pickWeightedLabel(candidates) {
+    const total = candidates.reduce((sum, item) => sum + item.weight, 0);
+    let roll = rand() * total;
+    for (const item of candidates) {
+        roll -= item.weight;
+        if (roll <= 0) return item.label;
+    }
+    return candidates[candidates.length - 1].label;
+}
+
+function generatePlanetSize(type) {
+    if (type === 'Gas Giant') {
+        return pickWeightedLabel([
+            { label: 'Large', weight: 0.35 },
+            { label: 'Huge', weight: 0.55 },
+            { label: 'Massive', weight: 0.10 }
+        ]);
+    }
+    return pickWeightedLabel([
+        { label: 'Tiny', weight: 0.12 },
+        { label: 'Small', weight: 0.30 },
+        { label: 'Medium', weight: 0.36 },
+        { label: 'Large', weight: 0.18 },
+        { label: 'Huge', weight: 0.04 }
+    ]);
+}
+
 function isHabitableCandidateType(type) {
     return HABITABLE_PLANET_TYPES.has(type);
 }
@@ -487,6 +514,7 @@ export function generateSystemData(config = null, context = null) {
         planets.push({
             name: `${name} ${romanize(i + 1)}`,
             type,
+            size: generatePlanetSize(type),
             features,
             pop,
             habitable: false
@@ -606,6 +634,7 @@ export function addBodyToSelectedSystem(kind) {
         system.planets.push({
             name: `${system.name} ${romanize(1)}`,
             type,
+            size: generatePlanetSize(type),
             features: [],
             pop: 0,
             habitable: false
