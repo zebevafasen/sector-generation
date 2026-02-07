@@ -721,7 +721,6 @@ export function rerollSelectedPlanet() {
     targetPlanet.__selectionToken = selectionToken;
 
     const config = getGenerationConfigSnapshot();
-    const generationProfile = getActiveGenerationProfile(config.generationProfile);
     const hasOtherTerrestrial = system.planets.some((body, idx) =>
         idx !== state.selectedBodyIndex && isPlanetaryBody(body) && body.type === 'Terrestrial'
     );
@@ -731,19 +730,20 @@ export function rerollSelectedPlanet() {
         : pickRandomPlanetType(excludedTypes);
     const nextEnvironment = generatePlanetEnvironment(nextType, rand);
 
+    const wasHabitable = !!targetPlanet.habitable;
     targetPlanet.type = nextType;
     targetPlanet.size = generatePlanetSize(nextType);
     targetPlanet.atmosphere = nextEnvironment.atmosphere;
     targetPlanet.temperature = nextEnvironment.temperature;
     targetPlanet.features = [];
     targetPlanet.pop = 0;
-    targetPlanet.habitable = false;
+    targetPlanet.habitable = wasHabitable;
 
     const planetaryBodies = system.planets.filter(isPlanetaryBody);
-    planetaryBodies.forEach(planet => {
-        planet.habitable = false;
-    });
-    assignSystemHabitability(planetaryBodies, generationProfile);
+    const hasAnyHabitable = planetaryBodies.some(planet => !!planet.habitable);
+    if (!hasAnyHabitable) {
+        targetPlanet.habitable = true;
+    }
     reconcilePlanetaryBodies(system);
 
     let updatedIndex = system.planets.findIndex(body => body && body.__selectionToken === selectionToken);
