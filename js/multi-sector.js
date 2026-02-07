@@ -211,7 +211,6 @@ function moveDirection(direction) {
     const targetKey = makeKey(x + delta.dx, y + delta.dy);
     const targetRecord = getOrCreateSectorRecord(targetKey, direction);
     if (!targetRecord) return;
-    const fromRecord = state.multiSector.sectorsByKey[state.multiSector.currentKey];
     const mappedSelectedHexId = mapSelectedHexForDirection(state.selectedHexId);
     applySectorRecord(targetKey, targetRecord, {
         preferredSelectedHexId: mappedSelectedHexId,
