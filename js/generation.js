@@ -259,9 +259,13 @@ function selectClusteredSystemCoords(candidateCoords, systemsToGenerate) {
 
     const shuffled = [...candidateCoords];
     shuffleArray(shuffled, rand);
-    const clusterCount = Math.min(
-        shuffled.length,
-        systemsToGenerate <= 8 ? 2 : systemsToGenerate <= 18 ? 3 : systemsToGenerate <= 32 ? 4 : 5
+    const targetSystemsPerCluster = 4.5;
+    const clusterCount = Math.max(
+        2,
+        Math.min(
+            shuffled.length,
+            Math.round(systemsToGenerate / targetSystemsPerCluster)
+        )
     );
     const parsedCoords = shuffled
         .map((hexId) => ({ hexId, coord: parseHexId(hexId) }))
@@ -313,7 +317,7 @@ function selectClusteredSystemCoords(candidateCoords, systemsToGenerate) {
     });
     buckets.forEach((bucket) => bucket.sort((a, b) => b.score - a.score));
 
-    const spreadCount = systemsToGenerate >= 6 ? Math.max(1, Math.floor(systemsToGenerate * 0.18)) : 0;
+    const spreadCount = systemsToGenerate >= 10 ? Math.max(1, Math.floor(systemsToGenerate * 0.12)) : 0;
     const clusteredCount = Math.max(0, systemsToGenerate - spreadCount);
     const selected = [];
     let cursor = 0;
