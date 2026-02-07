@@ -427,15 +427,10 @@ function isPlanetaryBody(body) {
     return !!body && body.type !== 'Artificial' && !/belt|field/i.test(body.type);
 }
 
-function reconcilePlanetaryBodies(system) {
-    if (!system || !Array.isArray(system.planets)) return;
-
-    const planetary = system.planets.filter(isPlanetaryBody);
-    const nonPlanetary = system.planets.filter(body => !isPlanetaryBody(body));
-    if (!planetary.length) {
-        system.planets = nonPlanetary;
-        return;
-    }
+function applyPlanetaryOrderAndNames(systemName, bodies) {
+    const planetary = bodies.filter(isPlanetaryBody);
+    const nonPlanetary = bodies.filter(body => !isPlanetaryBody(body));
+    if (!planetary.length) return nonPlanetary;
 
     let primary = planetary.find(body => body.habitable);
     if (!primary) {
@@ -452,19 +447,24 @@ function reconcilePlanetaryBodies(system) {
     orderedPlanetary.forEach((planet, index) => {
         if (index === 0) {
             planet.habitable = true;
-            planet.name = `${system.name} Prime`;
+            planet.name = `${systemName} Prime`;
             return;
         }
         if (planet.habitable) {
-            planet.name = `${system.name} ${inhabitedSuffixes[inhabitedSuffixIndex]}`;
+            planet.name = `${systemName} ${inhabitedSuffixes[inhabitedSuffixIndex]}`;
             inhabitedSuffixIndex++;
             return;
         }
-        planet.name = `${system.name} ${romanize(nonHabitableNumeral)}`;
+        planet.name = `${systemName} ${romanize(nonHabitableNumeral)}`;
         nonHabitableNumeral++;
     });
 
-    system.planets = [...orderedPlanetary, ...nonPlanetary];
+    return [...orderedPlanetary, ...nonPlanetary];
+}
+
+function reconcilePlanetaryBodies(system) {
+    if (!system || !Array.isArray(system.planets)) return;
+    system.planets = applyPlanetaryOrderAndNames(system.name, system.planets);
 }
 
 export function generateSector() {
@@ -552,23 +552,9 @@ export function generateSystemData(config = null, context = null) {
     }
 
     assignSystemHabitability(planets, generationProfile);
-    const primaryHabitableIndex = planets.findIndex(body => body.habitable);
-    if (primaryHabitableIndex >= 0) {
-        const [primaryHabitable] = planets.splice(primaryHabitableIndex, 1);
-        planets.unshift(primaryHabitable);
-    }
-    planets.forEach((planet, index) => {
-        if (index === 0 && planet.habitable) {
-            planet.name = `${name} Prime`;
-        } else {
-            planet.name = `${name} ${romanize(index)}`;
-        }
-    });
-    const secondaryHabitable = planets.filter((planet, index) => index > 0 && planet.habitable);
-    const inhabitedSuffixes = getUniqueHabitableSuffixes(secondaryHabitable.length);
-    secondaryHabitable.forEach((planet, idx) => {
-        planet.name = `${name} ${inhabitedSuffixes[idx]}`;
-    });
+    const normalizedPlanetaryBodies = applyPlanetaryOrderAndNames(name, planets);
+    planets.length = 0;
+    planets.push(...normalizedPlanetaryBodies);
 
     if (rand() < generationProfile.beltChance) {
         planets.push({
