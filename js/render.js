@@ -299,6 +299,13 @@ export function updateViewTransform() {
     }
 }
 
+export function refreshRouteOverlay() {
+    const viewport = document.getElementById('mapViewport');
+    if (!viewport) return;
+    viewport.querySelectorAll('.route-overlay').forEach((node) => node.remove());
+    renderRouteOverlay(viewport);
+}
+
 export function handleHexClick(e, id, groupElement) {
     if (state.viewState.dragDistance > 5) return;
     if (e.shiftKey) {

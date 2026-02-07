@@ -1,7 +1,7 @@
 import { state } from './config.js';
 import { showStatusMessage } from './core.js';
 import { EVENTS } from './events.js';
-import { redrawGridAndReselect } from './ui-sync.js';
+import { refreshRouteOverlay } from './render.js';
 import { isHexCoordInBounds, parseHexId } from './utils.js';
 
 class MinPriorityQueue {
@@ -242,8 +242,7 @@ function updateRouteLabels(refs) {
 }
 
 function redrawRoute() {
-    const { width, height } = getGridDimensions();
-    redrawGridAndReselect(width, height, { selectedHexId: state.selectedHexId });
+    refreshRouteOverlay();
 }
 
 function recalculateRoute(refs, options = {}) {
