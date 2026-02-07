@@ -99,6 +99,14 @@
             <div class="space-y-3">
                 <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wide">Seed & Data</h2>
                 <div>
+                    <label class="block text-xs text-slate-500 mb-1">Generation Profile</label>
+                    <select id="generationProfile" class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm focus:border-sky-500 focus:outline-none">
+                        <option value="cinematic" selected>Cinematic</option>
+                        <option value="hard_scifi">Hard Sci-Fi</option>
+                        <option value="high_adventure">High Adventure</option>
+                    </select>
+                </div>
+                <div>
                     <label class="block text-xs text-slate-500 mb-1">Seed</label>
                     <div class="flex gap-2">
                         <input type="text" id="seedInput" placeholder="Auto" 

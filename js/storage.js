@@ -14,6 +14,7 @@ export function buildSectorPayload(meta = {}) {
     const densitySelect = document.getElementById('densityPreset');
     const manualMinInput = document.getElementById('manualMin');
     const manualMaxInput = document.getElementById('manualMax');
+    const generationProfileSelect = document.getElementById('generationProfile');
 
     return {
         version: 1,
@@ -31,6 +32,7 @@ export function buildSectorPayload(meta = {}) {
         },
         autoSeed: isAutoSeedEnabled(),
         realisticPlanetWeights: isRealisticPlanetWeightingEnabled(),
+        generationProfile: generationProfileSelect ? generationProfileSelect.value : 'cinematic',
         dimensions: { width, height },
         stats: { totalHexes, totalSystems },
         sectors: JSON.parse(JSON.stringify(state.sectors))
@@ -164,6 +166,9 @@ export function applySectorPayload(payload) {
     if (typeof payload.realisticPlanetWeights === 'boolean') {
         const toggle = document.getElementById('realisticPlanetWeightsToggle');
         if (toggle) toggle.checked = payload.realisticPlanetWeights;
+    }
+    if (payload.generationProfile && document.getElementById('generationProfile')) {
+        document.getElementById('generationProfile').value = payload.generationProfile;
     }
 
     const seedInput = document.getElementById('seedInput');

@@ -25,11 +25,40 @@ const STAR_CLASS_PLANET_WEIGHTS = {
     default: { 'Gas Giant': 0.18, Terrestrial: 0.22, Oceanic: 0.14, Volcanic: 0.11, Desert: 0.15, Barren: 0.12, Arctic: 0.08 }
 };
 const HABITABLE_PLANET_TYPES = new Set(['Terrestrial', 'Oceanic', 'Desert', 'Arctic']);
-const HABITABILITY_TYPE_WEIGHT = {
+const BASE_HABITABILITY_TYPE_WEIGHT = {
     Terrestrial: 2.2,
     Oceanic: 1.0,
     Desert: 0.8,
     Arctic: 0.75
+};
+const GENERATION_PROFILES = {
+    cinematic: {
+        inhabitedChance: 0.45,
+        planetPoiChance: 0.2,
+        beltChance: 0.35,
+        stationChance: 0.3,
+        extraHabitableBaseChance: 0.12,
+        extraHabitableDecay: 0.45,
+        habitabilityTypeMultipliers: { Terrestrial: 1.15, Oceanic: 1.0, Desert: 0.95, Arctic: 0.9 }
+    },
+    hard_scifi: {
+        inhabitedChance: 0.3,
+        planetPoiChance: 0.12,
+        beltChance: 0.48,
+        stationChance: 0.2,
+        extraHabitableBaseChance: 0.06,
+        extraHabitableDecay: 0.35,
+        habitabilityTypeMultipliers: { Terrestrial: 1.1, Oceanic: 0.9, Desert: 0.75, Arctic: 0.65 }
+    },
+    high_adventure: {
+        inhabitedChance: 0.58,
+        planetPoiChance: 0.32,
+        beltChance: 0.28,
+        stationChance: 0.5,
+        extraHabitableBaseChance: 0.16,
+        extraHabitableDecay: 0.55,
+        habitabilityTypeMultipliers: { Terrestrial: 1.05, Oceanic: 1.1, Desert: 1.0, Arctic: 0.95 }
+    }
 };
 
 function pickWeightedType(weights, excludedTypes = new Set()) {
@@ -69,14 +98,24 @@ function isHabitableCandidateType(type) {
     return HABITABLE_PLANET_TYPES.has(type);
 }
 
-function getHabitabilityTypeWeight(type) {
-    return HABITABILITY_TYPE_WEIGHT[type] || 1;
+function getActiveGenerationProfile() {
+    const select = document.getElementById('generationProfile');
+    const key = select ? select.value : 'cinematic';
+    return GENERATION_PROFILES[key] || GENERATION_PROFILES.cinematic;
 }
 
-function pickWeightedCandidateIndex(candidateIndexes, planets) {
+function getHabitabilityTypeWeight(type, profile) {
+    const baseWeight = BASE_HABITABILITY_TYPE_WEIGHT[type] || 1;
+    const typeMultiplier = profile.habitabilityTypeMultipliers && profile.habitabilityTypeMultipliers[type]
+        ? profile.habitabilityTypeMultipliers[type]
+        : 1;
+    return baseWeight * typeMultiplier;
+}
+
+function pickWeightedCandidateIndex(candidateIndexes, planets, profile) {
     const weightedCandidates = candidateIndexes.map(index => ({
         index,
-        weight: getHabitabilityTypeWeight(planets[index].type)
+        weight: getHabitabilityTypeWeight(planets[index].type, profile)
     }));
     const total = weightedCandidates.reduce((sum, item) => sum + item.weight, 0);
     let roll = rand() * total;
@@ -87,7 +126,7 @@ function pickWeightedCandidateIndex(candidateIndexes, planets) {
     return weightedCandidates[weightedCandidates.length - 1].index;
 }
 
-function assignSystemHabitability(planets) {
+function assignSystemHabitability(planets, profile) {
     if (!planets.length) return;
 
     const candidateIndexes = [];
@@ -101,15 +140,15 @@ function assignSystemHabitability(planets) {
         candidateIndexes.push(fallbackIndex);
     }
 
-    const primaryIndex = pickWeightedCandidateIndex(candidateIndexes, planets);
+    const primaryIndex = pickWeightedCandidateIndex(candidateIndexes, planets, profile);
     const remainingIndexes = candidateIndexes.filter(index => index !== primaryIndex);
     planets[primaryIndex].habitable = true;
 
     let extraHabitableCount = 0;
     shuffleArray(remainingIndexes, rand);
     remainingIndexes.forEach(index => {
-        const typeWeight = getHabitabilityTypeWeight(planets[index].type);
-        const extraChance = 0.12 * typeWeight * Math.pow(0.45, extraHabitableCount);
+        const typeWeight = getHabitabilityTypeWeight(planets[index].type, profile);
+        const extraChance = profile.extraHabitableBaseChance * typeWeight * Math.pow(profile.extraHabitableDecay, extraHabitableCount);
         if (rand() < extraChance) {
             planets[index].habitable = true;
             extraHabitableCount++;
@@ -175,6 +214,7 @@ export function generateSector() {
 }
 
 export function generateSystemData() {
+    const generationProfile = getActiveGenerationProfile();
     const randChance = rand();
     let sClass = 'M';
     if (randChance > 0.99) sClass = 'Black Hole';
@@ -207,13 +247,13 @@ export function generateSystemData() {
         let pop = 0;
         const features = [];
 
-        if (['Terrestrial', 'Oceanic', 'Desert', 'Arctic'].includes(type) && rand() > 0.6) {
+        if (['Terrestrial', 'Oceanic', 'Desert', 'Arctic'].includes(type) && rand() < generationProfile.inhabitedChance) {
             pop = Math.floor(rand() * 10) + 1;
             population += pop;
             features.push('Inhabited');
         }
 
-        if (rand() > 0.8) {
+        if (rand() < generationProfile.planetPoiChance) {
             const poi = POI_TYPES[Math.floor(rand() * POI_TYPES.length)];
             features.push(poi);
         }
@@ -227,9 +267,9 @@ export function generateSystemData() {
         });
     }
 
-    assignSystemHabitability(planets);
+    assignSystemHabitability(planets, generationProfile);
 
-    if (rand() > 0.65) {
+    if (rand() < generationProfile.beltChance) {
         planets.push({
             name: `${name} Belt`,
             type: rand() > 0.6 ? 'Debris Field' : 'Asteroid Belt',
@@ -238,7 +278,7 @@ export function generateSystemData() {
         });
     }
 
-    if (rand() > 0.7) {
+    if (rand() < generationProfile.stationChance) {
         const poi = POI_TYPES[Math.floor(rand() * POI_TYPES.length)];
         planets.push({
             name: `Station Alpha-${Math.floor(rand() * 99)}`,
