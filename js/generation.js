@@ -7,64 +7,20 @@ import {
     STAR_VISUALS,
     state
 } from './config.js';
+import {
+    ADJACENT_DUPLICATE_NAME_CHANCE,
+    BASE_HABITABILITY_TYPE_WEIGHT,
+    GENERATION_PROFILES,
+    HABITABLE_PLANET_TYPES,
+    HABITABLE_WORLD_SUFFIXES,
+    STAR_CLASS_PLANET_WEIGHTS
+} from './generation-data.js';
+import { EVENTS, emitEvent } from './events.js';
+import { reportSystemInvariantIssues } from './invariants.js';
 import { generateStarAge, generateSeedString, isAutoSeedEnabled, rand, setSeed, showStatusMessage } from './core.js';
 import { autoSaveSectorState, buildSectorPayload } from './storage.js';
-import { clearInfoPanel, drawGrid, selectHex, updateInfoPanel } from './render.js';
+import { redrawGridAndReselect, refreshHexInfo, clearSelectionInfo } from './ui-sync.js';
 import { romanize, shuffleArray } from './utils.js';
-
-const STAR_CLASS_PLANET_WEIGHTS = {
-    O: { 'Gas Giant': 0.28, Terrestrial: 0.07, Oceanic: 0.02, Volcanic: 0.24, Desert: 0.17, Barren: 0.20, Arctic: 0.02 },
-    B: { 'Gas Giant': 0.26, Terrestrial: 0.09, Oceanic: 0.03, Volcanic: 0.20, Desert: 0.17, Barren: 0.20, Arctic: 0.05 },
-    A: { 'Gas Giant': 0.24, Terrestrial: 0.15, Oceanic: 0.08, Volcanic: 0.16, Desert: 0.16, Barren: 0.13, Arctic: 0.08 },
-    F: { 'Gas Giant': 0.20, Terrestrial: 0.23, Oceanic: 0.17, Volcanic: 0.10, Desert: 0.14, Barren: 0.08, Arctic: 0.08 },
-    G: { 'Gas Giant': 0.19, Terrestrial: 0.24, Oceanic: 0.19, Volcanic: 0.09, Desert: 0.12, Barren: 0.08, Arctic: 0.09 },
-    K: { 'Gas Giant': 0.17, Terrestrial: 0.22, Oceanic: 0.16, Volcanic: 0.11, Desert: 0.13, Barren: 0.10, Arctic: 0.11 },
-    M: { 'Gas Giant': 0.12, Terrestrial: 0.20, Oceanic: 0.11, Volcanic: 0.18, Desert: 0.11, Barren: 0.16, Arctic: 0.12 },
-    Neutron: { 'Gas Giant': 0.20, Terrestrial: 0.04, Oceanic: 0.01, Volcanic: 0.30, Desert: 0.08, Barren: 0.35, Arctic: 0.02 },
-    'Black Hole': { 'Gas Giant': 0.22, Terrestrial: 0.02, Oceanic: 0.00, Volcanic: 0.32, Desert: 0.06, Barren: 0.36, Arctic: 0.02 },
-    default: { 'Gas Giant': 0.18, Terrestrial: 0.22, Oceanic: 0.14, Volcanic: 0.11, Desert: 0.15, Barren: 0.12, Arctic: 0.08 }
-};
-const HABITABLE_PLANET_TYPES = new Set(['Terrestrial', 'Oceanic', 'Desert', 'Arctic']);
-const BASE_HABITABILITY_TYPE_WEIGHT = {
-    Terrestrial: 2.2,
-    Oceanic: 1.0,
-    Desert: 0.8,
-    Arctic: 0.75
-};
-const ADJACENT_DUPLICATE_NAME_CHANCE = 0.35;
-const HABITABLE_WORLD_SUFFIXES = [
-    'Haven', 'Eden', 'Sanctuary', 'Harbor', 'Bastion', 'Refuge',
-    'Prospect', 'Utopia', 'Arcadia', 'New Dawn', 'Greenfall', 'Crossing'
-];
-const GENERATION_PROFILES = {
-    cinematic: {
-        inhabitedChance: 0.45,
-        planetPoiChance: 0.2,
-        beltChance: 0.35,
-        stationChance: 0.3,
-        extraHabitableBaseChance: 0.12,
-        extraHabitableDecay: 0.45,
-        habitabilityTypeMultipliers: { Terrestrial: 1.15, Oceanic: 1.0, Desert: 0.95, Arctic: 0.9 }
-    },
-    hard_scifi: {
-        inhabitedChance: 0.3,
-        planetPoiChance: 0.12,
-        beltChance: 0.48,
-        stationChance: 0.2,
-        extraHabitableBaseChance: 0.06,
-        extraHabitableDecay: 0.35,
-        habitabilityTypeMultipliers: { Terrestrial: 1.1, Oceanic: 0.9, Desert: 0.75, Arctic: 0.65 }
-    },
-    high_adventure: {
-        inhabitedChance: 0.58,
-        planetPoiChance: 0.32,
-        beltChance: 0.28,
-        stationChance: 0.5,
-        extraHabitableBaseChance: 0.16,
-        extraHabitableDecay: 0.55,
-        habitabilityTypeMultipliers: { Terrestrial: 1.05, Oceanic: 1.1, Desert: 1.0, Arctic: 0.95 }
-    }
-};
 
 function deepClone(value) {
     return JSON.parse(JSON.stringify(value));
@@ -408,34 +364,14 @@ function sanitizePinnedHexes(width, height) {
     state.pinnedHexIds = (state.pinnedHexIds || []).filter(hexId => isHexIdInBounds(hexId, width, height) && !!state.sectors[hexId]);
 }
 
-function reselectionAfterDraw(selectedHexId) {
-    if (!selectedHexId || !state.sectors[selectedHexId]) {
-        state.selectedHexId = null;
-        clearInfoPanel();
-        return;
-    }
-    const group = document.querySelector(`.hex-group[data-id="${selectedHexId}"]`);
-    if (group) {
-        selectHex(selectedHexId, group);
-    } else {
-        state.selectedHexId = null;
-        clearInfoPanel();
-    }
-}
-
 function isPlanetaryBody(body) {
     return !!body && body.type !== 'Artificial' && !/belt|field/i.test(body.type);
 }
 
-function reconcilePlanetaryBodies(system) {
-    if (!system || !Array.isArray(system.planets)) return;
-
-    const planetary = system.planets.filter(isPlanetaryBody);
-    const nonPlanetary = system.planets.filter(body => !isPlanetaryBody(body));
-    if (!planetary.length) {
-        system.planets = nonPlanetary;
-        return;
-    }
+function applyPlanetaryOrderAndNames(systemName, bodies) {
+    const planetary = bodies.filter(isPlanetaryBody);
+    const nonPlanetary = bodies.filter(body => !isPlanetaryBody(body));
+    if (!planetary.length) return nonPlanetary;
 
     let primary = planetary.find(body => body.habitable);
     if (!primary) {
@@ -452,19 +388,25 @@ function reconcilePlanetaryBodies(system) {
     orderedPlanetary.forEach((planet, index) => {
         if (index === 0) {
             planet.habitable = true;
-            planet.name = `${system.name} Prime`;
+            planet.name = `${systemName} Prime`;
             return;
         }
         if (planet.habitable) {
-            planet.name = `${system.name} ${inhabitedSuffixes[inhabitedSuffixIndex]}`;
+            planet.name = `${systemName} ${inhabitedSuffixes[inhabitedSuffixIndex]}`;
             inhabitedSuffixIndex++;
             return;
         }
-        planet.name = `${system.name} ${romanize(nonHabitableNumeral)}`;
+        planet.name = `${systemName} ${romanize(nonHabitableNumeral)}`;
         nonHabitableNumeral++;
     });
 
-    system.planets = [...orderedPlanetary, ...nonPlanetary];
+    return [...orderedPlanetary, ...nonPlanetary];
+}
+
+function reconcilePlanetaryBodies(system) {
+    if (!system || !Array.isArray(system.planets)) return;
+    system.planets = applyPlanetaryOrderAndNames(system.name, system.planets);
+    reportSystemInvariantIssues(system, 'reconcile');
 }
 
 export function generateSector() {
@@ -488,9 +430,9 @@ export function generateSector() {
     state.sectors = built.sectors;
     state.pinnedHexIds = [];
     state.selectedHexId = null;
-    clearInfoPanel();
+    clearSelectionInfo();
 
-    drawGrid(built.width, built.height);
+    redrawGridAndReselect(built.width, built.height, { resetView: true });
     updateSectorStatus(built.totalHexes, built.systemCount);
     refreshSectorSnapshot(config, built.width, built.height);
     showStatusMessage(seedUsed ? `Generated seed ${seedUsed}` : 'Sector regenerated.', 'info');
@@ -552,23 +494,9 @@ export function generateSystemData(config = null, context = null) {
     }
 
     assignSystemHabitability(planets, generationProfile);
-    const primaryHabitableIndex = planets.findIndex(body => body.habitable);
-    if (primaryHabitableIndex >= 0) {
-        const [primaryHabitable] = planets.splice(primaryHabitableIndex, 1);
-        planets.unshift(primaryHabitable);
-    }
-    planets.forEach((planet, index) => {
-        if (index === 0 && planet.habitable) {
-            planet.name = `${name} Prime`;
-        } else {
-            planet.name = `${name} ${romanize(index)}`;
-        }
-    });
-    const secondaryHabitable = planets.filter((planet, index) => index > 0 && planet.habitable);
-    const inhabitedSuffixes = getUniqueHabitableSuffixes(secondaryHabitable.length);
-    secondaryHabitable.forEach((planet, idx) => {
-        planet.name = `${name} ${inhabitedSuffixes[idx]}`;
-    });
+    const normalizedPlanetaryBodies = applyPlanetaryOrderAndNames(name, planets);
+    planets.length = 0;
+    planets.push(...normalizedPlanetaryBodies);
 
     if (rand() < generationProfile.beltChance) {
         planets.push({
@@ -590,7 +518,7 @@ export function generateSystemData(config = null, context = null) {
     }
 
     const visuals = STAR_VISUALS[sClass] || STAR_VISUALS.default;
-    return {
+    const generatedSystem = {
         name,
         starClass: sClass,
         color: visuals.core,
@@ -600,11 +528,12 @@ export function generateSystemData(config = null, context = null) {
         planets,
         totalPop: population > 0 ? `${population} Billion` : 'None'
     };
+    reportSystemInvariantIssues(generatedSystem, 'generate');
+    return generatedSystem;
 }
 
 function notifyEditModeChanged() {
-    if (typeof window === 'undefined') return;
-    window.dispatchEvent(new Event('editModeChanged'));
+    emitEvent(EVENTS.EDIT_MODE_CHANGED);
 }
 
 export function setEditMode(enabled) {
@@ -633,9 +562,9 @@ export function addSystemAtHex(hexId) {
         usedNames,
         sectorsByCoord: state.sectors
     });
+    reportSystemInvariantIssues(state.sectors[hexId], 'add-system');
 
-    drawGrid(config.width, config.height, { resetView: false });
-    reselectionAfterDraw(hexId);
+    redrawGridAndReselect(config.width, config.height, { selectedHexId: hexId });
     sanitizePinnedHexes(config.width, config.height);
     refreshSectorSnapshot(config, config.width, config.height);
     updateSectorStatus(config.width * config.height, Object.keys(state.sectors).length);
@@ -655,8 +584,7 @@ export function deleteSelectedSystem() {
     state.selectedHexId = null;
     state.selectedBodyIndex = null;
 
-    drawGrid(config.width, config.height, { resetView: false });
-    clearInfoPanel();
+    redrawGridAndReselect(config.width, config.height);
     sanitizePinnedHexes(config.width, config.height);
     refreshSectorSnapshot(config, config.width, config.height);
     updateSectorStatus(config.width * config.height, Object.keys(state.sectors).length);
@@ -704,7 +632,8 @@ export function addBodyToSelectedSystem(kind) {
     }
 
     state.selectedBodyIndex = null;
-    updateInfoPanel(selectedHexId);
+    refreshHexInfo(selectedHexId);
+    reportSystemInvariantIssues(system, 'add-body');
     const config = getGenerationConfigSnapshot();
     refreshSectorSnapshot(config, config.width, config.height);
     showStatusMessage('Added new object.', 'success');
@@ -728,7 +657,8 @@ export function deleteSelectedBody() {
         reconcilePlanetaryBodies(system);
     }
 
-    updateInfoPanel(selectedHexId);
+    refreshHexInfo(selectedHexId);
+    reportSystemInvariantIssues(system, 'delete-body');
     const config = getGenerationConfigSnapshot();
     refreshSectorSnapshot(config, config.width, config.height);
     showStatusMessage('Deleted selected object.', 'success');
@@ -755,9 +685,9 @@ export function rerollSelectedSystem() {
         usedNames,
         sectorsByCoord: otherSystems
     });
+    reportSystemInvariantIssues(state.sectors[selectedHexId], 'reroll-selected');
 
-    drawGrid(config.width, config.height, { resetView: false });
-    reselectionAfterDraw(selectedHexId);
+    redrawGridAndReselect(config.width, config.height, { selectedHexId });
     sanitizePinnedHexes(config.width, config.height);
     refreshSectorSnapshot(config, config.width, config.height);
     showStatusMessage(`Rerolled system ${selectedHexId} with seed ${seedUsed}.`, 'success');
@@ -787,7 +717,7 @@ export function togglePinSelectedSystem() {
         poly.classList.toggle('pinned', state.pinnedHexIds.includes(selectedHexId));
     }
 
-    updateInfoPanel(selectedHexId);
+    refreshHexInfo(selectedHexId);
     const config = getGenerationConfigSnapshot();
     refreshSectorSnapshot(config, config.width, config.height);
 }
@@ -816,8 +746,7 @@ export function rerollUnpinnedSystems() {
     state.sectors = built.sectors;
     sanitizePinnedHexes(built.width, built.height);
 
-    drawGrid(built.width, built.height, { resetView: false });
-    reselectionAfterDraw(selectedHexId);
+    redrawGridAndReselect(built.width, built.height, { selectedHexId });
     updateSectorStatus(built.totalHexes, built.systemCount);
     refreshSectorSnapshot(config, built.width, built.height);
     showStatusMessage(`Rerolled unpinned systems with seed ${seedUsed}.`, 'success');

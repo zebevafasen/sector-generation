@@ -1,9 +1,49 @@
 import { setDensityMode, setSizeMode, setupStarClassTooltip } from './controls.js';
 import { randomizeSeed } from './core.js';
+import { EVENTS } from './events.js';
 import { state } from './config.js';
 import { addBodyToSelectedSystem, addSystemAtHex, deleteSelectedBody, deleteSelectedSystem, generateSector, rerollSelectedSystem, rerollUnpinnedSystems, setEditMode, toggleEditMode, togglePinSelectedSystem } from './generation.js';
 import { autoSaveSectorState, exportSector, handleImportFile, loadSectorLocal, restoreCachedSectorState, saveSectorLocal, triggerImport } from './storage.js';
 import { setupPanZoom, updateInfoPanel, updateViewTransform } from './render.js';
+
+const mainRefsCache = {};
+
+function getMainRefs() {
+    if (!mainRefsCache.modeSizePresetBtn) {
+        mainRefsCache.modeSizePresetBtn = document.getElementById('modeSizePresetBtn');
+        mainRefsCache.modeSizeCustomBtn = document.getElementById('modeSizeCustomBtn');
+        mainRefsCache.modePresetBtn = document.getElementById('modePresetBtn');
+        mainRefsCache.modeManualBtn = document.getElementById('modeManualBtn');
+        mainRefsCache.randomizeSeedBtn = document.getElementById('randomizeSeedBtn');
+        mainRefsCache.saveSectorLocalBtn = document.getElementById('saveSectorLocalBtn');
+        mainRefsCache.loadSectorLocalBtn = document.getElementById('loadSectorLocalBtn');
+        mainRefsCache.exportSectorBtn = document.getElementById('exportSectorBtn');
+        mainRefsCache.triggerImportBtn = document.getElementById('triggerImportBtn');
+        mainRefsCache.generateSectorBtn = document.getElementById('generateSectorBtn');
+        mainRefsCache.rerollUnpinnedBtn = document.getElementById('rerollUnpinnedBtn');
+        mainRefsCache.rerollSelectedSystemBtn = document.getElementById('rerollSelectedSystemBtn');
+        mainRefsCache.pinSelectedSystemBtn = document.getElementById('pinSelectedSystemBtn');
+        mainRefsCache.editModeToggleBtn = document.getElementById('editModeToggleBtn');
+        mainRefsCache.editAddPlanetInSectionBtn = document.getElementById('editAddPlanetInSectionBtn');
+        mainRefsCache.editAddBeltInSectionBtn = document.getElementById('editAddBeltInSectionBtn');
+        mainRefsCache.editAddStationInSectionBtn = document.getElementById('editAddStationInSectionBtn');
+        mainRefsCache.editDeleteBodyBtn = document.getElementById('editDeleteBodyBtn');
+        mainRefsCache.editDeleteSystemBtn = document.getElementById('editDeleteSystemBtn');
+        mainRefsCache.editModeControls = document.getElementById('editModeControls');
+        mainRefsCache.quickDeleteBodyBtn = document.getElementById('quickDeleteBodyBtn');
+        mainRefsCache.seedInput = document.getElementById('seedInput');
+        mainRefsCache.sizePreset = document.getElementById('sizePreset');
+        mainRefsCache.gridWidth = document.getElementById('gridWidth');
+        mainRefsCache.gridHeight = document.getElementById('gridHeight');
+        mainRefsCache.densityPreset = document.getElementById('densityPreset');
+        mainRefsCache.manualMin = document.getElementById('manualMin');
+        mainRefsCache.manualMax = document.getElementById('manualMax');
+        mainRefsCache.autoSeedToggle = document.getElementById('autoSeedToggle');
+        mainRefsCache.realisticPlanetWeightsToggle = document.getElementById('realisticPlanetWeightsToggle');
+        mainRefsCache.generationProfile = document.getElementById('generationProfile');
+    }
+    return mainRefsCache;
+}
 
 function setupPanelToggles() {
     const mapContainer = document.getElementById('mapContainer');
@@ -70,69 +110,69 @@ function setupPanelToggles() {
 }
 
 function bindUiEvents() {
-    const byId = (id) => document.getElementById(id);
+    const refs = getMainRefs();
 
-    byId('modeSizePresetBtn')?.addEventListener('click', () => setSizeMode('preset'));
-    byId('modeSizeCustomBtn')?.addEventListener('click', () => setSizeMode('custom'));
-    byId('modePresetBtn')?.addEventListener('click', () => setDensityMode('preset'));
-    byId('modeManualBtn')?.addEventListener('click', () => setDensityMode('manual'));
-    byId('randomizeSeedBtn')?.addEventListener('click', randomizeSeed);
-    byId('saveSectorLocalBtn')?.addEventListener('click', saveSectorLocal);
-    byId('loadSectorLocalBtn')?.addEventListener('click', loadSectorLocal);
-    byId('exportSectorBtn')?.addEventListener('click', exportSector);
-    byId('triggerImportBtn')?.addEventListener('click', triggerImport);
-    byId('generateSectorBtn')?.addEventListener('click', generateSector);
-    byId('rerollUnpinnedBtn')?.addEventListener('click', rerollUnpinnedSystems);
-    byId('rerollSelectedSystemBtn')?.addEventListener('click', rerollSelectedSystem);
-    byId('pinSelectedSystemBtn')?.addEventListener('click', togglePinSelectedSystem);
-    byId('editModeToggleBtn')?.addEventListener('click', toggleEditMode);
-    byId('editAddPlanetInSectionBtn')?.addEventListener('click', (event) => {
+    refs.modeSizePresetBtn?.addEventListener('click', () => setSizeMode('preset'));
+    refs.modeSizeCustomBtn?.addEventListener('click', () => setSizeMode('custom'));
+    refs.modePresetBtn?.addEventListener('click', () => setDensityMode('preset'));
+    refs.modeManualBtn?.addEventListener('click', () => setDensityMode('manual'));
+    refs.randomizeSeedBtn?.addEventListener('click', randomizeSeed);
+    refs.saveSectorLocalBtn?.addEventListener('click', saveSectorLocal);
+    refs.loadSectorLocalBtn?.addEventListener('click', loadSectorLocal);
+    refs.exportSectorBtn?.addEventListener('click', exportSector);
+    refs.triggerImportBtn?.addEventListener('click', triggerImport);
+    refs.generateSectorBtn?.addEventListener('click', generateSector);
+    refs.rerollUnpinnedBtn?.addEventListener('click', rerollUnpinnedSystems);
+    refs.rerollSelectedSystemBtn?.addEventListener('click', rerollSelectedSystem);
+    refs.pinSelectedSystemBtn?.addEventListener('click', togglePinSelectedSystem);
+    refs.editModeToggleBtn?.addEventListener('click', toggleEditMode);
+    refs.editAddPlanetInSectionBtn?.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
         addBodyToSelectedSystem('planet');
     });
-    byId('editAddBeltInSectionBtn')?.addEventListener('click', (event) => {
+    refs.editAddBeltInSectionBtn?.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
         addBodyToSelectedSystem('belt');
     });
-    byId('editAddStationInSectionBtn')?.addEventListener('click', (event) => {
+    refs.editAddStationInSectionBtn?.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
         addBodyToSelectedSystem('station');
     });
-    byId('editDeleteBodyBtn')?.addEventListener('click', deleteSelectedBody);
-    byId('editDeleteSystemBtn')?.addEventListener('click', deleteSelectedSystem);
+    refs.editDeleteBodyBtn?.addEventListener('click', deleteSelectedBody);
+    refs.editDeleteSystemBtn?.addEventListener('click', deleteSelectedSystem);
 
     const persistOnChangeIds = [
         'sizePreset', 'gridWidth', 'gridHeight', 'densityPreset', 'manualMin', 'manualMax',
         'seedInput', 'autoSeedToggle', 'realisticPlanetWeightsToggle', 'generationProfile'
     ];
     persistOnChangeIds.forEach((id) => {
-        const el = byId(id);
+        const el = document.getElementById(id);
         if (!el) return;
         el.addEventListener('change', autoSaveSectorState);
     });
-    byId('seedInput')?.addEventListener('input', autoSaveSectorState);
+    refs.seedInput?.addEventListener('input', autoSaveSectorState);
 
-    byId('modeSizePresetBtn')?.addEventListener('click', autoSaveSectorState);
-    byId('modeSizeCustomBtn')?.addEventListener('click', autoSaveSectorState);
-    byId('modePresetBtn')?.addEventListener('click', autoSaveSectorState);
-    byId('modeManualBtn')?.addEventListener('click', autoSaveSectorState);
-    byId('randomizeSeedBtn')?.addEventListener('click', autoSaveSectorState);
-    window.addEventListener('sectorDataChanged', autoSaveSectorState);
-    window.addEventListener('requestAddSystemAtHex', (event) => {
+    refs.modeSizePresetBtn?.addEventListener('click', autoSaveSectorState);
+    refs.modeSizeCustomBtn?.addEventListener('click', autoSaveSectorState);
+    refs.modePresetBtn?.addEventListener('click', autoSaveSectorState);
+    refs.modeManualBtn?.addEventListener('click', autoSaveSectorState);
+    refs.randomizeSeedBtn?.addEventListener('click', autoSaveSectorState);
+    window.addEventListener(EVENTS.SECTOR_DATA_CHANGED, autoSaveSectorState);
+    window.addEventListener(EVENTS.REQUEST_ADD_SYSTEM_AT_HEX, (event) => {
         if (!state.editMode) return;
         const hexId = event && event.detail ? event.detail.hexId : null;
         if (!hexId) return;
         addSystemAtHex(hexId);
     });
-    window.addEventListener('requestDeleteSelectedBody', () => {
+    window.addEventListener(EVENTS.REQUEST_DELETE_SELECTED_BODY, () => {
         if (!state.editMode) return;
         deleteSelectedBody();
     });
-    window.addEventListener('editModeChanged', updateEditModeUi);
-    window.addEventListener('editModeChanged', () => {
+    window.addEventListener(EVENTS.EDIT_MODE_CHANGED, () => {
+        updateEditModeUi();
         if (state.selectedHexId) {
             updateInfoPanel(state.selectedHexId, state.selectedBodyIndex);
         }
@@ -140,31 +180,26 @@ function bindUiEvents() {
 }
 
 function updateEditModeUi() {
-    const toggleBtn = document.getElementById('editModeToggleBtn');
-    const editControls = document.getElementById('editModeControls');
-    const quickDeleteBodyBtn = document.getElementById('quickDeleteBodyBtn');
-    const sectionAddPlanet = document.getElementById('editAddPlanetInSectionBtn');
-    const sectionAddBelt = document.getElementById('editAddBeltInSectionBtn');
-    const sectionAddStation = document.getElementById('editAddStationInSectionBtn');
-    if (toggleBtn) {
-        toggleBtn.innerText = state.editMode ? 'EDIT MODE: ON' : 'EDIT MODE: OFF';
-        toggleBtn.className = state.editMode
+    const refs = getMainRefs();
+    if (refs.editModeToggleBtn) {
+        refs.editModeToggleBtn.innerText = state.editMode ? 'EDIT MODE: ON' : 'EDIT MODE: OFF';
+        refs.editModeToggleBtn.className = state.editMode
             ? 'w-full py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded border border-emerald-500 font-semibold transition-all active:scale-95'
             : 'w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded border border-slate-600 font-semibold transition-all active:scale-95';
     }
-    if (editControls) {
-        editControls.classList.toggle('hidden', !state.editMode);
+    if (refs.editModeControls) {
+        refs.editModeControls.classList.toggle('hidden', !state.editMode);
     }
-    if (quickDeleteBodyBtn) {
-        quickDeleteBodyBtn.classList.toggle('hidden', !state.editMode);
+    if (refs.quickDeleteBodyBtn) {
+        refs.quickDeleteBodyBtn.classList.toggle('hidden', !state.editMode);
         if (!state.editMode) {
-            quickDeleteBodyBtn.disabled = true;
-            quickDeleteBodyBtn.onclick = null;
+            refs.quickDeleteBodyBtn.disabled = true;
+            refs.quickDeleteBodyBtn.onclick = null;
         }
     }
-    if (sectionAddPlanet) sectionAddPlanet.classList.toggle('hidden', !state.editMode);
-    if (sectionAddBelt) sectionAddBelt.classList.toggle('hidden', !state.editMode);
-    if (sectionAddStation) sectionAddStation.classList.toggle('hidden', !state.editMode);
+    if (refs.editAddPlanetInSectionBtn) refs.editAddPlanetInSectionBtn.classList.toggle('hidden', !state.editMode);
+    if (refs.editAddBeltInSectionBtn) refs.editAddBeltInSectionBtn.classList.toggle('hidden', !state.editMode);
+    if (refs.editAddStationInSectionBtn) refs.editAddStationInSectionBtn.classList.toggle('hidden', !state.editMode);
 }
 
 window.onload = function() {
