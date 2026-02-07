@@ -6,7 +6,7 @@
     STAR_VISUALS,
     state
 } from './config.js';
-import { generateStarAge, generateSeedString, isAutoSeedEnabled, prepareSeed, rand, showStatusMessage } from './core.js';
+import { generateStarAge, generateSeedString, isAutoSeedEnabled, isRealisticPlanetWeightingEnabled, prepareSeed, rand, showStatusMessage } from './core.js';
 import { getSelectedGridSize } from './controls.js';
 import { buildSectorPayload } from './storage.js';
 import { clearInfoPanel, drawGrid } from './render.js';
@@ -128,8 +128,11 @@ export function generateSystemData() {
     let population = 0;
     const starAge = generateStarAge(sClass);
 
+    const useWeightedTypes = isRealisticPlanetWeightingEnabled();
     for (let i = 0; i < planetCount; i++) {
-        const type = pickPlanetTypeForStarClass(sClass);
+        const type = useWeightedTypes
+            ? pickPlanetTypeForStarClass(sClass)
+            : PLANET_TYPES[Math.floor(rand() * PLANET_TYPES.length)];
         let pop = 0;
         const features = [];
 
