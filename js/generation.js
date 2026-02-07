@@ -25,6 +25,12 @@ const STAR_CLASS_PLANET_WEIGHTS = {
     default: { 'Gas Giant': 0.18, Terrestrial: 0.22, Oceanic: 0.14, Volcanic: 0.11, Desert: 0.15, Barren: 0.12, Arctic: 0.08 }
 };
 const HABITABLE_PLANET_TYPES = new Set(['Terrestrial', 'Oceanic', 'Desert', 'Arctic']);
+const HABITABILITY_TYPE_WEIGHT = {
+    Terrestrial: 2.2,
+    Oceanic: 1.0,
+    Desert: 0.8,
+    Arctic: 0.75
+};
 
 function pickWeightedType(weights, excludedTypes = new Set()) {
     const candidates = PLANET_TYPES
@@ -63,6 +69,24 @@ function isHabitableCandidateType(type) {
     return HABITABLE_PLANET_TYPES.has(type);
 }
 
+function getHabitabilityTypeWeight(type) {
+    return HABITABILITY_TYPE_WEIGHT[type] || 1;
+}
+
+function pickWeightedCandidateIndex(candidateIndexes, planets) {
+    const weightedCandidates = candidateIndexes.map(index => ({
+        index,
+        weight: getHabitabilityTypeWeight(planets[index].type)
+    }));
+    const total = weightedCandidates.reduce((sum, item) => sum + item.weight, 0);
+    let roll = rand() * total;
+    for (const item of weightedCandidates) {
+        roll -= item.weight;
+        if (roll <= 0) return item.index;
+    }
+    return weightedCandidates[weightedCandidates.length - 1].index;
+}
+
 function assignSystemHabitability(planets) {
     if (!planets.length) return;
 
@@ -77,13 +101,15 @@ function assignSystemHabitability(planets) {
         candidateIndexes.push(fallbackIndex);
     }
 
-    shuffleArray(candidateIndexes, rand);
-    const primaryIndex = candidateIndexes.shift();
+    const primaryIndex = pickWeightedCandidateIndex(candidateIndexes, planets);
+    const remainingIndexes = candidateIndexes.filter(index => index !== primaryIndex);
     planets[primaryIndex].habitable = true;
 
     let extraHabitableCount = 0;
-    candidateIndexes.forEach(index => {
-        const extraChance = 0.12 * Math.pow(0.45, extraHabitableCount);
+    shuffleArray(remainingIndexes, rand);
+    remainingIndexes.forEach(index => {
+        const typeWeight = getHabitabilityTypeWeight(planets[index].type);
+        const extraChance = 0.12 * typeWeight * Math.pow(0.45, extraHabitableCount);
         if (rand() < extraChance) {
             planets[index].habitable = true;
             extraHabitableCount++;
