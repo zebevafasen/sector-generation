@@ -88,7 +88,7 @@ function createHexGroup(svg, col, row, cols, rows, sectorX, sectorY) {
     const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
     poly.setAttribute('points', calculateHexPoints(x, y, HEX_SIZE - 2));
     poly.setAttribute('class', 'hex');
-    poly.setAttribute('fill', system ? '#0f172a' : '#1e293b');
+    poly.setAttribute('fill', (system || deepSpacePoi) ? '#0f172a' : '#1e293b');
     poly.setAttribute('stroke', '#334155');
     poly.setAttribute('stroke-width', '1');
     if (isPinned) poly.classList.add('pinned');
