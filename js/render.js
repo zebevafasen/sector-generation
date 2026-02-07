@@ -56,21 +56,47 @@ function renderRouteOverlay(viewport) {
     const path = Array.isArray(route.pathHexIds) ? route.pathHexIds : [];
     if (path.length < 2) return;
 
-    const points = path
+    const centers = path
         .map((hexId) => {
             const [cRaw, rRaw] = String(hexId).split('-');
             const c = parseInt(cRaw, 10);
             const r = parseInt(rRaw, 10);
             if (!Number.isInteger(c) || !Number.isInteger(r)) return null;
             const center = getHexCenter(c, r);
-            return `${center.x},${center.y}`;
+            return center;
         })
         .filter(Boolean);
 
-    if (points.length < 2) return;
+    if (centers.length < 2) return;
+
+    const offsetToward = (from, toward, distancePx) => {
+        const dx = toward.x - from.x;
+        const dy = toward.y - from.y;
+        const length = Math.hypot(dx, dy);
+        if (!Number.isFinite(length) || length === 0) return from;
+        const scale = Math.min(1, distancePx / length);
+        return {
+            x: from.x + dx * scale,
+            y: from.y + dy * scale
+        };
+    };
+
+    const offsetPx = 13;
+    const startCenter = centers[0];
+    const nextCenter = centers[1] || startCenter;
+    const endCenter = centers[centers.length - 1];
+    const prevCenter = centers[centers.length - 2] || endCenter;
+    const startMarkerPos = offsetToward(startCenter, nextCenter, offsetPx);
+    const endMarkerPos = offsetToward(endCenter, prevCenter, offsetPx);
+
+    const adjustedLinePoints = centers.map((center, index) => {
+        if (index === 0) return `${startMarkerPos.x},${startMarkerPos.y}`;
+        if (index === centers.length - 1) return `${endMarkerPos.x},${endMarkerPos.y}`;
+        return `${center.x},${center.y}`;
+    });
 
     const pathLine = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-    pathLine.setAttribute('points', points.join(' '));
+    pathLine.setAttribute('points', adjustedLinePoints.join(' '));
     pathLine.setAttribute('fill', 'none');
     pathLine.setAttribute('stroke', '#38bdf8');
     pathLine.setAttribute('stroke-width', '3');
@@ -80,20 +106,15 @@ function renderRouteOverlay(viewport) {
     pathLine.style.filter = 'drop-shadow(0 0 4px rgba(56, 189, 248, 0.8))';
     viewport.appendChild(pathLine);
 
-    const startId = path[0];
-    const endId = path[path.length - 1];
-    [startId, endId].forEach((hexId, index) => {
-        const [cRaw, rRaw] = String(hexId).split('-');
-        const c = parseInt(cRaw, 10);
-        const r = parseInt(rRaw, 10);
-        if (!Number.isInteger(c) || !Number.isInteger(r)) return;
-        const center = getHexCenter(c, r);
-
+    [
+        { pos: startMarkerPos, fill: '#22c55e' },
+        { pos: endMarkerPos, fill: '#f43f5e' }
+    ].forEach((markerData) => {
         const marker = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        marker.setAttribute('cx', String(center.x));
-        marker.setAttribute('cy', String(center.y));
+        marker.setAttribute('cx', String(markerData.pos.x));
+        marker.setAttribute('cy', String(markerData.pos.y));
         marker.setAttribute('r', '5');
-        marker.setAttribute('fill', index === 0 ? '#22c55e' : '#f43f5e');
+        marker.setAttribute('fill', markerData.fill);
         marker.setAttribute('stroke', '#e2e8f0');
         marker.setAttribute('stroke-width', '1');
         viewport.appendChild(marker);
