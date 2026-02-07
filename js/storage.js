@@ -33,6 +33,8 @@ export function buildSectorPayload(meta = {}) {
         autoSeed: isAutoSeedEnabled(),
         realisticPlanetWeights: isRealisticPlanetWeightingEnabled(),
         generationProfile: generationProfileSelect ? generationProfileSelect.value : 'cinematic',
+        sectorConfigSnapshot: state.sectorConfigSnapshot || null,
+        pinnedHexIds: Array.isArray(state.pinnedHexIds) ? state.pinnedHexIds : [],
         selectedHexId: state.selectedHexId || null,
         dimensions: { width, height },
         stats: { totalHexes, totalSystems },
@@ -208,6 +210,21 @@ export function applySectorPayload(payload) {
     }
 
     state.sectors = payload.sectors || {};
+    state.pinnedHexIds = Array.isArray(payload.pinnedHexIds)
+        ? payload.pinnedHexIds.filter(hexId => !!state.sectors[hexId])
+        : [];
+    state.sectorConfigSnapshot = payload.sectorConfigSnapshot || {
+        sizeMode: payload.sizeMode || state.sizeMode,
+        sizePreset: payload.sizePreset || 'standard',
+        width,
+        height,
+        densityMode: payload.densityMode || state.densityMode,
+        densityPreset: payload.densityPreset,
+        manualMin: payload.manualRange && typeof payload.manualRange.min === 'number' ? payload.manualRange.min : 0,
+        manualMax: payload.manualRange && typeof payload.manualRange.max === 'number' ? payload.manualRange.max : 0,
+        generationProfile: payload.generationProfile || 'cinematic',
+        realisticPlanetWeights: !!payload.realisticPlanetWeights
+    };
     state.selectedHexId = null;
     clearInfoPanel();
     drawGrid(width, height);

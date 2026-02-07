@@ -1,6 +1,6 @@
-﻿import { setDensityMode, setSizeMode, setupStarClassTooltip } from './controls.js';
+import { setDensityMode, setSizeMode, setupStarClassTooltip } from './controls.js';
 import { randomizeSeed } from './core.js';
-import { generateSector } from './generation.js';
+import { generateSector, rerollSelectedSystem, rerollUnpinnedSystems, togglePinSelectedSystem } from './generation.js';
 import { autoSaveSectorState, exportSector, handleImportFile, loadSectorLocal, restoreCachedSectorState, saveSectorLocal, triggerImport } from './storage.js';
 import { setupPanZoom } from './render.js';
 
@@ -17,6 +17,9 @@ function bindUiEvents() {
     byId('exportSectorBtn')?.addEventListener('click', exportSector);
     byId('triggerImportBtn')?.addEventListener('click', triggerImport);
     byId('generateSectorBtn')?.addEventListener('click', generateSector);
+    byId('rerollUnpinnedBtn')?.addEventListener('click', rerollUnpinnedSystems);
+    byId('rerollSelectedSystemBtn')?.addEventListener('click', rerollSelectedSystem);
+    byId('pinSelectedSystemBtn')?.addEventListener('click', togglePinSelectedSystem);
 
     const persistOnChangeIds = [
         'sizePreset', 'gridWidth', 'gridHeight', 'densityPreset', 'manualMin', 'manualMax',
@@ -47,3 +50,4 @@ window.onload = function() {
         generateSector();
     }
 };
+

@@ -131,6 +131,8 @@ export const state = {
     currentSeed: '',
     seededRandomFn: () => Math.random(),
     lastSectorSnapshot: null,
+    sectorConfigSnapshot: null,
+    pinnedHexIds: [],
     statusMessageTimer: null,
     starTooltipPinned: false,
     viewState: {

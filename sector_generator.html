@@ -136,6 +136,9 @@
             <button id="generateSectorBtn" class="w-full py-2 bg-sky-600 hover:bg-sky-500 text-white rounded shadow-lg shadow-sky-900/50 font-semibold transition-all active:scale-95">
                 GENERATE SECTOR
             </button>
+            <button id="rerollUnpinnedBtn" class="w-full py-2 bg-amber-700 hover:bg-amber-600 text-white rounded shadow-lg shadow-amber-900/40 font-semibold transition-all active:scale-95">
+                REROLL UNPINNED
+            </button>
 
         </div>
     </aside>
@@ -173,6 +176,12 @@
                 </div>
                 
                 <div id="systemDetails" class="hidden space-y-4">
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="pinSelectedSystemBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-amber-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Pin System</button>
+                        <button id="rerollSelectedSystemBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Reroll System</button>
+                    </div>
+                    <p id="selectedSystemPinState" class="text-[11px] text-slate-500">Pinned: No</p>
+
                     <!-- Star Info -->
                     <div class="bg-slate-800/50 p-3 rounded border border-slate-700">
                         <div class="flex items-center gap-3">

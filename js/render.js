@@ -1,5 +1,5 @@
 ﻿import { HEX_HEIGHT, HEX_SIZE, HEX_WIDTH, STAR_VISUALS, state } from './config.js';
-import { formatStarAgeValue, getStarClassInfo, hideStarClassInfo, rand } from './core.js';
+import { formatStarAgeValue, getStarClassInfo, hideStarClassInfo } from './core.js';
 
 const STAR_GRADIENT_CACHE = {};
 
@@ -109,6 +109,16 @@ function showBodyDetailsPanel(body, anchorEl) {
     if (panel && anchorEl) positionBodyDetailsPanel(panel, anchorEl);
 }
 
+function setPinButtonStyle(button, isPinned) {
+    if (!button) return;
+    const base = 'py-1.5 text-xs rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
+    if (isPinned) {
+        button.className = `${base} bg-rose-900/30 border-rose-700 text-rose-200 hover:bg-rose-800/40 hover:border-rose-500`;
+    } else {
+        button.className = `${base} bg-emerald-900/30 border-emerald-700 text-emerald-200 hover:bg-emerald-800/40 hover:border-emerald-500`;
+    }
+}
+
 export function ensureStarGradient(svg, starClass) {
     const key = (starClass || 'default').toLowerCase().replace(/[^a-z0-9]+/g, '-');
     if (STAR_GRADIENT_CACHE[key]) return STAR_GRADIENT_CACHE[key];
@@ -149,8 +159,9 @@ export function ensureStarGradient(svg, starClass) {
     return gradientId;
 }
 
-export function drawGrid(cols, rows) {
+export function drawGrid(cols, rows, options = {}) {
     const svg = document.getElementById('hexGrid');
+    const resetView = options.resetView !== false;
 
     const realWidth = cols * HEX_WIDTH + (HEX_WIDTH * 0.5);
     const realHeight = rows * (HEX_HEIGHT * 0.75) + (HEX_HEIGHT * 0.25);
@@ -167,14 +178,16 @@ export function drawGrid(cols, rows) {
     const startX = (container.clientWidth - realWidth) / 2;
     const startY = (container.clientHeight - realHeight) / 2;
 
-    state.viewState = {
-        ...state.viewState,
-        scale: 1,
-        x: startX > 0 ? startX : 20,
-        y: startY > 0 ? startY : 20,
-        isDragging: false,
-        dragDistance: 0
-    };
+    if (resetView) {
+        state.viewState = {
+            ...state.viewState,
+            scale: 1,
+            x: startX > 0 ? startX : 20,
+            y: startY > 0 ? startY : 20,
+            isDragging: false,
+            dragDistance: 0
+        };
+    }
     updateViewTransform();
 
     for (let c = 0; c < cols; c++) {
@@ -185,6 +198,7 @@ export function drawGrid(cols, rows) {
             const x = (c * HEX_WIDTH) + xOffset + (HEX_WIDTH / 2);
             const y = (r * (HEX_HEIGHT * 0.75)) + (HEX_HEIGHT / 2);
 
+            const isPinned = !!(system && state.pinnedHexIds && state.pinnedHexIds.includes(hexId));
             const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
             g.setAttribute('class', 'hex-group');
             g.setAttribute('data-id', hexId);
@@ -196,6 +210,7 @@ export function drawGrid(cols, rows) {
             poly.setAttribute('fill', system ? '#0f172a' : '#1e293b');
             poly.setAttribute('stroke', '#334155');
             poly.setAttribute('stroke-width', '1');
+            if (isPinned) poly.classList.add('pinned');
             g.appendChild(poly);
 
             const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -226,6 +241,19 @@ export function drawGrid(cols, rows) {
                 circle.setAttribute('class', 'star-circle');
                 circle.style.filter = `drop-shadow(0 0 8px ${system.glow || system.color})`;
                 g.appendChild(circle);
+
+                if (isPinned) {
+                    const pinRing = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    pinRing.setAttribute('cx', x);
+                    pinRing.setAttribute('cy', y);
+                    pinRing.setAttribute('r', String(rSize + 4));
+                    pinRing.setAttribute('fill', 'none');
+                    pinRing.setAttribute('stroke', '#2dd4bf');
+                    pinRing.setAttribute('stroke-width', '1.4');
+                    pinRing.setAttribute('stroke-dasharray', '2 2');
+                    pinRing.setAttribute('class', 'star-circle');
+                    g.appendChild(pinRing);
+                }
             }
 
             viewport.appendChild(g);
@@ -335,6 +363,9 @@ export function updateInfoPanel(id) {
     const planetList = document.getElementById('infoPlanetList');
     const beltList = document.getElementById('infoBeltList');
     const stationList = document.getElementById('infoStationList');
+    const pinSelectedSystemBtn = document.getElementById('pinSelectedSystemBtn');
+    const rerollSelectedSystemBtn = document.getElementById('rerollSelectedSystemBtn');
+    const selectedSystemPinState = document.getElementById('selectedSystemPinState');
     let selectedBodyEl = null;
 
     if (system) {
@@ -344,6 +375,14 @@ export function updateInfoPanel(id) {
         typeLabel.className = 'text-xs px-2 py-0.5 rounded-full bg-sky-900 text-sky-200 border border-sky-600';
 
         document.getElementById('infoSystemName').innerText = system.name;
+        const isPinned = !!(state.pinnedHexIds && state.pinnedHexIds.includes(id));
+        if (pinSelectedSystemBtn) {
+            pinSelectedSystemBtn.disabled = false;
+            pinSelectedSystemBtn.innerText = isPinned ? 'Unpin System' : 'Pin System';
+            setPinButtonStyle(pinSelectedSystemBtn, isPinned);
+        }
+        if (rerollSelectedSystemBtn) rerollSelectedSystemBtn.disabled = false;
+        if (selectedSystemPinState) selectedSystemPinState.innerText = `Pinned: ${isPinned ? 'Yes' : 'No'}`;
         if (starClassLabel) {
             starClassLabel.innerText = `Class ${system.starClass} Star`;
             starClassLabel.classList.add('cursor-help', 'text-sky-300', 'star-class-hint');
@@ -450,6 +489,13 @@ export function updateInfoPanel(id) {
         if (planetList) planetList.innerHTML = '';
         if (beltList) beltList.innerHTML = '';
         if (stationList) stationList.innerHTML = '';
+        if (pinSelectedSystemBtn) {
+            pinSelectedSystemBtn.disabled = true;
+            pinSelectedSystemBtn.innerText = 'Pin System';
+            setPinButtonStyle(pinSelectedSystemBtn, false);
+        }
+        if (rerollSelectedSystemBtn) rerollSelectedSystemBtn.disabled = true;
+        if (selectedSystemPinState) selectedSystemPinState.innerText = 'Pinned: --';
         resetBodyDetailsPanel();
     }
 }
@@ -471,6 +517,17 @@ export function clearInfoPanel() {
 
     const starAgeLabel = document.getElementById('infoStarAge');
     if (starAgeLabel) starAgeLabel.innerText = 'Age: --';
+
+    const pinSelectedSystemBtn = document.getElementById('pinSelectedSystemBtn');
+    if (pinSelectedSystemBtn) {
+        pinSelectedSystemBtn.disabled = true;
+        pinSelectedSystemBtn.innerText = 'Pin System';
+        setPinButtonStyle(pinSelectedSystemBtn, false);
+    }
+    const rerollSelectedSystemBtn = document.getElementById('rerollSelectedSystemBtn');
+    if (rerollSelectedSystemBtn) rerollSelectedSystemBtn.disabled = true;
+    const selectedSystemPinState = document.getElementById('selectedSystemPinState');
+    if (selectedSystemPinState) selectedSystemPinState.innerText = 'Pinned: --';
 
     resetBodyDetailsPanel();
 }
