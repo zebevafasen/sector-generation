@@ -1,30 +1,40 @@
-﻿function generateSector() {
+﻿import {
+    NAME_PREFIX,
+    NAME_SUFFIX,
+    PLANET_TYPES,
+    POI_TYPES,
+    STAR_VISUALS,
+    state
+} from './config.js';
+import { generateStarAge, generateSeedString, isAutoSeedEnabled, prepareSeed, rand, showStatusMessage } from './core.js';
+import { getSelectedGridSize } from './controls.js';
+import { buildSectorPayload } from './storage.js';
+import { clearInfoPanel, drawGrid } from './render.js';
+import { romanize, shuffleArray } from './utils.js';
+
+export function generateSector() {
     if (isAutoSeedEnabled()) {
         const input = document.getElementById('seedInput');
-        if (input) {
-            input.value = generateSeedString();
-        }
+        if (input) input.value = generateSeedString();
     }
 
     const seedUsed = prepareSeed();
     const size = getSelectedGridSize();
-    let w = size.width;
-    let h = size.height;
+    const w = size.width;
+    const h = size.height;
 
-    // Keep hidden inputs synced.
     document.getElementById('gridWidth').value = w;
     document.getElementById('gridHeight').value = h;
 
     const totalHexes = w * h;
     let systemCount = 0;
 
-    if (densityMode === 'preset') {
+    if (state.densityMode === 'preset') {
         const percent = parseFloat(document.getElementById('densityPreset').value);
         systemCount = Math.floor(totalHexes * percent);
     } else {
-        let min = parseInt(document.getElementById('manualMin').value);
-        let max = parseInt(document.getElementById('manualMax').value);
-
+        let min = parseInt(document.getElementById('manualMin').value, 10);
+        let max = parseInt(document.getElementById('manualMax').value, 10);
         if (min < 0) min = 0;
         if (max > totalHexes) max = totalHexes;
         if (min > max) {
@@ -32,36 +42,34 @@
             min = max;
             max = temp;
         }
-
         systemCount = Math.floor(rand() * (max - min + 1)) + min;
     }
 
-    sectors = {};
-    selectedHexId = null;
+    state.sectors = {};
+    state.selectedHexId = null;
     clearInfoPanel();
 
-    let allCoords = [];
+    const allCoords = [];
     for (let c = 0; c < w; c++) {
         for (let r = 0; r < h; r++) {
             allCoords.push(`${c}-${r}`);
         }
     }
 
-    shuffleArray(allCoords);
-    const occupiedCoords = allCoords.slice(0, systemCount);
-    occupiedCoords.forEach(coordId => {
-        sectors[coordId] = generateSystemData();
+    shuffleArray(allCoords, rand);
+    allCoords.slice(0, systemCount).forEach(coordId => {
+        state.sectors[coordId] = generateSystemData();
     });
 
     drawGrid(w, h);
 
     document.getElementById('statusTotalHexes').innerText = `${totalHexes} Hexes`;
     document.getElementById('statusTotalSystems').innerText = `${systemCount} Systems`;
-    lastSectorSnapshot = buildSectorPayload({ width: w, height: h, totalHexes, systemCount });
+    state.lastSectorSnapshot = buildSectorPayload({ width: w, height: h, totalHexes, systemCount });
     showStatusMessage(seedUsed ? `Generated seed ${seedUsed}` : 'Sector regenerated.', 'info');
 }
 
-function generateSystemData() {
+export function generateSystemData() {
     const randChance = rand();
     let sClass = 'M';
     if (randChance > 0.99) sClass = 'Black Hole';
@@ -86,7 +94,7 @@ function generateSystemData() {
     for (let i = 0; i < planetCount; i++) {
         const type = PLANET_TYPES[Math.floor(rand() * PLANET_TYPES.length)];
         let pop = 0;
-        let features = [];
+        const features = [];
 
         if (['Terrestrial', 'Oceanic'].includes(type) && rand() > 0.6) {
             pop = Math.floor(rand() * 10) + 1;
@@ -118,7 +126,6 @@ function generateSystemData() {
     }
 
     const visuals = STAR_VISUALS[sClass] || STAR_VISUALS.default;
-
     return {
         name,
         starClass: sClass,
