@@ -22,6 +22,21 @@ import {
 
 const STAR_GRADIENT_CACHE = {};
 
+function getDeepSpacePoiPalette(kind) {
+    switch (String(kind || '').toLowerCase()) {
+    case 'hazard':
+        return { fill: '#fb7185', stroke: '#fecdd3', glow: 'rgba(251,113,133,0.75)' };
+    case 'navigation':
+        return { fill: '#22d3ee', stroke: '#a5f3fc', glow: 'rgba(34,211,238,0.75)' };
+    case 'opportunity':
+        return { fill: '#34d399', stroke: '#a7f3d0', glow: 'rgba(52,211,153,0.75)' };
+    case 'mystery':
+        return { fill: '#a78bfa', stroke: '#ddd6fe', glow: 'rgba(167,139,250,0.75)' };
+    default:
+        return { fill: '#94a3b8', stroke: '#e2e8f0', glow: 'rgba(148,163,184,0.7)' };
+    }
+}
+
 function parseSectorOffset() {
     const { width } = getCurrentGridDimensions();
     const key = state.multiSector && state.multiSector.currentKey ? state.multiSector.currentKey : '0,0';
@@ -145,13 +160,14 @@ function createHexGroup(svg, col, row, cols, rows, sectorX, sectorY) {
         }
     }
     if (deepSpacePoi) {
+        const palette = getDeepSpacePoiPalette(deepSpacePoi.kind);
         const marker = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
         marker.setAttribute('points', `${x},${y - 6} ${x + 5},${y} ${x},${y + 6} ${x - 5},${y}`);
-        marker.setAttribute('fill', '#a78bfa');
-        marker.setAttribute('stroke', '#ddd6fe');
+        marker.setAttribute('fill', palette.fill);
+        marker.setAttribute('stroke', palette.stroke);
         marker.setAttribute('stroke-width', '1');
         marker.setAttribute('class', 'deep-space-poi-marker');
-        marker.style.filter = 'drop-shadow(0 0 4px rgba(167,139,250,0.75))';
+        marker.style.filter = `drop-shadow(0 0 4px ${palette.glow})`;
         g.appendChild(marker);
     }
 

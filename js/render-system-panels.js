@@ -86,6 +86,36 @@ function bindCompanionStarListHandlers(refs) {
     });
 }
 
+function getPoiTypeStyle(kind) {
+    switch (String(kind || '').toLowerCase()) {
+    case 'hazard':
+        return {
+            badge: 'text-xs px-2 py-0.5 rounded-full bg-rose-900/40 text-rose-200 border border-rose-700',
+            typeValue: 'text-rose-200'
+        };
+    case 'navigation':
+        return {
+            badge: 'text-xs px-2 py-0.5 rounded-full bg-cyan-900/40 text-cyan-200 border border-cyan-700',
+            typeValue: 'text-cyan-200'
+        };
+    case 'opportunity':
+        return {
+            badge: 'text-xs px-2 py-0.5 rounded-full bg-emerald-900/40 text-emerald-200 border border-emerald-700',
+            typeValue: 'text-emerald-200'
+        };
+    case 'mystery':
+        return {
+            badge: 'text-xs px-2 py-0.5 rounded-full bg-violet-900/40 text-violet-200 border border-violet-700',
+            typeValue: 'text-violet-200'
+        };
+    default:
+        return {
+            badge: 'text-xs px-2 py-0.5 rounded-full bg-slate-700/50 text-slate-200 border border-slate-500',
+            typeValue: 'text-slate-200'
+        };
+    }
+}
+
 export function configureSystemHeaderAndStar({ refs, system, id, preselectedBodyIndex, notifySectorDataChanged, updateInfoPanel, redrawAndReselect }) {
     ensureSystemStarFields(system);
     const stars = getSystemStars(system);
@@ -255,6 +285,7 @@ export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
     refs.systemDetails.classList.add('hidden');
     refs.emptyDetails.classList.remove('hidden');
     if (deepSpacePoi) {
+        const poiStyle = getPoiTypeStyle(deepSpacePoi.kind);
         refs.emptyDetails.innerHTML = `
             <div class="space-y-2 text-left">
                 <div class="flex items-center justify-between gap-2">
@@ -265,7 +296,7 @@ export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
                 <div class="grid grid-cols-2 gap-2 text-[11px]">
                     <div class="rounded border border-slate-700 bg-slate-900/35 px-2 py-1">
                         <span class="text-slate-500 uppercase">Type</span>
-                        <div class="text-slate-200">${escapeHtml(deepSpacePoi.kind || 'Unknown')}</div>
+                        <div class="${poiStyle.typeValue}">${escapeHtml(deepSpacePoi.kind || 'Unknown')}</div>
                     </div>
                     <div class="rounded border border-slate-700 bg-slate-900/35 px-2 py-1">
                         <span class="text-slate-500 uppercase">Risk</span>
@@ -276,7 +307,7 @@ export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
             </div>
         `;
         refs.typeLabel.innerText = 'Deep-Space POI';
-        refs.typeLabel.className = 'text-xs px-2 py-0.5 rounded-full bg-violet-900/40 text-violet-200 border border-violet-700';
+        refs.typeLabel.className = poiStyle.badge;
     } else {
         refs.emptyDetails.innerText = 'Deep space scans indicate no major stellar masses in this sector.';
         refs.typeLabel.innerText = 'Empty Void';
