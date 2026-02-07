@@ -1,4 +1,4 @@
-﻿import { GRID_PRESETS, state } from './config.js';
+import { state } from './config.js';
 import { hideFieldInfoTooltip, hideStarClassInfo, showFieldInfoTooltip, showStarClassInfo } from './core.js';
 
 const controlsRefsCache = {};
@@ -61,22 +61,6 @@ export function setSizeMode(mode) {
         presetContainer.classList.add('hidden');
         customContainer.classList.remove('hidden');
     }
-}
-
-export function getSelectedGridSize() {
-    const refs = getControlsRefs();
-    if (state.sizeMode === 'preset') {
-        const key = refs.sizePreset ? refs.sizePreset.value : 'standard';
-        const preset = GRID_PRESETS[key] || GRID_PRESETS.standard;
-        return { width: preset.width, height: preset.height, key };
-    }
-    let w = parseInt(refs.gridWidth.value, 10);
-    let h = parseInt(refs.gridHeight.value, 10);
-    if (w < 1) w = 1;
-    if (h < 1) h = 1;
-    refs.gridWidth.value = w;
-    refs.gridHeight.value = h;
-    return { width: w, height: h, key: 'custom' };
 }
 
 export function setupStarClassTooltip() {

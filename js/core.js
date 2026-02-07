@@ -1,20 +1,13 @@
 ﻿import { state, STAR_CLASS_INFO } from './config.js';
 import { xmur3, mulberry32 } from './utils.js';
 
-export function prepareSeed() {
-    const input = document.getElementById('seedInput');
-    if (!input) {
-        state.seededRandomFn = () => Math.random();
-        state.currentSeed = '';
-        return '';
-    }
-    let seedValue = (input.value || '').trim();
-    if (!seedValue) {
-        seedValue = generateSeedString();
-        input.value = seedValue;
-    }
-    setSeed(seedValue);
-    return seedValue;
+function escapeHtml(value) {
+    return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 export function setSeed(seedValue) {
@@ -134,11 +127,11 @@ export function showStarClassInfo(event, pin = false) {
     const info = getStarClassInfo(cls);
     const typicalAgeLabel = formatStarAgeRange(info.ageRange) || info.typicalAge || 'Age varies';
     panel.innerHTML = `
-        <div class="font-semibold text-sky-300 mb-1">${info.name}</div>
-        <div class="text-slate-400 mb-0.5">Temp: <span class="text-slate-200">${info.temp}</span></div>
-        <div class="text-slate-400 mb-0.5">Mass: <span class="text-slate-200">${info.mass}</span></div>
-        <div class="text-slate-400 mb-1">Typical Age: <span class="text-slate-200">${typicalAgeLabel}</span></div>
-        <div class="text-slate-300 leading-snug">${info.notes}</div>
+        <div class="font-semibold text-sky-300 mb-1">${escapeHtml(info.name)}</div>
+        <div class="text-slate-400 mb-0.5">Temp: <span class="text-slate-200">${escapeHtml(info.temp)}</span></div>
+        <div class="text-slate-400 mb-0.5">Mass: <span class="text-slate-200">${escapeHtml(info.mass)}</span></div>
+        <div class="text-slate-400 mb-1">Typical Age: <span class="text-slate-200">${escapeHtml(typicalAgeLabel)}</span></div>
+        <div class="text-slate-300 leading-snug">${escapeHtml(info.notes)}</div>
     `;
     panel.classList.remove('hidden');
     panel.style.opacity = '1';
@@ -245,9 +238,9 @@ export function showFieldInfoTooltip(event, field, value) {
     }
 
     panel.innerHTML = `
-        <div class="font-semibold text-sky-300 mb-1">${label}</div>
-        <div class="text-slate-400 mb-1"><span class="text-slate-200">${value || 'Unknown'}</span></div>
-        <div class="text-slate-300 leading-snug">${description}</div>
+        <div class="font-semibold text-sky-300 mb-1">${escapeHtml(label)}</div>
+        <div class="text-slate-400 mb-1"><span class="text-slate-200">${escapeHtml(value || 'Unknown')}</span></div>
+        <div class="text-slate-300 leading-snug">${escapeHtml(description)}</div>
     `;
     panel.classList.remove('hidden');
     panel.style.opacity = '1';

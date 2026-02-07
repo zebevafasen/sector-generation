@@ -2,23 +2,27 @@ import {
     GRID_PRESETS,
     NAME_PREFIX,
     NAME_SUFFIX,
-    PLANET_TYPES,
     POI_TYPES,
     STAR_VISUALS,
     state
 } from './config.js';
 import {
     ADJACENT_DUPLICATE_NAME_CHANCE,
-    BASE_HABITABILITY_TYPE_WEIGHT,
-    GENERATION_PROFILES,
-    HABITABLE_PLANET_TYPES,
-    HABITABLE_WORLD_SUFFIXES,
-    STAR_CLASS_PLANET_WEIGHTS
+    GENERATION_PROFILES
 } from './generation-data.js';
 import { EVENTS, emitEvent } from './events.js';
 import { reportSystemInvariantIssues } from './invariants.js';
 import { generateStarAge, generateSeedString, isAutoSeedEnabled, rand, setSeed, showStatusMessage } from './core.js';
 import { generatePlanetEnvironment } from './planet-environment.js';
+import {
+    applyPlanetaryOrderAndNames,
+    assignSystemHabitability,
+    generatePlanetSize,
+    isHabitableCandidateType,
+    isPlanetaryBody,
+    pickPlanetTypeForStarClass,
+    pickRandomPlanetType
+} from './planetary-rules.js';
 import { autoSaveSectorState, buildSectorPayload } from './storage.js';
 import { redrawGridAndReselect, refreshHexInfo, clearSelectionInfo } from './ui-sync.js';
 import { romanize, shuffleArray } from './utils.js';
@@ -104,124 +108,8 @@ function getGenerationConfigSnapshot() {
     return normalizeGenerationConfig(readGenerationConfigFromUi());
 }
 
-function pickWeightedType(weights, excludedTypes = new Set()) {
-    const candidates = PLANET_TYPES
-        .filter(type => !excludedTypes.has(type))
-        .map(type => ({ type, weight: weights[type] || 0 }))
-        .filter(item => item.weight > 0);
-
-    if (!candidates.length) {
-        return PLANET_TYPES[Math.floor(rand() * PLANET_TYPES.length)];
-    }
-
-    const total = candidates.reduce((sum, item) => sum + item.weight, 0);
-    let roll = rand() * total;
-    for (const item of candidates) {
-        roll -= item.weight;
-        if (roll <= 0) return item.type;
-    }
-
-    return candidates[candidates.length - 1].type;
-}
-
-function pickPlanetTypeForStarClass(starClass, excludedTypes = new Set()) {
-    const weights = STAR_CLASS_PLANET_WEIGHTS[starClass] || STAR_CLASS_PLANET_WEIGHTS.default;
-    return pickWeightedType(weights, excludedTypes);
-}
-
-function pickRandomPlanetType(excludedTypes = new Set()) {
-    const candidates = PLANET_TYPES.filter(type => !excludedTypes.has(type));
-    if (!candidates.length) {
-        return PLANET_TYPES[Math.floor(rand() * PLANET_TYPES.length)];
-    }
-    return candidates[Math.floor(rand() * candidates.length)];
-}
-
-function pickWeightedLabel(candidates) {
-    const total = candidates.reduce((sum, item) => sum + item.weight, 0);
-    let roll = rand() * total;
-    for (const item of candidates) {
-        roll -= item.weight;
-        if (roll <= 0) return item.label;
-    }
-    return candidates[candidates.length - 1].label;
-}
-
-function generatePlanetSize(type) {
-    if (type === 'Gas Giant') {
-        return pickWeightedLabel([
-            { label: 'Large', weight: 0.35 },
-            { label: 'Huge', weight: 0.55 },
-            { label: 'Massive', weight: 0.10 }
-        ]);
-    }
-    return pickWeightedLabel([
-        { label: 'Tiny', weight: 0.12 },
-        { label: 'Small', weight: 0.30 },
-        { label: 'Medium', weight: 0.36 },
-        { label: 'Large', weight: 0.18 },
-        { label: 'Huge', weight: 0.04 }
-    ]);
-}
-
-function isHabitableCandidateType(type) {
-    return HABITABLE_PLANET_TYPES.has(type);
-}
-
 function getActiveGenerationProfile(profileKey) {
     return GENERATION_PROFILES[profileKey] || GENERATION_PROFILES.cinematic;
-}
-
-function getHabitabilityTypeWeight(type, profile) {
-    const baseWeight = BASE_HABITABILITY_TYPE_WEIGHT[type] || 1;
-    const typeMultiplier = profile.habitabilityTypeMultipliers && profile.habitabilityTypeMultipliers[type]
-        ? profile.habitabilityTypeMultipliers[type]
-        : 1;
-    return baseWeight * typeMultiplier;
-}
-
-function pickWeightedCandidateIndex(candidateIndexes, planets, profile) {
-    const weightedCandidates = candidateIndexes.map(index => ({
-        index,
-        weight: getHabitabilityTypeWeight(planets[index].type, profile)
-    }));
-    const total = weightedCandidates.reduce((sum, item) => sum + item.weight, 0);
-    let roll = rand() * total;
-    for (const item of weightedCandidates) {
-        roll -= item.weight;
-        if (roll <= 0) return item.index;
-    }
-    return weightedCandidates[weightedCandidates.length - 1].index;
-}
-
-function assignSystemHabitability(planets, profile) {
-    if (!planets.length) return;
-
-    const candidateIndexes = [];
-    planets.forEach((planet, index) => {
-        if (isHabitableCandidateType(planet.type)) candidateIndexes.push(index);
-    });
-
-    if (!candidateIndexes.length) {
-        const fallbackIndex = Math.floor(rand() * planets.length);
-        planets[fallbackIndex].type = 'Terrestrial';
-        candidateIndexes.push(fallbackIndex);
-    }
-
-    const primaryIndex = pickWeightedCandidateIndex(candidateIndexes, planets, profile);
-    const remainingIndexes = candidateIndexes.filter(index => index !== primaryIndex);
-    planets[primaryIndex].habitable = true;
-
-    let extraHabitableCount = 0;
-    shuffleArray(remainingIndexes, rand);
-    remainingIndexes.forEach(index => {
-        const typeWeight = getHabitabilityTypeWeight(planets[index].type, profile);
-        const extraChance = profile.extraHabitableBaseChance * typeWeight * Math.pow(profile.extraHabitableDecay, extraHabitableCount);
-        if (rand() < extraChance) {
-            planets[index].habitable = true;
-            extraHabitableCount++;
-        }
-    });
 }
 
 function generateNameCandidate() {
@@ -277,20 +165,6 @@ function generateSystemName(coordId, usedNames, sectorsByCoord) {
     }
     registry.add(fallback);
     return fallback;
-}
-
-function getUniqueHabitableSuffixes(count) {
-    const pool = [...HABITABLE_WORLD_SUFFIXES];
-    shuffleArray(pool, rand);
-    const picked = [];
-    for (let i = 0; i < count; i++) {
-        if (i < pool.length) {
-            picked.push(pool[i]);
-        } else {
-            picked.push(`Colony ${i - pool.length + 1}`);
-        }
-    }
-    return picked;
 }
 
 function computeSystemCount(totalHexes, config) {
@@ -392,48 +266,9 @@ function sanitizePinnedHexes(width, height) {
     state.pinnedHexIds = (state.pinnedHexIds || []).filter(hexId => isHexIdInBounds(hexId, width, height) && !!state.sectors[hexId]);
 }
 
-function isPlanetaryBody(body) {
-    return !!body && body.type !== 'Artificial' && !/belt|field/i.test(body.type);
-}
-
-function applyPlanetaryOrderAndNames(systemName, bodies) {
-    const planetary = bodies.filter(isPlanetaryBody);
-    const nonPlanetary = bodies.filter(body => !isPlanetaryBody(body));
-    if (!planetary.length) return nonPlanetary;
-
-    let primary = planetary.find(body => body.habitable);
-    if (!primary) {
-        primary = planetary[0];
-        primary.habitable = true;
-    }
-
-    const orderedPlanetary = [primary, ...planetary.filter(body => body !== primary)];
-    const secondaryHabitable = orderedPlanetary.filter((body, index) => index > 0 && body.habitable);
-    const inhabitedSuffixes = getUniqueHabitableSuffixes(secondaryHabitable.length);
-    let nonHabitableNumeral = 1;
-    let inhabitedSuffixIndex = 0;
-
-    orderedPlanetary.forEach((planet, index) => {
-        if (index === 0) {
-            planet.habitable = true;
-            planet.name = `${systemName} Prime`;
-            return;
-        }
-        if (planet.habitable) {
-            planet.name = `${systemName} ${inhabitedSuffixes[inhabitedSuffixIndex]}`;
-            inhabitedSuffixIndex++;
-            return;
-        }
-        planet.name = `${systemName} ${romanize(nonHabitableNumeral)}`;
-        nonHabitableNumeral++;
-    });
-
-    return [...orderedPlanetary, ...nonPlanetary];
-}
-
 function reconcilePlanetaryBodies(system) {
     if (!system || !Array.isArray(system.planets)) return;
-    system.planets = applyPlanetaryOrderAndNames(system.name, system.planets);
+    system.planets = applyPlanetaryOrderAndNames(system.name, system.planets, rand);
     reportSystemInvariantIssues(system, 'reconcile');
 }
 
@@ -495,8 +330,8 @@ export function generateSystemData(config = null, context = null) {
     for (let i = 0; i < planetCount; i++) {
         const excludedTypes = hasTerrestrial ? new Set(['Terrestrial']) : new Set();
         const type = useWeightedTypes
-            ? pickPlanetTypeForStarClass(sClass, excludedTypes)
-            : pickRandomPlanetType(excludedTypes);
+            ? pickPlanetTypeForStarClass(sClass, rand, excludedTypes)
+            : pickRandomPlanetType(rand, excludedTypes);
         if (type === 'Terrestrial') hasTerrestrial = true;
         const environment = generatePlanetEnvironment(type, rand);
         let pop = 0;
@@ -516,7 +351,7 @@ export function generateSystemData(config = null, context = null) {
         planets.push({
             name: `${name} ${romanize(i + 1)}`,
             type,
-            size: generatePlanetSize(type),
+            size: generatePlanetSize(type, rand),
             atmosphere: environment.atmosphere,
             temperature: environment.temperature,
             features,
@@ -525,8 +360,8 @@ export function generateSystemData(config = null, context = null) {
         });
     }
 
-    assignSystemHabitability(planets, generationProfile);
-    const normalizedPlanetaryBodies = applyPlanetaryOrderAndNames(name, planets);
+    assignSystemHabitability(planets, generationProfile, rand);
+    const normalizedPlanetaryBodies = applyPlanetaryOrderAndNames(name, planets, rand);
     planets.length = 0;
     planets.push(...normalizedPlanetaryBodies);
 
@@ -634,12 +469,12 @@ export function addBodyToSelectedSystem(kind) {
     if (kind === 'planet') {
         const hasTerrestrial = system.planets.some(body => isPlanetaryBody(body) && body.type === 'Terrestrial');
         const excluded = hasTerrestrial ? new Set(['Terrestrial']) : new Set();
-        const type = pickRandomPlanetType(excluded);
+        const type = pickRandomPlanetType(rand, excluded);
         const environment = generatePlanetEnvironment(type, rand);
         system.planets.push({
             name: `${system.name} ${romanize(1)}`,
             type,
-            size: generatePlanetSize(type),
+            size: generatePlanetSize(type, rand),
             atmosphere: environment.atmosphere,
             temperature: environment.temperature,
             features: [],
@@ -717,8 +552,6 @@ export function rerollSelectedPlanet() {
         showStatusMessage('Only planets can be rerolled.', 'warn');
         return;
     }
-    const selectionToken = `sel-${Date.now()}-${Math.floor(rand() * 1_000_000)}`;
-    targetPlanet.__selectionToken = selectionToken;
 
     const config = getGenerationConfigSnapshot();
     const hasOtherTerrestrial = system.planets.some((body, idx) =>
@@ -726,13 +559,13 @@ export function rerollSelectedPlanet() {
     );
     const excludedTypes = hasOtherTerrestrial ? new Set(['Terrestrial']) : new Set();
     const nextType = config.realisticPlanetWeights
-        ? pickPlanetTypeForStarClass(system.starClass, excludedTypes)
-        : pickRandomPlanetType(excludedTypes);
+        ? pickPlanetTypeForStarClass(system.starClass, rand, excludedTypes)
+        : pickRandomPlanetType(rand, excludedTypes);
     const nextEnvironment = generatePlanetEnvironment(nextType, rand);
 
     const wasHabitable = !!targetPlanet.habitable;
     targetPlanet.type = nextType;
-    targetPlanet.size = generatePlanetSize(nextType);
+    targetPlanet.size = generatePlanetSize(nextType, rand);
     targetPlanet.atmosphere = nextEnvironment.atmosphere;
     targetPlanet.temperature = nextEnvironment.temperature;
     targetPlanet.features = [];
@@ -747,7 +580,7 @@ export function rerollSelectedPlanet() {
             fallbackCandidate.habitable = true;
         } else {
             targetPlanet.type = 'Terrestrial';
-            targetPlanet.size = generatePlanetSize('Terrestrial');
+            targetPlanet.size = generatePlanetSize('Terrestrial', rand);
             const fallbackEnvironment = generatePlanetEnvironment('Terrestrial', rand);
             targetPlanet.atmosphere = fallbackEnvironment.atmosphere;
             targetPlanet.temperature = fallbackEnvironment.temperature;
@@ -756,11 +589,7 @@ export function rerollSelectedPlanet() {
     }
     reconcilePlanetaryBodies(system);
 
-    let updatedIndex = system.planets.findIndex(body => body && body.__selectionToken === selectionToken);
-    system.planets.forEach((body) => {
-        if (body && body.__selectionToken === selectionToken) delete body.__selectionToken;
-    });
-    if (updatedIndex < 0) updatedIndex = system.planets.indexOf(targetPlanet);
+    const updatedIndex = system.planets.indexOf(targetPlanet);
     state.selectedBodyIndex = updatedIndex >= 0 ? updatedIndex : null;
     refreshHexInfo(selectedHexId, state.selectedBodyIndex);
     reportSystemInvariantIssues(system, 'reroll-planet');
