@@ -31,6 +31,7 @@ const BASE_HABITABILITY_TYPE_WEIGHT = {
     Desert: 0.8,
     Arctic: 0.75
 };
+const ADJACENT_DUPLICATE_NAME_CHANCE = 0.35;
 const GENERATION_PROFILES = {
     cinematic: {
         inhabitedChance: 0.45,
@@ -235,6 +236,61 @@ function assignSystemHabitability(planets, profile) {
     });
 }
 
+function generateNameCandidate() {
+    const p1 = NAME_PREFIX[Math.floor(rand() * NAME_PREFIX.length)];
+    const p2 = NAME_SUFFIX[Math.floor(rand() * NAME_SUFFIX.length)];
+    const num = Math.floor(rand() * 999) + 1;
+    return rand() > 0.5 ? `${p1}-${num}` : `${p1} ${p2}`;
+}
+
+function parseCoordId(coordId) {
+    const [cRaw, rRaw] = String(coordId || '').split('-');
+    return { c: parseInt(cRaw, 10), r: parseInt(rRaw, 10) };
+}
+
+function areCoordsAdjacent(coordA, coordB) {
+    const a = parseCoordId(coordA);
+    const b = parseCoordId(coordB);
+    if (!Number.isInteger(a.c) || !Number.isInteger(a.r) || !Number.isInteger(b.c) || !Number.isInteger(b.r)) {
+        return false;
+    }
+    const dc = Math.abs(a.c - b.c);
+    const dr = Math.abs(a.r - b.r);
+    return (dc <= 1 && dr <= 1) && !(dc === 0 && dr === 0);
+}
+
+function hasAdjacentDuplicateName(coordId, name, sectorsByCoord) {
+    return Object.entries(sectorsByCoord || {}).some(([otherCoord, system]) =>
+        !!system && system.name === name && areCoordsAdjacent(coordId, otherCoord)
+    );
+}
+
+function generateSystemName(coordId, usedNames, sectorsByCoord) {
+    const MAX_ATTEMPTS = 400;
+    const registry = usedNames || new Set();
+
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+        const candidate = generateNameCandidate();
+        if (!registry.has(candidate)) {
+            registry.add(candidate);
+            return candidate;
+        }
+        if (
+            hasAdjacentDuplicateName(coordId, candidate, sectorsByCoord) &&
+            rand() < ADJACENT_DUPLICATE_NAME_CHANCE
+        ) {
+            return candidate;
+        }
+    }
+
+    let fallback = `${generateNameCandidate()}-${Math.floor(rand() * 900) + 100}`;
+    while (registry.has(fallback)) {
+        fallback = `${generateNameCandidate()}-${Math.floor(rand() * 900) + 100}`;
+    }
+    registry.add(fallback);
+    return fallback;
+}
+
 function computeSystemCount(totalHexes, config) {
     if (config.densityMode === 'preset') {
         return Math.floor(totalHexes * config.densityPreset);
@@ -305,10 +361,19 @@ function buildSectorFromConfig(config, fixedSystems = {}) {
     validFixedEntries.forEach(([hexId, system]) => {
         nextSectors[hexId] = deepClone(system);
     });
+    const usedNames = new Set(
+        Object.values(nextSectors)
+            .map(system => (system && system.name ? system.name : null))
+            .filter(Boolean)
+    );
 
     const systemsToGenerate = Math.max(0, systemCount - validFixedEntries.length);
     candidateCoords.slice(0, systemsToGenerate).forEach(hexId => {
-        nextSectors[hexId] = generateSystemData(normalized);
+        nextSectors[hexId] = generateSystemData(normalized, {
+            coordId: hexId,
+            usedNames,
+            sectorsByCoord: nextSectors
+        });
     });
 
     return {
@@ -369,9 +434,12 @@ export function generateSector() {
     showStatusMessage(seedUsed ? `Generated seed ${seedUsed}` : 'Sector regenerated.', 'info');
 }
 
-export function generateSystemData(config = null) {
+export function generateSystemData(config = null, context = null) {
     const normalized = normalizeGenerationConfig(config || getGenerationConfigSnapshot());
     const generationProfile = getActiveGenerationProfile(normalized.generationProfile);
+    const coordId = context && context.coordId ? context.coordId : null;
+    const usedNames = context && context.usedNames ? context.usedNames : new Set();
+    const sectorsByCoord = context && context.sectorsByCoord ? context.sectorsByCoord : state.sectors;
     const randChance = rand();
     let sClass = 'M';
     if (randChance > 0.99) sClass = 'Black Hole';
@@ -383,10 +451,7 @@ export function generateSystemData(config = null) {
     else if (randChance > 0.45) sClass = 'G';
     else if (randChance > 0.20) sClass = 'K';
 
-    const p1 = NAME_PREFIX[Math.floor(rand() * NAME_PREFIX.length)];
-    const p2 = NAME_SUFFIX[Math.floor(rand() * NAME_SUFFIX.length)];
-    const num = Math.floor(rand() * 999) + 1;
-    const name = rand() > 0.5 ? `${p1}-${num}` : `${p1} ${p2}`;
+    const name = generateSystemName(coordId, usedNames, sectorsByCoord);
 
     const planetCount = Math.floor(rand() * 6) + 1;
     const planets = [];
@@ -467,7 +532,18 @@ export function rerollSelectedSystem() {
 
     const config = getGenerationConfigSnapshot();
     const seedUsed = setAndUseNewSeed(false);
-    state.sectors[selectedHexId] = generateSystemData(config);
+    const otherSystems = { ...state.sectors };
+    delete otherSystems[selectedHexId];
+    const usedNames = new Set(
+        Object.values(otherSystems)
+            .map(system => (system && system.name ? system.name : null))
+            .filter(Boolean)
+    );
+    state.sectors[selectedHexId] = generateSystemData(config, {
+        coordId: selectedHexId,
+        usedNames,
+        sectorsByCoord: otherSystems
+    });
 
     drawGrid(config.width, config.height, { resetView: false });
     reselectionAfterDraw(selectedHexId);
