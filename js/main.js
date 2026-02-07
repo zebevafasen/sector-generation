@@ -260,8 +260,8 @@ function updateEditModeUi() {
     if (refs.editModeToggleBtn) {
         refs.editModeToggleBtn.innerText = state.editMode ? 'EDIT MODE: ON' : 'EDIT MODE: OFF';
         refs.editModeToggleBtn.className = state.editMode
-            ? 'w-full py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded border border-emerald-500 font-semibold transition-all active:scale-95'
-            : 'w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded border border-slate-600 font-semibold transition-all active:scale-95';
+            ? 'px-2 py-1 text-[10px] rounded border border-emerald-500 bg-emerald-700 hover:bg-emerald-600 text-white font-semibold tracking-wide transition-colors'
+            : 'px-2 py-1 text-[10px] rounded border border-slate-600 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold tracking-wide transition-colors';
     }
     if (refs.editModeControls) {
         refs.editModeControls.classList.toggle('hidden', !state.editMode);
