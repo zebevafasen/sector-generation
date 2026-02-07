@@ -4,6 +4,7 @@ import { EVENTS } from './events.js';
 import { state } from './config.js';
 import { addBodyToSelectedSystem, addSystemAtHex, deleteSelectedBody, deleteSelectedSystem, generateSector, rerollSelectedPlanet, rerollSelectedSystem, rerollUnpinnedSystems, setEditMode, toggleEditMode, togglePinSelectedSystem } from './generation.js';
 import { captureHistorySnapshot, setupHistory } from './history.js';
+import { setupMultiSectorLinks } from './multi-sector.js';
 import { setupSearchPanel } from './search.js';
 import { setupRoutePlanner } from './route-planner.js';
 import { autoSaveSectorState, exportSector, handleImportFile, loadSectorLocal, restoreCachedSectorState, saveSectorLocal, triggerImport } from './storage.js';
@@ -227,6 +228,7 @@ window.onload = function() {
     setupPanelToggles();
     bindUiEvents();
     setupHistory();
+    setupMultiSectorLinks();
     setupSearchPanel();
     setupRoutePlanner();
     const importInput = document.getElementById('importFileInput');

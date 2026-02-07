@@ -56,6 +56,7 @@ export function buildSectorPayload(meta = {}) {
         sectorConfigSnapshot: state.sectorConfigSnapshot || null,
         pinnedHexIds: Array.isArray(state.pinnedHexIds) ? state.pinnedHexIds : [],
         selectedHexId: state.selectedHexId || null,
+        multiSector: state.multiSector || null,
         dimensions: { width, height },
         stats: { totalHexes, totalSystems },
         sectors: JSON.parse(JSON.stringify(state.sectors))
@@ -256,6 +257,14 @@ export function applySectorPayload(payload) {
     state.lastSectorSnapshot = buildSectorPayload({ width, height, totalHexes, systemCount });
     if (payload.generatedAt) {
         state.lastSectorSnapshot.generatedAt = payload.generatedAt;
+    }
+    if (payload.multiSector && typeof payload.multiSector === 'object') {
+        state.multiSector = payload.multiSector;
+    } else {
+        state.multiSector = {
+            currentKey: '0,0',
+            sectorsByKey: {}
+        };
     }
     autoSaveSectorState();
     emitEvent(EVENTS.SECTOR_DATA_CHANGED, { label: 'Load Sector' });

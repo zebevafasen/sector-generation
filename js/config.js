@@ -131,6 +131,10 @@ export const state = {
     lastSectorSnapshot: null,
     sectorConfigSnapshot: null,
     pinnedHexIds: [],
+    multiSector: {
+        currentKey: '0,0',
+        sectorsByKey: {}
+    },
     statusMessageTimer: null,
     starTooltipPinned: false,
     routePlanner: {

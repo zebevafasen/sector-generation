@@ -133,6 +133,26 @@
                 <input type="file" id="importFileInput" accept="application/json,.json" class="hidden" />
             </div>
 
+            <!-- Multi-Sector -->
+            <div class="space-y-3">
+                <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wide">Multi-Sector</h2>
+                <div class="bg-slate-900/40 border border-slate-700 rounded p-2 space-y-2">
+                    <p id="currentSectorLabel" class="text-xs text-slate-400">Current: 0,0</p>
+                    <p id="knownSectorsLabel" class="text-[11px] text-slate-500">Loaded: 1</p>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div></div>
+                        <button id="sectorNorthBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors">N</button>
+                        <div></div>
+                        <button id="sectorWestBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors">W</button>
+                        <button id="sectorHomeBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-amber-500 transition-colors">Home</button>
+                        <button id="sectorEastBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors">E</button>
+                        <div></div>
+                        <button id="sectorSouthBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors">S</button>
+                        <div></div>
+                    </div>
+                </div>
+            </div>
+
             <button id="generateSectorBtn" class="w-full py-2 bg-sky-600 hover:bg-sky-500 text-white rounded shadow-lg shadow-sky-900/50 font-semibold transition-all active:scale-95">
                 GENERATE SECTOR
             </button>

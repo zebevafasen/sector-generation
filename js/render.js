@@ -51,6 +51,31 @@ function getHexCenter(col, row) {
     };
 }
 
+function formatGlobalCoord(value) {
+    const sign = value < 0 ? '-' : '';
+    const abs = Math.abs(value);
+    return `${sign}${String(abs).padStart(2, '0')}`;
+}
+
+function getGlobalHexDisplayId(localHexId) {
+    const [cRaw, rRaw] = String(localHexId || '').split('-');
+    const c = parseInt(cRaw, 10);
+    const r = parseInt(rRaw, 10);
+    if (!Number.isInteger(c) || !Number.isInteger(r)) return '--';
+
+    const { width, height } = getCurrentGridDimensions();
+    const key = state.multiSector && state.multiSector.currentKey ? state.multiSector.currentKey : '0,0';
+    const [sxRaw, syRaw] = String(key).split(',');
+    const sectorX = parseInt(sxRaw, 10);
+    const sectorY = parseInt(syRaw, 10);
+    const normalizedSectorX = Number.isInteger(sectorX) ? sectorX : 0;
+    const normalizedSectorY = Number.isInteger(sectorY) ? sectorY : 0;
+
+    const globalC = c + (normalizedSectorX * width);
+    const globalR = r + (normalizedSectorY * height);
+    return `${formatGlobalCoord(globalC)}${formatGlobalCoord(globalR)}`;
+}
+
 function renderRouteOverlay(viewport) {
     const route = state.routePlanner || {};
     const path = Array.isArray(route.pathHexIds) ? route.pathHexIds : [];
@@ -489,6 +514,23 @@ export function drawGrid(cols, rows, options = {}) {
     }
     updateViewTransform();
 
+    const parseSectorOffset = () => {
+        const key = state.multiSector && state.multiSector.currentKey ? state.multiSector.currentKey : '0,0';
+        const [xRaw, yRaw] = String(key).split(',');
+        const sectorX = parseInt(xRaw, 10);
+        const sectorY = parseInt(yRaw, 10);
+        return {
+            sectorX: Number.isInteger(sectorX) ? sectorX : 0,
+            sectorY: Number.isInteger(sectorY) ? sectorY : 0
+        };
+    };
+    const { sectorX, sectorY } = parseSectorOffset();
+    const formatGlobalCoord = (value) => {
+        const sign = value < 0 ? '-' : '';
+        const abs = Math.abs(value);
+        return `${sign}${String(abs).padStart(2, '0')}`;
+    };
+
     for (let c = 0; c < cols; c++) {
         for (let r = 0; r < rows; r++) {
             const hexId = `${c}-${r}`;
@@ -518,7 +560,9 @@ export function drawGrid(cols, rows, options = {}) {
             text.setAttribute('y', y + HEX_SIZE / 1.5);
             text.setAttribute('text-anchor', 'middle');
             text.setAttribute('class', 'hex-text');
-            text.textContent = `${String(c).padStart(2, '0')}${String(r).padStart(2, '0')}`;
+            const globalC = c + (sectorX * cols);
+            const globalR = r + (sectorY * rows);
+            text.textContent = `${formatGlobalCoord(globalC)}${formatGlobalCoord(globalR)}`;
             g.appendChild(text);
 
             if (system) {
@@ -996,8 +1040,7 @@ function renderEmptyHexInfo(refs, id) {
 export function updateInfoPanel(id, preselectedBodyIndex = null) {
     const system = state.sectors[id];
     state.selectedSystemData = system;
-    const [c, r] = id.split('-');
-    const displayId = `${String(c).padStart(2, '0')}${String(r).padStart(2, '0')}`;
+    const displayId = getGlobalHexDisplayId(id);
 
     hideStarClassInfo(true);
     state.starTooltipPinned = false;

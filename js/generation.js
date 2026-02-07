@@ -689,3 +689,26 @@ export function rerollUnpinnedSystems() {
     refreshSectorSnapshot(config, built.width, built.height, 'Reroll Unpinned');
     showStatusMessage(`Rerolled unpinned systems with seed ${seedUsed}.`, 'success');
 }
+
+export function createSectorRecord(options = {}) {
+    const config = normalizeGenerationConfig(options.config || getGenerationConfigSnapshot());
+    const fixedSystems = options && options.fixedSystems ? options.fixedSystems : {};
+    const requestedSeed = options && options.seed ? String(options.seed).trim() : '';
+    const seed = requestedSeed || generateSeedString();
+
+    const previousSeed = state.currentSeed;
+    const previousRandom = state.seededRandomFn;
+    setSeed(seed);
+    const built = buildSectorFromConfig(config, fixedSystems);
+    state.currentSeed = previousSeed;
+    state.seededRandomFn = previousRandom;
+
+    return {
+        seed,
+        config,
+        sectors: deepClone(built.sectors),
+        pinnedHexIds: [],
+        totalHexes: built.totalHexes,
+        systemCount: built.systemCount
+    };
+}
