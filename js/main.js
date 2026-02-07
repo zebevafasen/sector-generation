@@ -3,6 +3,7 @@ import { randomizeSeed } from './core.js';
 import { EVENTS } from './events.js';
 import { state } from './config.js';
 import { addBodyToSelectedSystem, addSystemAtHex, deleteSelectedBody, deleteSelectedSystem, generateSector, rerollSelectedPlanet, rerollSelectedSystem, rerollUnpinnedSystems, setEditMode, toggleEditMode, togglePinSelectedSystem } from './generation.js';
+import { captureHistorySnapshot, setupHistory } from './history.js';
 import { autoSaveSectorState, exportSector, handleImportFile, loadSectorLocal, restoreCachedSectorState, saveSectorLocal, triggerImport } from './storage.js';
 import { setupPanZoom, updateInfoPanel, updateViewTransform } from './render.js';
 
@@ -30,6 +31,7 @@ function getMainRefs() {
         mainRefsCache.editDeleteBodyBtn = document.getElementById('editDeleteBodyBtn');
         mainRefsCache.editDeleteSystemBtn = document.getElementById('editDeleteSystemBtn');
         mainRefsCache.editModeControls = document.getElementById('editModeControls');
+        mainRefsCache.editHistoryPanel = document.getElementById('editHistoryPanel');
         mainRefsCache.quickDeleteBodyBtn = document.getElementById('quickDeleteBodyBtn');
         mainRefsCache.seedInput = document.getElementById('seedInput');
         mainRefsCache.sizePreset = document.getElementById('sizePreset');
@@ -193,6 +195,9 @@ function updateEditModeUi() {
     if (refs.editModeControls) {
         refs.editModeControls.classList.toggle('hidden', !state.editMode);
     }
+    if (refs.editHistoryPanel) {
+        refs.editHistoryPanel.classList.toggle('hidden', !state.editMode);
+    }
     if (refs.quickDeleteBodyBtn) {
         refs.quickDeleteBodyBtn.classList.toggle('hidden', !state.editMode);
         if (!state.editMode) {
@@ -209,6 +214,7 @@ window.onload = function() {
     setupPanZoom();
     setupPanelToggles();
     bindUiEvents();
+    setupHistory();
     const importInput = document.getElementById('importFileInput');
     if (importInput) importInput.addEventListener('change', handleImportFile);
     setSizeMode('preset');
@@ -219,5 +225,6 @@ window.onload = function() {
     if (!restoreCachedSectorState()) {
         generateSector();
     }
+    captureHistorySnapshot('Initial State');
 };
 
