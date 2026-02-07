@@ -72,6 +72,7 @@ function redrawAndReselect(hexId, preselectedBodyIndex = null) {
 function createHexGroup(svg, col, row, cols, rows, sectorX, sectorY) {
     const hexId = `${col}-${row}`;
     const system = state.sectors[hexId];
+    const deepSpacePoi = !system && state.deepSpacePois ? state.deepSpacePois[hexId] : null;
     const xOffset = (row % 2 === 1) ? (HEX_WIDTH / 2) : 0;
     const x = (col * HEX_WIDTH) + xOffset + (HEX_WIDTH / 2);
     const y = (row * (HEX_HEIGHT * 0.75)) + (HEX_HEIGHT / 2);
@@ -142,6 +143,16 @@ function createHexGroup(svg, col, row, cols, rows, sectorX, sectorY) {
             g.appendChild(pinRing);
         }
     }
+    if (deepSpacePoi) {
+        const marker = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        marker.setAttribute('points', `${x},${y - 6} ${x + 5},${y} ${x},${y + 6} ${x - 5},${y}`);
+        marker.setAttribute('fill', '#a78bfa');
+        marker.setAttribute('stroke', '#ddd6fe');
+        marker.setAttribute('stroke-width', '1');
+        marker.setAttribute('class', 'deep-space-poi-marker');
+        marker.style.filter = 'drop-shadow(0 0 4px rgba(167,139,250,0.75))';
+        g.appendChild(marker);
+    }
 
     return g;
 }
@@ -163,7 +174,7 @@ export function redrawHex(hexId) {
     if (!existing) return null;
     viewport.replaceChild(nextGroup, existing);
 
-    if (state.selectedHexId === hexId && state.sectors[hexId]) {
+    if (state.selectedHexId === hexId) {
         const poly = nextGroup.querySelector('polygon.hex');
         if (poly) poly.classList.add('selected');
     }
@@ -362,6 +373,7 @@ export function selectHex(id, groupElement) {
 
 export function updateInfoPanel(id, preselectedBodyIndex = null) {
     const system = state.sectors[id];
+    const deepSpacePoi = !system && state.deepSpacePois ? state.deepSpacePois[id] : null;
     if (system) ensureSystemStarFields(system);
     state.selectedSystemData = system;
     const displayId = getGlobalHexDisplayId(id);
@@ -397,7 +409,7 @@ export function updateInfoPanel(id, preselectedBodyIndex = null) {
             updateInfoPanel
         });
     } else {
-        renderEmptyHexInfo({ refs, id });
+        renderEmptyHexInfo({ refs, id, deepSpacePoi });
     }
 }
 

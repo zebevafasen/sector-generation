@@ -117,6 +117,11 @@ test.describe('pure logic modules', () => {
           '0-0': { name: 'Alpha', planets: [{ type: 'Terrestrial' }, { type: '' }, null] },
           '99-99': { name: 'OutOfBounds', planets: [] }
         },
+        deepSpacePois: {
+          '0-1': { name: 'Relay Beacon 101', kind: 'Navigation', summary: 'safe lane marker', risk: 'Low', rewardHint: 'route aid' },
+          '0-0': { name: 'Should Drop', kind: 'Hazard' },
+          '99-99': { name: 'Also Drop', kind: 'Mystery' }
+        },
         selectedHexId: '99-99',
         pinnedHexIds: ['0-0', '99-99'],
         manualRange: { min: 12, max: 2 }
@@ -130,7 +135,8 @@ test.describe('pure logic modules', () => {
         validSelectedHexId: valid.ok ? valid.payload.selectedHexId : null,
         validPinnedHexIds: valid.ok ? valid.payload.pinnedHexIds : [],
         validManualRange: valid.ok ? valid.payload.manualRange : null,
-        secondPlanetType: valid.ok ? valid.payload.sectors['0-0'].planets[1].type : null
+        secondPlanetType: valid.ok ? valid.payload.sectors['0-0'].planets[1].type : null,
+        validPois: valid.ok ? Object.keys(valid.payload.deepSpacePois || {}) : []
       };
     });
 
@@ -142,5 +148,6 @@ test.describe('pure logic modules', () => {
     expect(result.validPinnedHexIds).toEqual(['0-0']);
     expect(result.validManualRange).toEqual({ min: 2, max: 12 });
     expect(result.secondPlanetType).toBe('Barren');
+    expect(result.validPois).toEqual(['0-1']);
   });
 });

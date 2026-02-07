@@ -15,6 +15,15 @@ import {
     setPinButtonStyle
 } from './info-panel-ui.js';
 
+function escapeHtml(value) {
+    return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 function bindCompanionStarListHandlers(refs) {
     if (!refs.starList || refs.starList.dataset.companionHandlersBound === '1') return;
     refs.starList.dataset.companionHandlersBound = '1';
@@ -228,12 +237,34 @@ export function configureSystemHeaderAndStar({ refs, system, id, preselectedBody
     }
 }
 
-export function renderEmptyHexInfo({ refs, id }) {
+export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
     refs.systemDetails.classList.add('hidden');
     refs.emptyDetails.classList.remove('hidden');
-    refs.emptyDetails.innerText = 'Deep space scans indicate no major stellar masses in this sector.';
-    refs.typeLabel.innerText = 'Empty Void';
-    refs.typeLabel.className = 'text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-600';
+    if (deepSpacePoi) {
+        refs.emptyDetails.innerHTML = `
+            <div class="space-y-2 text-left">
+                <p class="text-sm text-slate-200 font-semibold">${escapeHtml(deepSpacePoi.name || 'Deep-Space Site')}</p>
+                <p class="text-xs text-slate-400">${escapeHtml(deepSpacePoi.summary || 'Uncatalogued deep-space contact.')}</p>
+                <div class="grid grid-cols-2 gap-2 text-[11px]">
+                    <div class="rounded border border-slate-700 bg-slate-900/35 px-2 py-1">
+                        <span class="text-slate-500 uppercase">Type</span>
+                        <div class="text-slate-200">${escapeHtml(deepSpacePoi.kind || 'Unknown')}</div>
+                    </div>
+                    <div class="rounded border border-slate-700 bg-slate-900/35 px-2 py-1">
+                        <span class="text-slate-500 uppercase">Risk</span>
+                        <div class="text-slate-200">${escapeHtml(deepSpacePoi.risk || 'Unknown')}</div>
+                    </div>
+                </div>
+                <p class="text-[11px] text-slate-400">Travel Intel: ${escapeHtml(deepSpacePoi.rewardHint || 'No additional intel.')}</p>
+            </div>
+        `;
+        refs.typeLabel.innerText = 'Deep-Space POI';
+        refs.typeLabel.className = 'text-xs px-2 py-0.5 rounded-full bg-violet-900/40 text-violet-200 border border-violet-700';
+    } else {
+        refs.emptyDetails.innerText = 'Deep space scans indicate no major stellar masses in this sector.';
+        refs.typeLabel.innerText = 'Empty Void';
+        refs.typeLabel.className = 'text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-600';
+    }
 
     if (refs.starClassLabel) {
         refs.starClassLabel.innerText = 'Class Unknown';

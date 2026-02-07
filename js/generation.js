@@ -33,6 +33,51 @@ import { ensureSystemStarFields } from './star-system.js';
 import { redrawGridAndReselect, redrawHexAndReselect, refreshHexInfo, clearSelectionInfo } from './ui-sync.js';
 import { deepClone, isHexIdInBounds, parseHexId, romanize, shuffleArray, sortHexIds } from './utils.js';
 
+const DEEP_SPACE_POI_TEMPLATES = [
+    {
+        kind: 'Navigation',
+        name: 'Relay Beacon',
+        summary: 'A functioning long-range navigation relay anchored to old trade routes.',
+        risk: 'Low',
+        rewardHint: 'Improves navigation confidence for nearby travel plans.'
+    },
+    {
+        kind: 'Hazard',
+        name: 'Ion Storm Front',
+        summary: 'A volatile electromagnetic storm pocket that scrambles sensors.',
+        risk: 'High',
+        rewardHint: 'Forcing a crossing can save time at elevated danger.'
+    },
+    {
+        kind: 'Opportunity',
+        name: 'Drift Wreck Cluster',
+        summary: 'Scattered hulks from an old convoy battle with salvage potential.',
+        risk: 'Medium',
+        rewardHint: 'Potential salvage, encrypted logs, and recoverable cargo.'
+    },
+    {
+        kind: 'Mystery',
+        name: 'Anomalous Signal Echo',
+        summary: 'A periodic deep-space signal with no stable origin point.',
+        risk: 'Unknown',
+        rewardHint: 'Could indicate hidden structures, traps, or first-contact traces.'
+    },
+    {
+        kind: 'Opportunity',
+        name: 'Smuggler Dead-Drop',
+        summary: 'A masked cache buoy linked to covert transport networks.',
+        risk: 'Medium',
+        rewardHint: 'Useful supplies and faction leads if intercepted quietly.'
+    },
+    {
+        kind: 'Navigation',
+        name: 'Ancient Lane Marker',
+        summary: 'A pre-collapse gravimetric marker still broadcasting weak lane data.',
+        risk: 'Low',
+        rewardHint: 'Can reveal safer micro-routes and old map fragments.'
+    }
+];
+
 function normalizeGenerationConfig(config) {
     const source = config || {};
     const sizeMode = source.sizeMode === 'custom' ? 'custom' : 'preset';
@@ -252,6 +297,48 @@ function composeContentSeed(layoutSeed, iteration) {
     return `${layoutSeed}::content:${iteration}`;
 }
 
+function countNeighborSystems(hexId, sectors) {
+    const parsed = parseHexId(hexId);
+    if (!parsed) return 0;
+    let count = 0;
+    for (let dc = -1; dc <= 1; dc++) {
+        for (let dr = -1; dr <= 1; dr++) {
+            if (dc === 0 && dr === 0) continue;
+            const neighborHexId = `${parsed.col + dc}-${parsed.row + dr}`;
+            if (sectors[neighborHexId]) count++;
+        }
+    }
+    return count;
+}
+
+function generateDeepSpacePois(width, height, sectors) {
+    const pois = {};
+    for (let c = 0; c < width; c++) {
+        for (let r = 0; r < height; r++) {
+            const hexId = `${c}-${r}`;
+            if (sectors[hexId]) continue;
+
+            const nearbySystems = countNeighborSystems(hexId, sectors);
+            const baseChance = 0.035;
+            const nearbyBoost = nearbySystems > 0 ? Math.min(0.05, nearbySystems * 0.015) : 0;
+            const remoteBoost = nearbySystems === 0 ? 0.015 : 0;
+            const spawnChance = baseChance + nearbyBoost + remoteBoost;
+            if (rand() > spawnChance) continue;
+
+            const template = DEEP_SPACE_POI_TEMPLATES[Math.floor(rand() * DEEP_SPACE_POI_TEMPLATES.length)];
+            const serial = Math.floor(rand() * 900) + 100;
+            pois[hexId] = {
+                kind: template.kind,
+                name: `${template.name} ${serial}`,
+                summary: template.summary,
+                risk: template.risk,
+                rewardHint: template.rewardHint
+            };
+        }
+    }
+    return pois;
+}
+
 function selectClusteredSystemCoords(candidateCoords, systemsToGenerate) {
     if (systemsToGenerate <= 2 || candidateCoords.length <= 2) {
         return candidateCoords.slice(0, systemsToGenerate);
@@ -388,6 +475,7 @@ function buildSectorFromConfig(config, fixedSystems = {}) {
             sectorsByCoord: nextSectors
         });
     });
+    const deepSpacePois = generateDeepSpacePois(width, height, nextSectors);
 
     return {
         config: normalized,
@@ -395,7 +483,8 @@ function buildSectorFromConfig(config, fixedSystems = {}) {
         height,
         totalHexes,
         systemCount: Object.keys(nextSectors).length,
-        sectors: nextSectors
+        sectors: nextSectors,
+        deepSpacePois
     };
 }
 
@@ -436,6 +525,7 @@ export function generateSector() {
     const built = buildSectorFromConfig(config, {});
 
     state.sectors = built.sectors;
+    state.deepSpacePois = built.deepSpacePois;
     state.pinnedHexIds = [];
     state.selectedHexId = null;
     state.multiSector = {
@@ -445,6 +535,7 @@ export function generateSector() {
                 seed: seedUsed,
                 config: deepClone(config),
                 sectors: deepClone(built.sectors),
+                deepSpacePois: deepClone(built.deepSpacePois),
                 pinnedHexIds: [],
                 totalHexes: built.totalHexes,
                 systemCount: built.systemCount
@@ -577,6 +668,9 @@ export function addSystemAtHex(hexId) {
         usedNames,
         sectorsByCoord: state.sectors
     });
+    if (state.deepSpacePois && state.deepSpacePois[hexId]) {
+        delete state.deepSpacePois[hexId];
+    }
     reportSystemInvariantIssues(state.sectors[hexId], 'add-system');
 
     redrawHexAndReselect(hexId);
@@ -595,6 +689,9 @@ export function deleteSelectedSystem() {
 
     const config = getGenerationConfigSnapshot();
     delete state.sectors[selectedHexId];
+    if (state.deepSpacePois && state.deepSpacePois[selectedHexId]) {
+        delete state.deepSpacePois[selectedHexId];
+    }
     state.pinnedHexIds = (state.pinnedHexIds || []).filter(id => id !== selectedHexId);
     clearSelectionInfo();
 
@@ -853,6 +950,7 @@ export function rerollUnpinnedSystems() {
     state.rerollIteration = nextIteration;
     state.currentSeed = layoutSeed;
     state.sectors = nextSectors;
+    state.deepSpacePois = generateDeepSpacePois(width, height, nextSectors);
     sanitizePinnedHexes(width, height);
 
     redrawGridAndReselect(width, height, { selectedHexId });
@@ -878,6 +976,7 @@ export function createSectorRecord(options = {}) {
         seed,
         config,
         sectors: deepClone(built.sectors),
+        deepSpacePois: deepClone(built.deepSpacePois),
         pinnedHexIds: [],
         totalHexes: built.totalHexes,
         systemCount: built.systemCount

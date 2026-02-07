@@ -119,6 +119,7 @@ export const state = {
     sizeMode: 'preset',
     densityMode: 'preset',
     sectors: {},
+    deepSpacePois: {},
     selectedHexId: null,
     selectedBodyIndex: null,
     selectedSystemData: null,

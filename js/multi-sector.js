@@ -84,6 +84,7 @@ function saveCurrentSectorRecord() {
         seed: state.currentSeed || '',
         config,
         sectors: deepClone(state.sectors || {}),
+        deepSpacePois: deepClone(state.deepSpacePois || {}),
         pinnedHexIds: deepClone(state.pinnedHexIds || []),
         totalHexes,
         systemCount: Object.keys(state.sectors || {}).length
@@ -115,6 +116,7 @@ function applySectorRecord(key, record, options = {}) {
         generationProfile: record.config.generationProfile || 'high_adventure',
         starDistribution: record.config.starDistribution || 'standard',
         sectorConfigSnapshot: deepClone(record.config),
+        deepSpacePois: deepClone(record.deepSpacePois || {}),
         pinnedHexIds: deepClone(record.pinnedHexIds || []),
         selectedHexId: null,
         multiSector: deepClone(state.multiSector),

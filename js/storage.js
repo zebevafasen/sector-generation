@@ -240,6 +240,7 @@ export function buildSectorPayload(meta = {}) {
         multiSector: state.multiSector || null,
         dimensions: { width, height },
         stats: { totalHexes, totalSystems },
+        deepSpacePois: JSON.parse(JSON.stringify(state.deepSpacePois || {})),
         sectors: JSON.parse(JSON.stringify(state.sectors))
     };
 }
@@ -519,6 +520,7 @@ export function applySectorPayload(payload) {
     state.rerollIteration = Number.isFinite(Number(nextPayload.rerollIteration)) ? Number(nextPayload.rerollIteration) : 0;
 
     state.sectors = nextPayload.sectors || {};
+    state.deepSpacePois = nextPayload.deepSpacePois || {};
     Object.values(state.sectors).forEach((system) => ensureSystemStarFields(system));
     state.pinnedHexIds = Array.isArray(nextPayload.pinnedHexIds)
         ? nextPayload.pinnedHexIds.filter(hexId => !!state.sectors[hexId])

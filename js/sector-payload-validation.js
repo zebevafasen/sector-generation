@@ -67,6 +67,36 @@ function sanitizeMultiSector(value) {
     };
 }
 
+function sanitizeDeepSpacePois(rawPois, width, height, sectors) {
+    if (!isPlainObject(rawPois)) return { deepSpacePois: {}, dropped: 0 };
+    const deepSpacePois = {};
+    let dropped = 0;
+
+    Object.entries(rawPois).forEach(([hexId, poi]) => {
+        const parsed = parseHexId(hexId);
+        if (!parsed || !isHexCoordInBounds(parsed.col, parsed.row, width, height) || sectors[hexId]) {
+            dropped++;
+            return;
+        }
+        if (!isPlainObject(poi)) {
+            dropped++;
+            return;
+        }
+        const name = typeof poi.name === 'string' && poi.name.trim() ? poi.name.trim() : 'Unknown Site';
+        const kind = typeof poi.kind === 'string' && poi.kind.trim() ? poi.kind.trim() : 'Unknown';
+        const summary = typeof poi.summary === 'string' && poi.summary.trim()
+            ? poi.summary.trim()
+            : 'Uncatalogued deep-space point of interest.';
+        const risk = typeof poi.risk === 'string' && poi.risk.trim() ? poi.risk.trim() : 'Unknown';
+        const rewardHint = typeof poi.rewardHint === 'string' && poi.rewardHint.trim()
+            ? poi.rewardHint.trim()
+            : 'No additional intel.';
+        deepSpacePois[hexId] = { name, kind, summary, risk, rewardHint };
+    });
+
+    return { deepSpacePois, dropped };
+}
+
 export function validateSectorPayload(rawPayload) {
     if (!isPlainObject(rawPayload)) {
         return { ok: false, error: 'Payload must be an object.' };
@@ -84,6 +114,7 @@ export function validateSectorPayload(rawPayload) {
     if (Object.keys(rawPayload.sectors || {}).length > 0 && !Object.keys(sectors).length) {
         return { ok: false, error: 'No valid systems were found in sector data.' };
     }
+    const { deepSpacePois, dropped: droppedPois } = sanitizeDeepSpacePois(rawPayload.deepSpacePois, width, height, sectors);
 
     const manualMin = toNonNegativeInt(rawPayload.manualRange && rawPayload.manualRange.min, 0);
     const manualMax = toNonNegativeInt(rawPayload.manualRange && rawPayload.manualRange.max, 0);
@@ -110,6 +141,7 @@ export function validateSectorPayload(rawPayload) {
         autoSeed: typeof rawPayload.autoSeed === 'boolean' ? rawPayload.autoSeed : false,
         realisticPlanetWeights: !!rawPayload.realisticPlanetWeights,
         sectors,
+        deepSpacePois,
         pinnedHexIds: Array.isArray(rawPayload.pinnedHexIds)
             ? rawPayload.pinnedHexIds.filter((hexId) => typeof hexId === 'string' && Object.prototype.hasOwnProperty.call(sectors, hexId))
             : [],
@@ -124,5 +156,6 @@ export function validateSectorPayload(rawPayload) {
         sectorConfigSnapshot: isPlainObject(rawPayload.sectorConfigSnapshot) ? rawPayload.sectorConfigSnapshot : null
     };
 
-    return { ok: true, payload, warning: dropped > 0 ? `${dropped} invalid entries were ignored.` : null };
+    const totalDropped = dropped + droppedPois;
+    return { ok: true, payload, warning: totalDropped > 0 ? `${totalDropped} invalid entries were ignored.` : null };
 }
