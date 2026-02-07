@@ -11,7 +11,7 @@ import { EVENTS } from './events.js';
 import { state } from './config.js';
 import { addBodyToSelectedSystem, addPoiAtHex, addSystemAtHex, deletePoiAtHex, deleteSelectedBody, deleteSelectedSystem, generateSector, renamePoiAtHex, rerollSelectedPlanet, rerollSelectedSystem, rerollUnpinnedSystems, setEditMode, toggleEditMode, togglePinSelectedSystem } from './generation.js';
 import { captureHistorySnapshot, setupHistory } from './history.js';
-import { setupMultiSectorLinks } from './multi-sector.js';
+import { setupMultiSectorLinks, travelSelectedJumpGate } from './multi-sector.js';
 import { setupSearchPanel } from './search.js';
 import { setupRoutePlanner } from './route-planner.js';
 import {
@@ -249,6 +249,9 @@ function bindAppEventHandlers() {
         const hexId = event && event.detail ? event.detail.hexId : null;
         if (!hexId) return;
         renamePoiAtHex(hexId);
+    });
+    window.addEventListener(EVENTS.REQUEST_TRAVEL_JUMP_GATE, () => {
+        travelSelectedJumpGate();
     });
     window.addEventListener(EVENTS.REQUEST_DELETE_SELECTED_BODY, () => {
         if (!state.editMode) return;

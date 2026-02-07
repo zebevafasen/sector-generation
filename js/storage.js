@@ -555,10 +555,14 @@ export function applySectorPayload(payload) {
     }
     if (nextPayload.multiSector && typeof nextPayload.multiSector === 'object') {
         state.multiSector = nextPayload.multiSector;
+        if (!state.multiSector.jumpGateRegistry || typeof state.multiSector.jumpGateRegistry !== 'object') {
+            state.multiSector.jumpGateRegistry = {};
+        }
     } else {
         state.multiSector = {
             currentKey: '0,0',
-            sectorsByKey: {}
+            sectorsByKey: {},
+            jumpGateRegistry: {}
         };
     }
     autoSaveSectorState();

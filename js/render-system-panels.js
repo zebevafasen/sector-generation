@@ -116,6 +116,12 @@ function getPoiTypeStyle(kind) {
     }
 }
 
+function isActiveJumpGatePoi(poi) {
+    if (!poi) return false;
+    if (poi.jumpGateState === 'active') return true;
+    return /^active jump-gate\b/i.test(String(poi.name || ''));
+}
+
 export function configureSystemHeaderAndStar({ refs, system, id, preselectedBodyIndex, notifySectorDataChanged, updateInfoPanel, redrawAndReselect }) {
     ensureSystemStarFields(system);
     const stars = getSystemStars(system);
@@ -304,6 +310,12 @@ export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
                     </div>
                 </div>
                 <p class="text-[11px] text-slate-400">Travel Intel: ${escapeHtml(deepSpacePoi.rewardHint || 'No additional intel.')}</p>
+                ${isActiveJumpGatePoi(deepSpacePoi) ? `
+                <div class="rounded border border-cyan-700/60 bg-cyan-950/20 px-2 py-2">
+                    <p class="text-[11px] text-cyan-200">Jump Link: ${escapeHtml((deepSpacePoi.jumpGateLink && deepSpacePoi.jumpGateLink.sectorKey) ? `${deepSpacePoi.jumpGateLink.sectorKey} / ${deepSpacePoi.jumpGateLink.hexId || '--'}` : 'Unresolved')}</p>
+                    <button type="button" id="travelJumpGateBtn" class="mt-2 w-full py-1.5 text-xs rounded bg-cyan-900/35 border border-cyan-700 text-cyan-200 hover:bg-cyan-800/40 hover:border-cyan-500 transition-colors">Go to Location</button>
+                </div>
+                ` : ''}
             </div>
         `;
         refs.typeLabel.innerText = 'Deep-Space POI';
@@ -371,6 +383,17 @@ export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
             renamePoiBtn.onclick = () => {
                 emitEvent(EVENTS.REQUEST_RENAME_POI_AT_HEX, { hexId: id });
             };
+        }
+    }
+    if (id && !!deepSpacePoi && isActiveJumpGatePoi(deepSpacePoi)) {
+        const travelBtn = refs.emptyDetails.querySelector('#travelJumpGateBtn');
+        if (travelBtn) {
+            const hasLink = !!(deepSpacePoi.jumpGateLink && deepSpacePoi.jumpGateLink.sectorKey && deepSpacePoi.jumpGateLink.hexId);
+            travelBtn.disabled = !hasLink;
+            if (!hasLink) {
+                travelBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+            travelBtn.onclick = hasLink ? () => emitEvent(EVENTS.REQUEST_TRAVEL_JUMP_GATE, { hexId: id }) : null;
         }
     }
     setButtonAction(refs.renameSystemBtn, false);

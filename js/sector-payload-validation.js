@@ -63,7 +63,8 @@ function sanitizeMultiSector(value) {
     if (!isPlainObject(value) || !isPlainObject(value.sectorsByKey)) return null;
     return {
         currentKey: typeof value.currentKey === 'string' && value.currentKey.trim() ? value.currentKey : '0,0',
-        sectorsByKey: value.sectorsByKey
+        sectorsByKey: value.sectorsByKey,
+        jumpGateRegistry: isPlainObject(value.jumpGateRegistry) ? value.jumpGateRegistry : {}
     };
 }
 
@@ -93,7 +94,16 @@ function sanitizeDeepSpacePois(rawPois, width, height, sectors) {
             : 'No additional intel.';
         const isRefuelingStation = !!poi.isRefuelingStation
             || (kind.toLowerCase() === 'navigation' && /refueling station/i.test(name));
-        deepSpacePois[hexId] = { name, kind, summary, risk, rewardHint, isRefuelingStation };
+        const jumpGateState = poi.jumpGateState === 'active' || poi.jumpGateState === 'inactive'
+            ? poi.jumpGateState
+            : (name.toLowerCase().includes('inactive jump-gate') ? 'inactive' : (name.toLowerCase().includes('active jump-gate') ? 'active' : null));
+        const jumpGatePairId = typeof poi.jumpGatePairId === 'string' && poi.jumpGatePairId.trim() ? poi.jumpGatePairId.trim() : null;
+        const jumpGateLink = isPlainObject(poi.jumpGateLink)
+            && typeof poi.jumpGateLink.sectorKey === 'string'
+            && typeof poi.jumpGateLink.hexId === 'string'
+            ? { sectorKey: poi.jumpGateLink.sectorKey, hexId: poi.jumpGateLink.hexId }
+            : null;
+        deepSpacePois[hexId] = { name, kind, summary, risk, rewardHint, isRefuelingStation, jumpGateState, jumpGatePairId, jumpGateLink };
     });
 
     return { deepSpacePois, dropped };
