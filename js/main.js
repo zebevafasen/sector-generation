@@ -27,6 +27,7 @@ function getMainRefs() {
         mainRefsCache.editAddPlanetInSectionBtn = document.getElementById('editAddPlanetInSectionBtn');
         mainRefsCache.editAddBeltInSectionBtn = document.getElementById('editAddBeltInSectionBtn');
         mainRefsCache.editAddStationInSectionBtn = document.getElementById('editAddStationInSectionBtn');
+        mainRefsCache.editRenameBodyBtn = document.getElementById('editRenameBodyBtn');
         mainRefsCache.editDeleteBodyBtn = document.getElementById('editDeleteBodyBtn');
         mainRefsCache.editDeleteSystemBtn = document.getElementById('editDeleteSystemBtn');
         mainRefsCache.editModeControls = document.getElementById('editModeControls');

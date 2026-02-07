@@ -46,7 +46,7 @@ function resetBodyDetailsPanel() {
     const content = document.getElementById('infoBodyDetailsContent');
     const name = document.getElementById('infoBodyDetailsName');
     const type = document.getElementById('infoBodyDetailsType');
-    const renameBodyBtn = document.getElementById('renameBodyBtn');
+    const renameBodyBtn = document.getElementById('editRenameBodyBtn');
     const quickDeleteBodyBtn = document.getElementById('quickDeleteBodyBtn');
     const editPlanetTypeRow = document.getElementById('editPlanetTypeRow');
     const editPlanetTypeSelect = document.getElementById('editPlanetTypeSelect');
@@ -123,6 +123,28 @@ function setButtonAction(button, enabled, onClick = null) {
     button.onclick = enabled ? onClick : null;
 }
 
+function renameBodiesForSystemNameChange(system, oldName, newName) {
+    if (!system || !Array.isArray(system.planets)) return;
+    const oldSystemPrefix = `${oldName} `;
+    const oldStationPrefix = `Station ${oldName} `;
+    const oldStationBare = `Station ${oldName}`;
+
+    system.planets.forEach((body) => {
+        if (!body || typeof body.name !== 'string') return;
+        if (body.name.startsWith(oldSystemPrefix)) {
+            body.name = `${newName}${body.name.slice(oldName.length)}`;
+            return;
+        }
+        if (body.name.startsWith(oldStationPrefix)) {
+            body.name = `Station ${newName} ${body.name.slice(oldStationPrefix.length)}`;
+            return;
+        }
+        if (body.name === oldStationBare) {
+            body.name = `Station ${newName}`;
+        }
+    });
+}
+
 function getInfoPanelRefs() {
     return {
         panel: document.getElementById('infoPanel'),
@@ -143,7 +165,7 @@ function getInfoPanelRefs() {
         beltSummaryLabel: document.getElementById('infoBeltSummaryLabel'),
         stationSummaryLabel: document.getElementById('infoStationSummaryLabel'),
         renameSystemBtn: document.getElementById('renameSystemBtn'),
-        renameBodyBtn: document.getElementById('renameBodyBtn'),
+        renameBodyBtn: document.getElementById('editRenameBodyBtn'),
         quickDeleteBodyBtn: document.getElementById('quickDeleteBodyBtn'),
         editStarClassRow: document.getElementById('editStarClassRow'),
         editStarClassSelect: document.getElementById('editStarClassSelect'),
@@ -403,10 +425,18 @@ function configureSystemHeaderAndStar(refs, system, id, preselectedBodyIndex) {
     refs.systemName.innerText = system.name;
     if (refs.renameSystemBtn) {
         setButtonAction(refs.renameSystemBtn, true, () => {
+            const previousName = system.name;
             const nextNameRaw = prompt('Rename system', system.name);
             if (nextNameRaw === null) return;
             const nextName = nextNameRaw.trim();
             if (!nextName) return;
+            if (nextName === previousName) return;
+            if (state.editMode) {
+                const shouldRenameBodies = confirm('Also rename linked planets/objects to match the new system name?');
+                if (shouldRenameBodies) {
+                    renameBodiesForSystemNameChange(system, previousName, nextName);
+                }
+            }
             system.name = nextName;
             notifySectorDataChanged();
             updateInfoPanel(id, preselectedBodyIndex);
