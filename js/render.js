@@ -1,12 +1,12 @@
 ﻿import { HEX_HEIGHT, HEX_SIZE, HEX_WIDTH, STAR_VISUALS, state } from './config.js';
 import { formatStarAgeValue, generateStarAge, getStarClassInfo, hideStarClassInfo } from './core.js';
 import { getBodyIconMarkup, normalizeBodyType } from './body-icons.js';
+import { EVENTS, emitEvent } from './events.js';
 
 const STAR_GRADIENT_CACHE = {};
 
 function notifySectorDataChanged() {
-    if (typeof window === 'undefined') return;
-    window.dispatchEvent(new Event('sectorDataChanged'));
+    emitEvent(EVENTS.SECTOR_DATA_CHANGED);
 }
 
 function getCurrentGridDimensions() {
@@ -542,9 +542,7 @@ function renderSystemBodyLists(refs, system, id, preselectedBodyIndex) {
             }
             if (refs.quickDeleteBodyBtn && state.editMode) {
                 setButtonAction(refs.quickDeleteBodyBtn, true, () => {
-                    if (typeof window !== 'undefined') {
-                        window.dispatchEvent(new Event('requestDeleteSelectedBody'));
-                    }
+                    emitEvent(EVENTS.REQUEST_DELETE_SELECTED_BODY);
                 });
             }
         };
@@ -606,9 +604,7 @@ function renderEmptyHexInfo(refs, id) {
         if (state.editMode && id) {
             refs.addSystemHereBtn.classList.remove('hidden');
             refs.addSystemHereBtn.onclick = () => {
-                if (typeof window !== 'undefined') {
-                    window.dispatchEvent(new CustomEvent('requestAddSystemAtHex', { detail: { hexId: id } }));
-                }
+                emitEvent(EVENTS.REQUEST_ADD_SYSTEM_AT_HEX, { hexId: id });
             };
         } else {
             refs.addSystemHereBtn.classList.add('hidden');

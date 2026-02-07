@@ -15,6 +15,7 @@ import {
     HABITABLE_WORLD_SUFFIXES,
     STAR_CLASS_PLANET_WEIGHTS
 } from './generation-data.js';
+import { EVENTS, emitEvent } from './events.js';
 import { generateStarAge, generateSeedString, isAutoSeedEnabled, rand, setSeed, showStatusMessage } from './core.js';
 import { autoSaveSectorState, buildSectorPayload } from './storage.js';
 import { redrawGridAndReselect, refreshHexInfo, clearSelectionInfo } from './ui-sync.js';
@@ -528,8 +529,7 @@ export function generateSystemData(config = null, context = null) {
 }
 
 function notifyEditModeChanged() {
-    if (typeof window === 'undefined') return;
-    window.dispatchEvent(new Event('editModeChanged'));
+    emitEvent(EVENTS.EDIT_MODE_CHANGED);
 }
 
 export function setEditMode(enabled) {

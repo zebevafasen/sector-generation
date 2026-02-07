@@ -1,5 +1,6 @@
 import { setDensityMode, setSizeMode, setupStarClassTooltip } from './controls.js';
 import { randomizeSeed } from './core.js';
+import { EVENTS } from './events.js';
 import { state } from './config.js';
 import { addBodyToSelectedSystem, addSystemAtHex, deleteSelectedBody, deleteSelectedSystem, generateSector, rerollSelectedSystem, rerollUnpinnedSystems, setEditMode, toggleEditMode, togglePinSelectedSystem } from './generation.js';
 import { autoSaveSectorState, exportSector, handleImportFile, loadSectorLocal, restoreCachedSectorState, saveSectorLocal, triggerImport } from './storage.js';
@@ -120,18 +121,18 @@ function bindUiEvents() {
     byId('modePresetBtn')?.addEventListener('click', autoSaveSectorState);
     byId('modeManualBtn')?.addEventListener('click', autoSaveSectorState);
     byId('randomizeSeedBtn')?.addEventListener('click', autoSaveSectorState);
-    window.addEventListener('sectorDataChanged', autoSaveSectorState);
-    window.addEventListener('requestAddSystemAtHex', (event) => {
+    window.addEventListener(EVENTS.SECTOR_DATA_CHANGED, autoSaveSectorState);
+    window.addEventListener(EVENTS.REQUEST_ADD_SYSTEM_AT_HEX, (event) => {
         if (!state.editMode) return;
         const hexId = event && event.detail ? event.detail.hexId : null;
         if (!hexId) return;
         addSystemAtHex(hexId);
     });
-    window.addEventListener('requestDeleteSelectedBody', () => {
+    window.addEventListener(EVENTS.REQUEST_DELETE_SELECTED_BODY, () => {
         if (!state.editMode) return;
         deleteSelectedBody();
     });
-    window.addEventListener('editModeChanged', () => {
+    window.addEventListener(EVENTS.EDIT_MODE_CHANGED, () => {
         updateEditModeUi();
         if (state.selectedHexId) {
             updateInfoPanel(state.selectedHexId, state.selectedBodyIndex);
