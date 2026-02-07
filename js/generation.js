@@ -186,12 +186,13 @@ function computeSystemCount(totalHexes, config) {
     return Math.floor(rand() * (max - min + 1)) + min;
 }
 
-function refreshSectorSnapshot(config, width, height) {
+function refreshSectorSnapshot(config, width, height, changeLabel = 'Update Sector') {
     const totalHexes = width * height;
     const systemCount = Object.keys(state.sectors).length;
     state.sectorConfigSnapshot = normalizeGenerationConfig(config);
     state.lastSectorSnapshot = buildSectorPayload({ width, height, totalHexes, systemCount });
     autoSaveSectorState();
+    emitEvent(EVENTS.SECTOR_DATA_CHANGED, { label: changeLabel });
 }
 
 function updateSectorStatus(totalHexes, systemCount) {
@@ -301,7 +302,7 @@ export function generateSector() {
 
     redrawGridAndReselect(built.width, built.height, { resetView: true });
     updateSectorStatus(built.totalHexes, built.systemCount);
-    refreshSectorSnapshot(config, built.width, built.height);
+    refreshSectorSnapshot(config, built.width, built.height, 'Generate Sector');
     showStatusMessage(seedUsed ? `Generated seed ${seedUsed}` : 'Sector regenerated.', 'info');
 }
 
@@ -433,7 +434,7 @@ export function addSystemAtHex(hexId) {
 
     redrawGridAndReselect(config.width, config.height, { selectedHexId: hexId });
     sanitizePinnedHexes(config.width, config.height);
-    refreshSectorSnapshot(config, config.width, config.height);
+    refreshSectorSnapshot(config, config.width, config.height, 'Add System');
     updateSectorStatus(config.width * config.height, Object.keys(state.sectors).length);
     showStatusMessage(`Added system at ${hexId}.`, 'success');
 }
@@ -453,7 +454,7 @@ export function deleteSelectedSystem() {
 
     redrawGridAndReselect(config.width, config.height);
     sanitizePinnedHexes(config.width, config.height);
-    refreshSectorSnapshot(config, config.width, config.height);
+    refreshSectorSnapshot(config, config.width, config.height, 'Delete System');
     updateSectorStatus(config.width * config.height, Object.keys(state.sectors).length);
     showStatusMessage(`Deleted system ${selectedHexId}.`, 'success');
 }
@@ -508,7 +509,7 @@ export function addBodyToSelectedSystem(kind) {
     refreshHexInfo(selectedHexId);
     reportSystemInvariantIssues(system, 'add-body');
     const config = getGenerationConfigSnapshot();
-    refreshSectorSnapshot(config, config.width, config.height);
+    refreshSectorSnapshot(config, config.width, config.height, 'Add Object');
     showStatusMessage('Added new object.', 'success');
 }
 
@@ -533,7 +534,7 @@ export function deleteSelectedBody() {
     refreshHexInfo(selectedHexId);
     reportSystemInvariantIssues(system, 'delete-body');
     const config = getGenerationConfigSnapshot();
-    refreshSectorSnapshot(config, config.width, config.height);
+    refreshSectorSnapshot(config, config.width, config.height, 'Delete Object');
     showStatusMessage('Deleted selected object.', 'success');
 }
 
@@ -597,7 +598,7 @@ export function rerollSelectedPlanet() {
     state.selectedBodyIndex = updatedIndex >= 0 ? updatedIndex : null;
     refreshHexInfo(selectedHexId, state.selectedBodyIndex);
     reportSystemInvariantIssues(system, 'reroll-planet');
-    refreshSectorSnapshot(config, config.width, config.height);
+    refreshSectorSnapshot(config, config.width, config.height, 'Reroll Planet');
     showStatusMessage('Rerolled selected planet.', 'success');
 }
 
@@ -626,7 +627,7 @@ export function rerollSelectedSystem() {
 
     redrawGridAndReselect(config.width, config.height, { selectedHexId });
     sanitizePinnedHexes(config.width, config.height);
-    refreshSectorSnapshot(config, config.width, config.height);
+    refreshSectorSnapshot(config, config.width, config.height, 'Reroll System');
     showStatusMessage(`Rerolled system ${selectedHexId} with seed ${seedUsed}.`, 'success');
 }
 
@@ -656,7 +657,7 @@ export function togglePinSelectedSystem() {
 
     refreshHexInfo(selectedHexId);
     const config = getGenerationConfigSnapshot();
-    refreshSectorSnapshot(config, config.width, config.height);
+    refreshSectorSnapshot(config, config.width, config.height, 'Toggle Pin');
 }
 
 export function rerollUnpinnedSystems() {
@@ -685,6 +686,6 @@ export function rerollUnpinnedSystems() {
 
     redrawGridAndReselect(built.width, built.height, { selectedHexId });
     updateSectorStatus(built.totalHexes, built.systemCount);
-    refreshSectorSnapshot(config, built.width, built.height);
+    refreshSectorSnapshot(config, built.width, built.height, 'Reroll Unpinned');
     showStatusMessage(`Rerolled unpinned systems with seed ${seedUsed}.`, 'success');
 }

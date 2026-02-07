@@ -9,8 +9,8 @@ import { refreshSystemPlanetTags } from './planet-tags.js';
 
 const STAR_GRADIENT_CACHE = {};
 
-function notifySectorDataChanged() {
-    emitEvent(EVENTS.SECTOR_DATA_CHANGED);
+function notifySectorDataChanged(label = 'Edit Sector') {
+    emitEvent(EVENTS.SECTOR_DATA_CHANGED, { label });
 }
 
 function getCurrentGridDimensions() {
@@ -584,7 +584,7 @@ function configureSystemHeaderAndStar(refs, system, id, preselectedBodyIndex) {
                 }
             }
             system.name = nextName;
-            notifySectorDataChanged();
+            notifySectorDataChanged('Rename System');
             updateInfoPanel(id, preselectedBodyIndex);
         });
     }
@@ -605,7 +605,7 @@ function configureSystemHeaderAndStar(refs, system, id, preselectedBodyIndex) {
                     current.glow = nextPalette.halo;
                     current.starAge = generateStarAge(nextClass);
                     reportSystemInvariantIssues(current, 'edit-star-class');
-                    notifySectorDataChanged();
+                    notifySectorDataChanged('Edit Star Class');
                     redrawAndReselect(id, state.selectedBodyIndex);
                 };
             } else {
@@ -663,7 +663,7 @@ function renderSystemBodyLists(refs, system, id, preselectedBodyIndex) {
         const nextName = nextNameRaw.trim();
         if (!nextName || !system.planets[bodyIndex]) return;
         system.planets[bodyIndex].name = nextName;
-        notifySectorDataChanged();
+        notifySectorDataChanged('Rename Object');
         updateInfoPanel(id, bodyIndex);
     };
 
@@ -762,7 +762,7 @@ function renderSystemBodyLists(refs, system, id, preselectedBodyIndex) {
                         refreshSystemPlanetPopulation(targetSystem, { randomFn: rand });
                         refreshSystemPlanetTags(targetSystem, { randomFn: rand });
                         reportSystemInvariantIssues(targetSystem, 'edit-planet-type');
-                        notifySectorDataChanged();
+                        notifySectorDataChanged('Edit Planet Type');
                         updateInfoPanel(id, bodyIndex);
                     };
                 } else {
@@ -787,7 +787,7 @@ function renderSystemBodyLists(refs, system, id, preselectedBodyIndex) {
                         refreshSystemPlanetPopulation(targetSystem, { randomFn: rand });
                         refreshSystemPlanetTags(targetSystem, { randomFn: rand });
                         reportSystemInvariantIssues(targetSystem, 'edit-inhabit-planet');
-                        notifySectorDataChanged();
+                        notifySectorDataChanged('Toggle Inhabited');
                         updateInfoPanel(id, bodyIndex);
                     };
                 } else {

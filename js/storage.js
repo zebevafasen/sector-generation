@@ -4,6 +4,7 @@
 } from './config.js';
 import { isAutoSeedEnabled, isRealisticPlanetWeightingEnabled, setSeed, showStatusMessage } from './core.js';
 import { setDensityMode, setSizeMode } from './controls.js';
+import { EVENTS, emitEvent } from './events.js';
 import { clearInfoPanel, drawGrid, selectHex } from './render.js';
 
 function getStorageUiRefs() {
@@ -257,4 +258,5 @@ export function applySectorPayload(payload) {
         state.lastSectorSnapshot.generatedAt = payload.generatedAt;
     }
     autoSaveSectorState();
+    emitEvent(EVENTS.SECTOR_DATA_CHANGED, { label: 'Load Sector' });
 }
