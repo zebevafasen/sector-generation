@@ -111,6 +111,13 @@
                     </select>
                 </div>
                 <div>
+                    <label class="flex items-center gap-1 text-xs text-slate-500 mb-1">Star Distribution <span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-slate-600 text-[10px] text-slate-400 cursor-help" title="Standard spreads systems uniformly. Clusters favors nearby groupings while keeping some spread.">?</span></label>
+                    <select id="starDistribution" class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm focus:border-sky-500 focus:outline-none">
+                        <option value="standard" selected>Standard</option>
+                        <option value="clusters">Clusters</option>
+                    </select>
+                </div>
+                <div>
                     <label class="flex items-center gap-1 text-xs text-slate-500 mb-1">Seed <span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-slate-600 text-[10px] text-slate-400 cursor-help" title="Same seed and settings reproduce the same sector layout.">?</span></label>
                     <div class="flex gap-2">
                         <input type="text" id="seedInput" placeholder="Auto" 

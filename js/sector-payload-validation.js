@@ -100,6 +100,7 @@ export function validateSectorPayload(rawPayload) {
         generationProfile: typeof rawPayload.generationProfile === 'string' && rawPayload.generationProfile
             ? rawPayload.generationProfile
             : 'high_adventure',
+        starDistribution: rawPayload.starDistribution === 'clusters' ? 'clusters' : 'standard',
         seed: typeof rawPayload.seed === 'string' ? rawPayload.seed : '',
         layoutSeed: typeof rawPayload.layoutSeed === 'string'
             ? rawPayload.layoutSeed

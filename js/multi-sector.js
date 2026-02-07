@@ -60,6 +60,7 @@ function getCurrentConfig() {
         manualMin: 0,
         manualMax: 0,
         generationProfile: 'high_adventure',
+        starDistribution: 'standard',
         realisticPlanetWeights: false
     });
 }
@@ -112,6 +113,7 @@ function applySectorRecord(key, record, options = {}) {
         autoSeed: isAutoSeedEnabled(),
         realisticPlanetWeights: !!record.config.realisticPlanetWeights,
         generationProfile: record.config.generationProfile || 'high_adventure',
+        starDistribution: record.config.starDistribution || 'standard',
         sectorConfigSnapshot: deepClone(record.config),
         pinnedHexIds: deepClone(record.pinnedHexIds || []),
         selectedHexId: null,
