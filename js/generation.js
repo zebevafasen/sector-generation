@@ -29,34 +29,13 @@ import {
     pickRandomPlanetType
 } from './planetary-rules.js';
 import { autoSaveSectorState, buildSectorPayload } from './storage.js';
+import { readGenerationConfigFromUi } from './sector-config.js';
 import { ensureSystemStarFields } from './star-system.js';
 import { redrawGridAndReselect, refreshHexInfo, clearSelectionInfo } from './ui-sync.js';
 import { isHexIdInBounds, parseHexId, romanize, shuffleArray, sortHexIds } from './utils.js';
 
 function deepClone(value) {
     return JSON.parse(JSON.stringify(value));
-}
-
-function readGenerationConfigFromUi() {
-    const sizePresetSelect = document.getElementById('sizePreset');
-    const densityPresetSelect = document.getElementById('densityPreset');
-    const manualMinInput = document.getElementById('manualMin');
-    const manualMaxInput = document.getElementById('manualMax');
-    const profileSelect = document.getElementById('generationProfile');
-    const weightedToggle = document.getElementById('realisticPlanetWeightsToggle');
-
-    return {
-        sizeMode: state.sizeMode || 'preset',
-        sizePreset: sizePresetSelect ? sizePresetSelect.value : 'standard',
-        width: parseInt(document.getElementById('gridWidth')?.value || '8', 10),
-        height: parseInt(document.getElementById('gridHeight')?.value || '10', 10),
-        densityMode: state.densityMode || 'preset',
-        densityPreset: normalizeDensityPresetKey(densityPresetSelect ? densityPresetSelect.value : 'standard'),
-        manualMin: manualMinInput ? parseInt(manualMinInput.value, 10) : 0,
-        manualMax: manualMaxInput ? parseInt(manualMaxInput.value, 10) : 0,
-        generationProfile: profileSelect ? profileSelect.value : 'high_adventure',
-        realisticPlanetWeights: !!(weightedToggle && weightedToggle.checked)
-    };
 }
 
 function normalizeGenerationConfig(config) {
@@ -110,7 +89,10 @@ function getGenerationConfigSnapshot() {
     if (state.lastSectorSnapshot && state.lastSectorSnapshot.sectorConfigSnapshot) {
         return normalizeGenerationConfig(state.lastSectorSnapshot.sectorConfigSnapshot);
     }
-    return normalizeGenerationConfig(readGenerationConfigFromUi());
+    return normalizeGenerationConfig(readGenerationConfigFromUi({
+        sizeMode: state.sizeMode,
+        densityMode: state.densityMode
+    }));
 }
 
 function getActiveGenerationProfile(profileKey) {
@@ -356,7 +338,10 @@ export function generateSector() {
         seedUsed = setAndUseNewSeed();
     }
 
-    const config = normalizeGenerationConfig(readGenerationConfigFromUi());
+    const config = normalizeGenerationConfig(readGenerationConfigFromUi({
+        sizeMode: state.sizeMode,
+        densityMode: state.densityMode
+    }));
     state.layoutSeed = seedUsed;
     state.rerollIteration = 0;
     const built = buildSectorFromConfig(config, {});

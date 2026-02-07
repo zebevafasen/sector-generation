@@ -8,6 +8,7 @@ import { EVENTS, emitEvent } from './events.js';
 import { normalizeDensityPresetKey } from './generation-data.js';
 import { getGlobalHexDisplayId } from './render-shared.js';
 import { clearInfoPanel, drawGrid, selectHex } from './render.js';
+import { readGenerationConfigFromUi } from './sector-config.js';
 import { ensureSystemStarFields, getSystemStars } from './star-system.js';
 import { sortHexIds } from './utils.js';
 
@@ -173,9 +174,12 @@ function buildGmBrief(payload) {
 }
 
 export function buildSectorPayload(meta = {}) {
-    const refs = getStorageUiRefs();
-    const width = Number.isFinite(meta.width) ? meta.width : (parseInt(refs.gridWidthInput.value, 10) || 0);
-    const height = Number.isFinite(meta.height) ? meta.height : (parseInt(refs.gridHeightInput.value, 10) || 0);
+    const uiConfig = readGenerationConfigFromUi({
+        sizeMode: state.sizeMode,
+        densityMode: state.densityMode
+    });
+    const width = Number.isFinite(meta.width) ? meta.width : (parseInt(String(uiConfig.width), 10) || 0);
+    const height = Number.isFinite(meta.height) ? meta.height : (parseInt(String(uiConfig.height), 10) || 0);
     const totalHexes = Number.isFinite(meta.totalHexes) ? meta.totalHexes : width * height;
     const totalSystems = Number.isFinite(meta.systemCount) ? meta.systemCount : Object.keys(state.sectors).length;
 
@@ -185,19 +189,19 @@ export function buildSectorPayload(meta = {}) {
         seed: state.currentSeed,
         layoutSeed: state.layoutSeed || state.currentSeed || '',
         rerollIteration: Number.isFinite(Number(state.rerollIteration)) ? Number(state.rerollIteration) : 0,
-        sizeMode: state.sizeMode,
-        sizePreset: state.sizeMode === 'preset' && refs.sizePresetSelect
-            ? refs.sizePresetSelect.value
+        sizeMode: uiConfig.sizeMode,
+        sizePreset: uiConfig.sizeMode === 'preset'
+            ? uiConfig.sizePreset
             : 'custom',
-        densityMode: state.densityMode,
-        densityPreset: refs.densityPresetSelect ? refs.densityPresetSelect.value : null,
+        densityMode: uiConfig.densityMode,
+        densityPreset: uiConfig.densityPreset,
         manualRange: {
-            min: refs.manualMinInput ? parseInt(refs.manualMinInput.value, 10) || 0 : 0,
-            max: refs.manualMaxInput ? parseInt(refs.manualMaxInput.value, 10) || 0 : 0
+            min: Number.isFinite(uiConfig.manualMin) ? uiConfig.manualMin : 0,
+            max: Number.isFinite(uiConfig.manualMax) ? uiConfig.manualMax : 0
         },
         autoSeed: isAutoSeedEnabled(),
-        realisticPlanetWeights: isRealisticPlanetWeightingEnabled(),
-        generationProfile: refs.generationProfileSelect ? refs.generationProfileSelect.value : 'high_adventure',
+        realisticPlanetWeights: isRealisticPlanetWeightingEnabled() || !!uiConfig.realisticPlanetWeights,
+        generationProfile: uiConfig.generationProfile || 'high_adventure',
         sectorConfigSnapshot: state.sectorConfigSnapshot || null,
         pinnedHexIds: Array.isArray(state.pinnedHexIds) ? state.pinnedHexIds : [],
         selectedHexId: state.selectedHexId || null,
