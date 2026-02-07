@@ -9,7 +9,7 @@ import {
 } from './config.js';
 import { generateStarAge, generateSeedString, isAutoSeedEnabled, rand, setSeed, showStatusMessage } from './core.js';
 import { autoSaveSectorState, buildSectorPayload } from './storage.js';
-import { clearInfoPanel, drawGrid, selectHex, updateInfoPanel } from './render.js';
+import { redrawGridAndReselect, refreshHexInfo, clearSelectionInfo } from './ui-sync.js';
 import { romanize, shuffleArray } from './utils.js';
 
 const STAR_CLASS_PLANET_WEIGHTS = {
@@ -408,21 +408,6 @@ function sanitizePinnedHexes(width, height) {
     state.pinnedHexIds = (state.pinnedHexIds || []).filter(hexId => isHexIdInBounds(hexId, width, height) && !!state.sectors[hexId]);
 }
 
-function reselectionAfterDraw(selectedHexId) {
-    if (!selectedHexId || !state.sectors[selectedHexId]) {
-        state.selectedHexId = null;
-        clearInfoPanel();
-        return;
-    }
-    const group = document.querySelector(`.hex-group[data-id="${selectedHexId}"]`);
-    if (group) {
-        selectHex(selectedHexId, group);
-    } else {
-        state.selectedHexId = null;
-        clearInfoPanel();
-    }
-}
-
 function isPlanetaryBody(body) {
     return !!body && body.type !== 'Artificial' && !/belt|field/i.test(body.type);
 }
@@ -488,9 +473,9 @@ export function generateSector() {
     state.sectors = built.sectors;
     state.pinnedHexIds = [];
     state.selectedHexId = null;
-    clearInfoPanel();
+    clearSelectionInfo();
 
-    drawGrid(built.width, built.height);
+    redrawGridAndReselect(built.width, built.height, { resetView: true });
     updateSectorStatus(built.totalHexes, built.systemCount);
     refreshSectorSnapshot(config, built.width, built.height);
     showStatusMessage(seedUsed ? `Generated seed ${seedUsed}` : 'Sector regenerated.', 'info');
@@ -620,8 +605,7 @@ export function addSystemAtHex(hexId) {
         sectorsByCoord: state.sectors
     });
 
-    drawGrid(config.width, config.height, { resetView: false });
-    reselectionAfterDraw(hexId);
+    redrawGridAndReselect(config.width, config.height, { selectedHexId: hexId });
     sanitizePinnedHexes(config.width, config.height);
     refreshSectorSnapshot(config, config.width, config.height);
     updateSectorStatus(config.width * config.height, Object.keys(state.sectors).length);
@@ -641,8 +625,7 @@ export function deleteSelectedSystem() {
     state.selectedHexId = null;
     state.selectedBodyIndex = null;
 
-    drawGrid(config.width, config.height, { resetView: false });
-    clearInfoPanel();
+    redrawGridAndReselect(config.width, config.height);
     sanitizePinnedHexes(config.width, config.height);
     refreshSectorSnapshot(config, config.width, config.height);
     updateSectorStatus(config.width * config.height, Object.keys(state.sectors).length);
@@ -690,7 +673,7 @@ export function addBodyToSelectedSystem(kind) {
     }
 
     state.selectedBodyIndex = null;
-    updateInfoPanel(selectedHexId);
+    refreshHexInfo(selectedHexId);
     const config = getGenerationConfigSnapshot();
     refreshSectorSnapshot(config, config.width, config.height);
     showStatusMessage('Added new object.', 'success');
@@ -714,7 +697,7 @@ export function deleteSelectedBody() {
         reconcilePlanetaryBodies(system);
     }
 
-    updateInfoPanel(selectedHexId);
+    refreshHexInfo(selectedHexId);
     const config = getGenerationConfigSnapshot();
     refreshSectorSnapshot(config, config.width, config.height);
     showStatusMessage('Deleted selected object.', 'success');
@@ -742,8 +725,7 @@ export function rerollSelectedSystem() {
         sectorsByCoord: otherSystems
     });
 
-    drawGrid(config.width, config.height, { resetView: false });
-    reselectionAfterDraw(selectedHexId);
+    redrawGridAndReselect(config.width, config.height, { selectedHexId });
     sanitizePinnedHexes(config.width, config.height);
     refreshSectorSnapshot(config, config.width, config.height);
     showStatusMessage(`Rerolled system ${selectedHexId} with seed ${seedUsed}.`, 'success');
@@ -773,7 +755,7 @@ export function togglePinSelectedSystem() {
         poly.classList.toggle('pinned', state.pinnedHexIds.includes(selectedHexId));
     }
 
-    updateInfoPanel(selectedHexId);
+    refreshHexInfo(selectedHexId);
     const config = getGenerationConfigSnapshot();
     refreshSectorSnapshot(config, config.width, config.height);
 }
@@ -802,8 +784,7 @@ export function rerollUnpinnedSystems() {
     state.sectors = built.sectors;
     sanitizePinnedHexes(built.width, built.height);
 
-    drawGrid(built.width, built.height, { resetView: false });
-    reselectionAfterDraw(selectedHexId);
+    redrawGridAndReselect(built.width, built.height, { selectedHexId });
     updateSectorStatus(built.totalHexes, built.systemCount);
     refreshSectorSnapshot(config, built.width, built.height);
     showStatusMessage(`Rerolled unpinned systems with seed ${seedUsed}.`, 'success');
