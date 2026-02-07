@@ -52,7 +52,7 @@ function baseTagWeights(planet) {
         { tag: 'Research Enclave', weight: researchWeight },
         { tag: 'Military Bastion', weight: militaryWeight },
         { tag: 'Frontier Outpost', weight: frontierWeight },
-        { tag: 'Tourism / Cultural Center', weight: tourismWeight }
+        { tag: 'Cultural Center', weight: tourismWeight }
     ];
 }
 

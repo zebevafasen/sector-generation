@@ -216,6 +216,22 @@ function getTemperatureTooltip(temperature) {
     return entries[key] || 'Estimated broad thermal regime for this body.';
 }
 
+function getPlanetTagTooltip(tag) {
+    const key = normalizeLookupKey(tag);
+    const entries = {
+        'colony-world': 'Young settlement still building core infrastructure, institutions, and long-range resilience.',
+        'core-trade-hub': 'High-throughput commercial nexus with strong logistics, finance, and interstellar market reach.',
+        'industrial-powerhouse': 'Production-focused world with heavy manufacturing, refining, and strategic material output.',
+        'agri-world': 'Food-export economy centered on large-scale agriculture, aquaculture, or bioresource processing.',
+        'research-enclave': 'Knowledge economy world with major laboratories, academic centers, and advanced R&D programs.',
+        'military-bastion': 'Fortified strategic anchor with major defense installations, fleet support, and hardened infrastructure.',
+        'frontier-outpost': 'Remote edge settlement with limited support, high risk, and strong expansion potential.',
+        'cultural-center': 'Destination world known for culture, heritage, pilgrimage, recreation, or hospitality industries.',
+        'tourism-/-cultural-center': 'Destination world known for culture, heritage, pilgrimage, recreation, or hospitality industries.'
+    };
+    return entries[key] || 'Strategic or socio-economic specialization observed for this inhabited world.';
+}
+
 export function showFieldInfoTooltip(event, field, value) {
     const panel = document.getElementById('fieldInfoTooltip');
     if (!panel) return;
@@ -235,6 +251,9 @@ export function showFieldInfoTooltip(event, field, value) {
     } else if (fieldKey === 'temperature') {
         label = 'Temperature';
         description = getTemperatureTooltip(value);
+    } else if (fieldKey === 'tag') {
+        label = 'Planet Tag';
+        description = getPlanetTagTooltip(value);
     }
 
     panel.innerHTML = `

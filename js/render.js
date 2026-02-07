@@ -202,7 +202,7 @@ function showBodyDetailsPanel(body, anchorEl) {
     if (tagsRow && tagsValue) {
         if (isPlanetaryBodyType(normalizedType) && body.habitable && Array.isArray(body.tags) && body.tags.length) {
             tagsValue.innerHTML = body.tags
-                .map(tag => `<span class="inline-flex items-center rounded border border-sky-700/55 bg-sky-900/25 px-1.5 py-0.5 text-[10px] text-sky-200">${escapeHtml(tag)}</span>`)
+                .map(tag => `<span class="inline-flex items-center rounded border border-sky-700/55 bg-sky-900/25 px-1.5 py-0.5 text-[10px] text-sky-200 cursor-help underline decoration-dotted decoration-slate-500/70 underline-offset-2" data-field-tooltip="tag" data-field-value="${escapeHtml(tag)}">${escapeHtml(tag)}</span>`)
                 .join('');
             tagsRow.classList.remove('hidden');
         } else {
