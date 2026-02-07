@@ -62,6 +62,7 @@ function resetBodyDetailsPanel() {
     const name = document.getElementById('infoBodyDetailsName');
     const type = document.getElementById('infoBodyDetailsType');
     const renameBodyBtn = document.getElementById('renameBodyBtn');
+    const quickDeleteBodyBtn = document.getElementById('quickDeleteBodyBtn');
     const placeholder = document.getElementById('infoBodyDetailsPlaceholder');
 
     if (panel) panel.classList.add('hidden');
@@ -75,6 +76,10 @@ function resetBodyDetailsPanel() {
     if (renameBodyBtn) {
         renameBodyBtn.disabled = true;
         renameBodyBtn.onclick = null;
+    }
+    if (quickDeleteBodyBtn) {
+        quickDeleteBodyBtn.disabled = true;
+        quickDeleteBodyBtn.onclick = null;
     }
     if (placeholder) placeholder.innerText = 'Detailed stats coming soon.';
 }
@@ -339,12 +344,6 @@ export function updateViewTransform() {
 
 export function handleHexClick(e, id, groupElement) {
     if (state.viewState.dragDistance > 5) return;
-    if (state.editMode && !state.sectors[id]) {
-        if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('requestAddSystemAtHex', { detail: { hexId: id } }));
-        }
-        return;
-    }
     selectHex(id, groupElement);
 }
 
@@ -385,6 +384,8 @@ export function updateInfoPanel(id, preselectedBodyIndex = null) {
     const stationSummary = document.getElementById('infoStationSummary');
     const renameSystemBtn = document.getElementById('renameSystemBtn');
     const renameBodyBtn = document.getElementById('renameBodyBtn');
+    const quickDeleteBodyBtn = document.getElementById('quickDeleteBodyBtn');
+    const addSystemHereBtn = document.getElementById('addSystemHereBtn');
     const pinSelectedSystemBtn = document.getElementById('pinSelectedSystemBtn');
     const rerollSelectedSystemBtn = document.getElementById('rerollSelectedSystemBtn');
     const selectedSystemPinState = document.getElementById('selectedSystemPinState');
@@ -408,6 +409,10 @@ export function updateInfoPanel(id, preselectedBodyIndex = null) {
                 notifySectorDataChanged();
                 updateInfoPanel(id, preselectedBodyIndex);
             };
+        }
+        if (addSystemHereBtn) {
+            addSystemHereBtn.classList.add('hidden');
+            addSystemHereBtn.onclick = null;
         }
         const isPinned = !!(state.pinnedHexIds && state.pinnedHexIds.includes(id));
         if (pinSelectedSystemBtn) {
@@ -474,6 +479,10 @@ export function updateInfoPanel(id, preselectedBodyIndex = null) {
                             renameBodyBtn.disabled = true;
                             renameBodyBtn.onclick = null;
                         }
+                        if (quickDeleteBodyBtn) {
+                            quickDeleteBodyBtn.disabled = true;
+                            quickDeleteBodyBtn.onclick = null;
+                        }
                         resetBodyDetailsPanel();
                         return;
                     }
@@ -495,6 +504,14 @@ export function updateInfoPanel(id, preselectedBodyIndex = null) {
                             system.planets[bodyIndex].name = nextName;
                             notifySectorDataChanged();
                             updateInfoPanel(id, bodyIndex);
+                        };
+                    }
+                    if (quickDeleteBodyBtn) {
+                        quickDeleteBodyBtn.disabled = false;
+                        quickDeleteBodyBtn.onclick = () => {
+                            if (typeof window !== 'undefined') {
+                                window.dispatchEvent(new Event('requestDeleteSelectedBody'));
+                            }
                         };
                     }
                 };
@@ -553,6 +570,19 @@ export function updateInfoPanel(id, preselectedBodyIndex = null) {
         if (planetList) planetList.innerHTML = '';
         if (beltList) beltList.innerHTML = '';
         if (stationList) stationList.innerHTML = '';
+        if (addSystemHereBtn) {
+            if (state.editMode && id) {
+                addSystemHereBtn.classList.remove('hidden');
+                addSystemHereBtn.onclick = () => {
+                    if (typeof window !== 'undefined') {
+                        window.dispatchEvent(new CustomEvent('requestAddSystemAtHex', { detail: { hexId: id } }));
+                    }
+                };
+            } else {
+                addSystemHereBtn.classList.add('hidden');
+                addSystemHereBtn.onclick = null;
+            }
+        }
         if (renameSystemBtn) {
             renameSystemBtn.disabled = true;
             renameSystemBtn.onclick = null;
@@ -560,6 +590,10 @@ export function updateInfoPanel(id, preselectedBodyIndex = null) {
         if (renameBodyBtn) {
             renameBodyBtn.disabled = true;
             renameBodyBtn.onclick = null;
+        }
+        if (quickDeleteBodyBtn) {
+            quickDeleteBodyBtn.disabled = true;
+            quickDeleteBodyBtn.onclick = null;
         }
         if (planetSummary) planetSummary.innerText = 'Planets (0)';
         if (beltSummary) beltSummary.innerText = 'Belts & Fields (0)';
@@ -602,6 +636,16 @@ export function clearInfoPanel() {
     if (renameBodyBtn) {
         renameBodyBtn.disabled = true;
         renameBodyBtn.onclick = null;
+    }
+    const quickDeleteBodyBtn = document.getElementById('quickDeleteBodyBtn');
+    if (quickDeleteBodyBtn) {
+        quickDeleteBodyBtn.disabled = true;
+        quickDeleteBodyBtn.onclick = null;
+    }
+    const addSystemHereBtn = document.getElementById('addSystemHereBtn');
+    if (addSystemHereBtn) {
+        addSystemHereBtn.classList.add('hidden');
+        addSystemHereBtn.onclick = null;
     }
     const planetSummary = document.getElementById('infoPlanetSummary');
     const beltSummary = document.getElementById('infoBeltSummary');

@@ -248,6 +248,9 @@
                 <div id="emptyDetails" class="text-sm text-slate-500 italic mt-4 text-center">
                     Select a hex to view data.
                 </div>
+                <button id="addSystemHereBtn" class="hidden mt-3 w-full py-1.5 text-xs rounded bg-emerald-900/35 border border-emerald-700 text-emerald-200 hover:bg-emerald-800/40 hover:border-emerald-500 transition-colors">
+                    Add System Here
+                </button>
             </div>
         </div>
         <button id="toggleRightPanelBtn" aria-label="Toggle info panel" class="absolute top-24 left-0 -translate-x-full w-7 h-12 rounded-l bg-slate-900 border border-slate-700 border-r-0 text-slate-200 font-semibold hover:text-white hover:border-sky-500 transition-colors z-30">&raquo;</button>
@@ -261,7 +264,10 @@
                 <h4 id="infoBodyDetailsName" class="text-sm font-semibold text-sky-200">Body</h4>
                 <span id="infoBodyDetailsType" class="text-[11px] text-slate-400">Type</span>
             </div>
-            <button id="renameBodyBtn" class="mt-2 px-2 py-0.5 text-[10px] rounded bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:border-sky-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Rename</button>
+            <div class="mt-2 flex items-center gap-2">
+                <button id="renameBodyBtn" class="px-2 py-0.5 text-[10px] rounded bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:border-sky-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Rename</button>
+                <button id="quickDeleteBodyBtn" class="w-6 h-6 inline-flex items-center justify-center text-xs rounded bg-rose-900/35 border border-rose-700 text-rose-200 hover:bg-rose-800/40 hover:border-rose-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Delete object" aria-label="Delete object">🗑</button>
+            </div>
             <p id="infoBodyDetailsPlaceholder" class="text-xs text-slate-400 mt-2">Detailed stats coming soon.</p>
         </div>
     </div>

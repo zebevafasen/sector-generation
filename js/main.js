@@ -115,6 +115,10 @@ function bindUiEvents() {
         if (!hexId) return;
         addSystemAtHex(hexId);
     });
+    window.addEventListener('requestDeleteSelectedBody', () => {
+        if (!state.editMode) return;
+        deleteSelectedBody();
+    });
     window.addEventListener('editModeChanged', updateEditModeUi);
 }
 
