@@ -439,6 +439,14 @@ export function clearInfoPanel() {
         refs.addSystemHereBtn.classList.add('hidden');
         refs.addSystemHereBtn.onclick = null;
     }
+    if (refs.addPoiHereBtn) {
+        refs.addPoiHereBtn.classList.add('hidden');
+        refs.addPoiHereBtn.onclick = null;
+    }
+    if (refs.deletePoiHereBtn) {
+        refs.deletePoiHereBtn.classList.add('hidden');
+        refs.deletePoiHereBtn.onclick = null;
+    }
     setBodySummaryLabels(refs, 0, 0, 0);
     disableStarEditControls(refs);
     disablePlanetTypeControls(refs);

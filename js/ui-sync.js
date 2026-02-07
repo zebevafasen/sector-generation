@@ -57,3 +57,14 @@ export function redrawHexAndReselect(hexId, preselectedBodyIndex = null) {
         updateInfoPanel(hexId, preselectedBodyIndex);
     }
 }
+
+export function redrawHexAndSelectHex(hexId, preselectedBodyIndex = null) {
+    if (!hexId) return;
+    const nextGroup = redrawHex(hexId);
+    if (!nextGroup) return;
+
+    selectHex(hexId, nextGroup);
+    if (Number.isInteger(preselectedBodyIndex) && preselectedBodyIndex >= 0) {
+        updateInfoPanel(hexId, preselectedBodyIndex);
+    }
+}

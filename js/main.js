@@ -9,7 +9,7 @@ import {
 import { randomizeSeed } from './core.js';
 import { EVENTS } from './events.js';
 import { state } from './config.js';
-import { addBodyToSelectedSystem, addSystemAtHex, deleteSelectedBody, deleteSelectedSystem, generateSector, rerollSelectedPlanet, rerollSelectedSystem, rerollUnpinnedSystems, setEditMode, toggleEditMode, togglePinSelectedSystem } from './generation.js';
+import { addBodyToSelectedSystem, addPoiAtHex, addSystemAtHex, deletePoiAtHex, deleteSelectedBody, deleteSelectedSystem, generateSector, rerollSelectedPlanet, rerollSelectedSystem, rerollUnpinnedSystems, setEditMode, toggleEditMode, togglePinSelectedSystem } from './generation.js';
 import { captureHistorySnapshot, setupHistory } from './history.js';
 import { setupMultiSectorLinks } from './multi-sector.js';
 import { setupSearchPanel } from './search.js';
@@ -231,6 +231,18 @@ function bindAppEventHandlers() {
         const hexId = event && event.detail ? event.detail.hexId : null;
         if (!hexId) return;
         addSystemAtHex(hexId);
+    });
+    window.addEventListener(EVENTS.REQUEST_ADD_POI_AT_HEX, (event) => {
+        if (!state.editMode) return;
+        const hexId = event && event.detail ? event.detail.hexId : null;
+        if (!hexId) return;
+        addPoiAtHex(hexId);
+    });
+    window.addEventListener(EVENTS.REQUEST_DELETE_POI_AT_HEX, (event) => {
+        if (!state.editMode) return;
+        const hexId = event && event.detail ? event.detail.hexId : null;
+        if (!hexId) return;
+        deletePoiAtHex(hexId);
     });
     window.addEventListener(EVENTS.REQUEST_DELETE_SELECTED_BODY, () => {
         if (!state.editMode) return;

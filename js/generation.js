@@ -30,7 +30,7 @@ import {
 import { autoSaveSectorState, buildSectorPayload } from './storage.js';
 import { readGenerationConfigFromUi } from './sector-config.js';
 import { ensureSystemStarFields } from './star-system.js';
-import { redrawGridAndReselect, redrawHexAndReselect, refreshHexInfo, clearSelectionInfo } from './ui-sync.js';
+import { redrawGridAndReselect, redrawHexAndReselect, redrawHexAndSelectHex, refreshHexInfo, clearSelectionInfo } from './ui-sync.js';
 import { deepClone, isHexIdInBounds, parseHexId, romanize, shuffleArray, sortHexIds } from './utils.js';
 
 const DEEP_SPACE_POI_TEMPLATES = [
@@ -311,6 +311,18 @@ function countNeighborSystems(hexId, sectors) {
     return count;
 }
 
+function createDeepSpacePoi() {
+    const template = DEEP_SPACE_POI_TEMPLATES[Math.floor(rand() * DEEP_SPACE_POI_TEMPLATES.length)];
+    const serial = Math.floor(rand() * 900) + 100;
+    return {
+        kind: template.kind,
+        name: `${template.name} ${serial}`,
+        summary: template.summary,
+        risk: template.risk,
+        rewardHint: template.rewardHint
+    };
+}
+
 function generateDeepSpacePois(width, height, sectors) {
     const pois = {};
     for (let c = 0; c < width; c++) {
@@ -324,16 +336,7 @@ function generateDeepSpacePois(width, height, sectors) {
             const remoteBoost = nearbySystems === 0 ? 0.015 : 0;
             const spawnChance = baseChance + nearbyBoost + remoteBoost;
             if (rand() > spawnChance) continue;
-
-            const template = DEEP_SPACE_POI_TEMPLATES[Math.floor(rand() * DEEP_SPACE_POI_TEMPLATES.length)];
-            const serial = Math.floor(rand() * 900) + 100;
-            pois[hexId] = {
-                kind: template.kind,
-                name: `${template.name} ${serial}`,
-                summary: template.summary,
-                risk: template.risk,
-                rewardHint: template.rewardHint
-            };
+            pois[hexId] = createDeepSpacePoi();
         }
     }
     return pois;
@@ -711,6 +714,41 @@ export function deleteSelectedSystem() {
     refreshSectorSnapshot(config, config.width, config.height, 'Delete System');
     updateSectorStatus(config.width * config.height, Object.keys(state.sectors).length);
     showStatusMessage(`Deleted system ${selectedHexId}.`, 'success');
+}
+
+export function addPoiAtHex(hexId) {
+    const config = getGenerationConfigSnapshot();
+    if (!isHexIdInBounds(hexId, config.width, config.height)) return;
+    if (state.sectors[hexId]) {
+        showStatusMessage('Cannot add POI on a system hex.', 'warn');
+        return;
+    }
+    if (!state.deepSpacePois) state.deepSpacePois = {};
+    if (state.deepSpacePois[hexId]) {
+        showStatusMessage(`POI already exists at ${hexId}.`, 'info');
+        return;
+    }
+
+    state.deepSpacePois[hexId] = createDeepSpacePoi();
+
+    redrawHexAndSelectHex(hexId);
+    refreshSectorSnapshot(config, config.width, config.height, 'Add POI');
+    showStatusMessage(`Added POI at ${hexId}.`, 'success');
+}
+
+export function deletePoiAtHex(hexId) {
+    const config = getGenerationConfigSnapshot();
+    if (!isHexIdInBounds(hexId, config.width, config.height)) return;
+    if (!state.deepSpacePois || !state.deepSpacePois[hexId]) {
+        showStatusMessage('No POI found at selected hex.', 'warn');
+        return;
+    }
+
+    delete state.deepSpacePois[hexId];
+
+    redrawHexAndSelectHex(hexId);
+    refreshSectorSnapshot(config, config.width, config.height, 'Delete POI');
+    showStatusMessage(`Deleted POI at ${hexId}.`, 'success');
 }
 
 export function addBodyToSelectedSystem(kind) {

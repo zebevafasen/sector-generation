@@ -141,3 +141,31 @@ test('edit mode warns before replacing a deep-space POI with a system', async ({
   const systemsAfterAccept = parseCountFromLabel(await page.locator('#statusTotalSystems').innerText());
   expect(systemsAfterAccept).toBeGreaterThan(systemsBefore);
 });
+
+test('edit mode can add and delete a deep-space POI from empty hexes', async ({ page }) => {
+  await page.goto('/sector_generator.html');
+  await page.locator('#generateSectorBtn').click();
+  await page.locator('#editModeToggleBtn').click();
+  await expect(page.locator('#editModeToggleBtn')).toContainText('EDIT MODE: ON');
+
+  const emptyHex = page.locator('.hex-group').filter({
+    hasNot: page.locator('circle.star-circle')
+  }).filter({
+    hasNot: page.locator('polygon.deep-space-poi-marker')
+  }).first();
+  await emptyHex.click();
+
+  await expect(page.locator('#addPoiHereBtn')).toBeVisible();
+  const poiCountBefore = await page.locator('polygon.deep-space-poi-marker').count();
+  await page.locator('#addPoiHereBtn').click();
+  await expect(page.locator('#statusMessage')).toContainText('Added POI');
+
+  const poiCountAfterAdd = await page.locator('polygon.deep-space-poi-marker').count();
+  expect(poiCountAfterAdd).toBeGreaterThan(poiCountBefore);
+  await expect(page.locator('#deletePoiHereBtn')).toBeVisible();
+
+  await page.locator('#deletePoiHereBtn').click();
+  await expect(page.locator('#statusMessage')).toContainText('Deleted POI');
+  const poiCountAfterDelete = await page.locator('polygon.deep-space-poi-marker').count();
+  expect(poiCountAfterDelete).toBe(poiCountBefore);
+});

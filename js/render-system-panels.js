@@ -140,6 +140,14 @@ export function configureSystemHeaderAndStar({ refs, system, id, preselectedBody
         refs.addSystemHereBtn.classList.add('hidden');
         refs.addSystemHereBtn.onclick = null;
     }
+    if (refs.addPoiHereBtn) {
+        refs.addPoiHereBtn.classList.add('hidden');
+        refs.addPoiHereBtn.onclick = null;
+    }
+    if (refs.deletePoiHereBtn) {
+        refs.deletePoiHereBtn.classList.add('hidden');
+        refs.deletePoiHereBtn.onclick = null;
+    }
     if (refs.deletePrimaryStarBtn) {
         refs.deletePrimaryStarBtn.classList.toggle('hidden', !canEditStar);
         setButtonAction(refs.deletePrimaryStarBtn, canEditStar && stars.length > 1, () => {
@@ -293,6 +301,28 @@ export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
         } else {
             refs.addSystemHereBtn.classList.add('hidden');
             refs.addSystemHereBtn.onclick = null;
+        }
+    }
+    if (refs.addPoiHereBtn) {
+        if (state.editMode && id && !deepSpacePoi) {
+            refs.addPoiHereBtn.classList.remove('hidden');
+            refs.addPoiHereBtn.onclick = () => {
+                emitEvent(EVENTS.REQUEST_ADD_POI_AT_HEX, { hexId: id });
+            };
+        } else {
+            refs.addPoiHereBtn.classList.add('hidden');
+            refs.addPoiHereBtn.onclick = null;
+        }
+    }
+    if (refs.deletePoiHereBtn) {
+        if (state.editMode && id && !!deepSpacePoi) {
+            refs.deletePoiHereBtn.classList.remove('hidden');
+            refs.deletePoiHereBtn.onclick = () => {
+                emitEvent(EVENTS.REQUEST_DELETE_POI_AT_HEX, { hexId: id });
+            };
+        } else {
+            refs.deletePoiHereBtn.classList.add('hidden');
+            refs.deletePoiHereBtn.onclick = null;
         }
     }
     setButtonAction(refs.renameSystemBtn, false);

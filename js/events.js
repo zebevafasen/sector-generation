@@ -4,6 +4,8 @@ export const EVENTS = {
     ROUTE_SHORTCUT_HEX: 'routeShortcutHex',
     ROUTE_SHORTCUT_CLEAR: 'routeShortcutClear',
     REQUEST_ADD_SYSTEM_AT_HEX: 'requestAddSystemAtHex',
+    REQUEST_ADD_POI_AT_HEX: 'requestAddPoiAtHex',
+    REQUEST_DELETE_POI_AT_HEX: 'requestDeletePoiAtHex',
     REQUEST_DELETE_SELECTED_BODY: 'requestDeleteSelectedBody',
     REQUEST_REROLL_SELECTED_PLANET: 'requestRerollSelectedPlanet',
     EDIT_MODE_CHANGED: 'editModeChanged'

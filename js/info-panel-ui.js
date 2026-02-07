@@ -72,6 +72,8 @@ export function getInfoPanelRefs() {
         editInhabitPlanetRow: document.getElementById('editInhabitPlanetRow'),
         editInhabitPlanetBtn: document.getElementById('editInhabitPlanetBtn'),
         addSystemHereBtn: document.getElementById('addSystemHereBtn'),
+        addPoiHereBtn: document.getElementById('addPoiHereBtn'),
+        deletePoiHereBtn: document.getElementById('deletePoiHereBtn'),
         pinSelectedSystemBtn: document.getElementById('pinSelectedSystemBtn'),
         rerollSelectedSystemBtn: document.getElementById('rerollSelectedSystemBtn'),
         selectedSystemPinState: document.getElementById('selectedSystemPinState')
