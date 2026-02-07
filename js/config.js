@@ -96,7 +96,7 @@ export const STAR_CLASS_INFO = {
 };
 
 export const PLANET_TYPES = [
-    'Gas Giant', 'Ice Giant', 'Terrestrial', 'Desert', 'Oceanic', 'Lava', 'Barren', 'Asteroid Belt'
+    'Gas Giant', 'Ice Giant', 'Terrestrial', 'Desert', 'Oceanic', 'Volcanic', 'Barren', 'Asteroid Belt'
 ];
 
 export const POI_TYPES = [

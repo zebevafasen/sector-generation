@@ -272,15 +272,18 @@ export function updateInfoPanel(id) {
                 const li = document.createElement('li');
                 li.className = 'bg-slate-800/50 p-2 rounded border border-slate-700/50 flex flex-col';
 
-                let icon = '&#9898;';
-                if (body.type.includes('Giant')) icon = '&#127761;';
-                if (body.type === 'Terrestrial') icon = '&#127757;';
-                if (body.type === 'Oceanic') icon = '&#127754;';
-                if (body.type === 'Lava') icon = '&#127755;';
-                if (/belt|field/i.test(body.type)) icon = '&#10022;';
-                if (body.type === 'Artificial') icon = '&#128752;';
+                const normalizedType = body.type === 'Lava' ? 'Volcanic' : body.type;
+                let markerClass = 'bg-slate-300';
+                if (normalizedType.includes('Giant')) markerClass = 'bg-amber-200';
+                if (normalizedType === 'Terrestrial') markerClass = 'bg-emerald-300';
+                if (normalizedType === 'Desert') markerClass = 'bg-yellow-400';
+                if (normalizedType === 'Oceanic') markerClass = 'bg-cyan-400';
+                if (normalizedType === 'Volcanic') markerClass = 'bg-orange-500';
+                if (normalizedType === 'Barren') markerClass = 'bg-slate-400';
+                if (/belt|field/i.test(normalizedType)) markerClass = 'bg-violet-300';
+                if (normalizedType === 'Artificial') markerClass = 'bg-fuchsia-300';
 
-                let html = `<div class="flex justify-between font-semibold text-sky-100"><span>${icon} ${body.name}</span> <span class="text-xs text-slate-500 font-normal">${body.type}</span></div>`;
+                let html = `<div class="flex justify-between font-semibold text-sky-100"><span class="inline-flex items-center gap-2"><span class="inline-block w-2.5 h-2.5 rounded-full ${markerClass} ring-1 ring-white/25 shrink-0"></span>${body.name}</span> <span class="text-xs text-slate-500 font-normal">${normalizedType}</span></div>`;
                 if (body.features.length > 0) {
                     html += `<div class="text-xs text-slate-400 mt-1 pl-5">Detected: ${body.features.join(', ')}</div>`;
                 }
