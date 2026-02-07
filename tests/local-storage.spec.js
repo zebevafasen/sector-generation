@@ -50,3 +50,21 @@ test('load local falls back when primary saved payload is invalid', async ({ pag
   expect(after).toBe(before);
   await expect(page.locator('#statusMessage')).toContainText('ignored invalid older save', { ignoreCase: true });
 });
+
+test('save/load uses active size mode dimensions and ignores stale custom inputs', async ({ page }) => {
+  await page.goto('/sector_generator.html');
+
+  await page.locator('#modeSizeCustomBtn').click();
+  await page.locator('#gridWidth').fill('24');
+  await page.locator('#gridHeight').fill('24');
+
+  await page.locator('#modeSizePresetBtn').click();
+  await page.locator('#sizePreset').selectOption('standard'); // 8 x 10
+  await page.locator('#generateSectorBtn').click();
+
+  await expect(page.locator('#statusTotalHexes')).toContainText('80 Hexes');
+  await page.locator('#saveSectorLocalBtn').click();
+  await page.locator('#loadSectorLocalBtn').click();
+  await expect(page.locator('#statusTotalHexes')).toContainText('80 Hexes');
+  await expect(page.locator('.hex-group')).toHaveCount(80);
+});

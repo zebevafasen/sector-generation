@@ -64,6 +64,7 @@ function normalizeGenerationConfig(config) {
     }
 
     const generationProfile = GENERATION_PROFILES[source.generationProfile] ? source.generationProfile : 'high_adventure';
+    const starDistribution = source.starDistribution === 'clusters' ? 'clusters' : 'standard';
 
     return {
         sizeMode,
@@ -75,6 +76,7 @@ function normalizeGenerationConfig(config) {
         manualMin,
         manualMax,
         generationProfile,
+        starDistribution,
         realisticPlanetWeights: !!source.realisticPlanetWeights
     };
 }
@@ -250,6 +252,94 @@ function composeContentSeed(layoutSeed, iteration) {
     return `${layoutSeed}::content:${iteration}`;
 }
 
+function selectClusteredSystemCoords(candidateCoords, systemsToGenerate) {
+    if (systemsToGenerate <= 2 || candidateCoords.length <= 2) {
+        return candidateCoords.slice(0, systemsToGenerate);
+    }
+
+    const shuffled = [...candidateCoords];
+    shuffleArray(shuffled, rand);
+    const targetSystemsPerCluster = 4.5;
+    const clusterCount = Math.max(
+        2,
+        Math.min(
+            shuffled.length,
+            Math.round(systemsToGenerate / targetSystemsPerCluster)
+        )
+    );
+    const parsedCoords = shuffled
+        .map((hexId) => ({ hexId, coord: parseHexId(hexId) }))
+        .filter((item) => !!item.coord);
+    if (!parsedCoords.length) return candidateCoords.slice(0, systemsToGenerate);
+
+    const centers = [];
+    centers.push(parsedCoords[Math.floor(rand() * parsedCoords.length)].coord);
+    while (centers.length < clusterCount) {
+        let best = null;
+        let bestScore = Number.NEGATIVE_INFINITY;
+        parsedCoords.forEach((item) => {
+            const nearest = centers.reduce((min, center) => {
+                const dc = item.coord.col - center.col;
+                const dr = item.coord.row - center.row;
+                const distance = Math.sqrt((dc * dc) + (dr * dr));
+                return Math.min(min, distance);
+            }, Number.POSITIVE_INFINITY);
+            const spreadBias = nearest + (rand() * 0.75);
+            if (spreadBias > bestScore) {
+                bestScore = spreadBias;
+                best = item.coord;
+            }
+        });
+        if (!best) break;
+        centers.push(best);
+    }
+    if (!centers.length) return candidateCoords.slice(0, systemsToGenerate);
+
+    const buckets = centers.map(() => []);
+    candidateCoords.forEach((hexId) => {
+        const parsed = parseHexId(hexId);
+        if (!parsed) return;
+        let nearest = Number.POSITIVE_INFINITY;
+        let nearestIndex = 0;
+        centers.forEach((center, index) => {
+            const dc = parsed.col - center.col;
+            const dr = parsed.row - center.row;
+            const distance = Math.sqrt((dc * dc) + (dr * dr));
+            if (distance < nearest) {
+                nearest = distance;
+                nearestIndex = index;
+            }
+        });
+        buckets[nearestIndex].push({
+            hexId,
+            score: -nearest + (rand() * 1.8)
+        });
+    });
+    buckets.forEach((bucket) => bucket.sort((a, b) => b.score - a.score));
+
+    const spreadCount = systemsToGenerate >= 10 ? Math.max(1, Math.floor(systemsToGenerate * 0.12)) : 0;
+    const clusteredCount = Math.max(0, systemsToGenerate - spreadCount);
+    const selected = [];
+    let cursor = 0;
+    while (selected.length < clusteredCount) {
+        let pickedInPass = false;
+        for (let i = 0; i < buckets.length && selected.length < clusteredCount; i++) {
+            const bucket = buckets[i];
+            const item = bucket[cursor];
+            if (!item) continue;
+            selected.push(item.hexId);
+            pickedInPass = true;
+        }
+        if (!pickedInPass) break;
+        cursor++;
+    }
+    const selectedSet = new Set(selected);
+    const spreadCandidates = shuffled.filter((hexId) => !selectedSet.has(hexId));
+    const spreadPicked = spreadCandidates.slice(0, systemsToGenerate - selected.length);
+
+    return [...selected, ...spreadPicked];
+}
+
 function buildSectorFromConfig(config, fixedSystems = {}) {
     const normalized = normalizeGenerationConfig(config);
     const width = normalized.width;
@@ -287,7 +377,11 @@ function buildSectorFromConfig(config, fixedSystems = {}) {
     );
 
     const systemsToGenerate = Math.max(0, systemCount - validFixedEntries.length);
-    candidateCoords.slice(0, systemsToGenerate).forEach(hexId => {
+    const generatedCoords = normalized.starDistribution === 'clusters'
+        ? selectClusteredSystemCoords(candidateCoords, systemsToGenerate)
+        : candidateCoords.slice(0, systemsToGenerate);
+
+    generatedCoords.forEach(hexId => {
         nextSectors[hexId] = generateSystemData(normalized, {
             coordId: hexId,
             usedNames,

@@ -1,3 +1,4 @@
+import { GRID_PRESETS } from './config.js';
 import { normalizeDensityPresetKey } from './generation-data.js';
 
 const refsCache = {};
@@ -11,6 +12,7 @@ function getConfigRefs() {
         refsCache.manualMinInput = document.getElementById('manualMin');
         refsCache.manualMaxInput = document.getElementById('manualMax');
         refsCache.generationProfileSelect = document.getElementById('generationProfile');
+        refsCache.starDistributionSelect = document.getElementById('starDistribution');
         refsCache.realisticWeightsToggle = document.getElementById('realisticPlanetWeightsToggle');
     }
     return refsCache;
@@ -18,11 +20,23 @@ function getConfigRefs() {
 
 export function readGenerationConfigFromUi(defaults = {}) {
     const refs = getConfigRefs();
+    const sizeMode = defaults.sizeMode === 'custom' ? 'custom' : 'preset';
+    const sizePreset = refs.sizePresetSelect ? refs.sizePresetSelect.value : (defaults.sizePreset || 'standard');
+    const safePreset = GRID_PRESETS[sizePreset] ? sizePreset : 'standard';
+    const widthFromInput = parseInt(refs.gridWidthInput?.value || String(defaults.width ?? GRID_PRESETS.standard.width), 10);
+    const heightFromInput = parseInt(refs.gridHeightInput?.value || String(defaults.height ?? GRID_PRESETS.standard.height), 10);
+    const width = sizeMode === 'preset'
+        ? GRID_PRESETS[safePreset].width
+        : widthFromInput;
+    const height = sizeMode === 'preset'
+        ? GRID_PRESETS[safePreset].height
+        : heightFromInput;
+
     return {
-        sizeMode: defaults.sizeMode || 'preset',
-        sizePreset: refs.sizePresetSelect ? refs.sizePresetSelect.value : (defaults.sizePreset || 'standard'),
-        width: parseInt(refs.gridWidthInput?.value || String(defaults.width ?? 8), 10),
-        height: parseInt(refs.gridHeightInput?.value || String(defaults.height ?? 10), 10),
+        sizeMode,
+        sizePreset: safePreset,
+        width,
+        height,
         densityMode: defaults.densityMode || 'preset',
         densityPreset: normalizeDensityPresetKey(
             refs.densityPresetSelect ? refs.densityPresetSelect.value : (defaults.densityPreset || 'standard')
@@ -30,6 +44,7 @@ export function readGenerationConfigFromUi(defaults = {}) {
         manualMin: refs.manualMinInput ? parseInt(refs.manualMinInput.value, 10) : parseInt(String(defaults.manualMin ?? 0), 10),
         manualMax: refs.manualMaxInput ? parseInt(refs.manualMaxInput.value, 10) : parseInt(String(defaults.manualMax ?? 0), 10),
         generationProfile: refs.generationProfileSelect ? refs.generationProfileSelect.value : (defaults.generationProfile || 'high_adventure'),
+        starDistribution: refs.starDistributionSelect ? refs.starDistributionSelect.value : (defaults.starDistribution || 'standard'),
         realisticPlanetWeights: refs.realisticWeightsToggle ? !!refs.realisticWeightsToggle.checked : !!defaults.realisticPlanetWeights
     };
 }

@@ -71,6 +71,7 @@ function getMainRefs() {
         mainRefsCache.autoSeedToggle = document.getElementById('autoSeedToggle');
         mainRefsCache.realisticPlanetWeightsToggle = document.getElementById('realisticPlanetWeightsToggle');
         mainRefsCache.generationProfile = document.getElementById('generationProfile');
+        mainRefsCache.starDistribution = document.getElementById('starDistribution');
     }
     return mainRefsCache;
 }
@@ -196,7 +197,7 @@ function bindPrimaryActions(refs) {
 function bindPersistenceSync(refs) {
     const persistOnChangeIds = [
         'sizePreset', 'gridWidth', 'gridHeight', 'densityPreset', 'manualMin', 'manualMax',
-        'seedInput', 'autoSeedToggle', 'realisticPlanetWeightsToggle', 'generationProfile'
+        'seedInput', 'autoSeedToggle', 'realisticPlanetWeightsToggle', 'generationProfile', 'starDistribution'
     ];
     persistOnChangeIds.forEach((id) => {
         const el = document.getElementById(id);

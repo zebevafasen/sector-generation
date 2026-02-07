@@ -25,6 +25,7 @@ function getStorageUiRefs() {
         manualMinInput: document.getElementById('manualMin'),
         manualMaxInput: document.getElementById('manualMax'),
         generationProfileSelect: document.getElementById('generationProfile'),
+        starDistributionSelect: document.getElementById('starDistribution'),
         autoSeedToggle: document.getElementById('autoSeedToggle'),
         realisticWeightsToggle: document.getElementById('realisticPlanetWeightsToggle'),
         seedInput: document.getElementById('seedInput'),
@@ -232,6 +233,7 @@ export function buildSectorPayload(meta = {}) {
         autoSeed: isAutoSeedEnabled(),
         realisticPlanetWeights: isRealisticPlanetWeightingEnabled() || !!uiConfig.realisticPlanetWeights,
         generationProfile: uiConfig.generationProfile || 'high_adventure',
+        starDistribution: uiConfig.starDistribution || 'standard',
         sectorConfigSnapshot: state.sectorConfigSnapshot || null,
         pinnedHexIds: Array.isArray(state.pinnedHexIds) ? state.pinnedHexIds : [],
         selectedHexId: state.selectedHexId || null,
@@ -481,6 +483,9 @@ export function applySectorPayload(payload) {
     if (nextPayload.generationProfile && refs.generationProfileSelect) {
         refs.generationProfileSelect.value = nextPayload.generationProfile;
     }
+    if (refs.starDistributionSelect) {
+        refs.starDistributionSelect.value = nextPayload.starDistribution === 'clusters' ? 'clusters' : 'standard';
+    }
     syncDensityPresetForProfile(refs.generationProfileSelect ? refs.generationProfileSelect.value : 'high_adventure');
     if (nextPayload.densityMode) {
         setDensityMode(nextPayload.densityMode);
@@ -528,6 +533,7 @@ export function applySectorPayload(payload) {
         manualMin: nextPayload.manualRange && typeof nextPayload.manualRange.min === 'number' ? nextPayload.manualRange.min : 0,
         manualMax: nextPayload.manualRange && typeof nextPayload.manualRange.max === 'number' ? nextPayload.manualRange.max : 0,
         generationProfile: nextPayload.generationProfile || 'high_adventure',
+        starDistribution: nextPayload.starDistribution === 'clusters' ? 'clusters' : 'standard',
         realisticPlanetWeights: !!nextPayload.realisticPlanetWeights
     };
     state.selectedHexId = null;
