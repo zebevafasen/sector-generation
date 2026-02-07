@@ -96,7 +96,7 @@ export function generateSystemData() {
         let pop = 0;
         const features = [];
 
-        if (['Terrestrial', 'Oceanic'].includes(type) && rand() > 0.6) {
+        if (['Terrestrial', 'Oceanic', 'Desert', 'Arctic'].includes(type) && rand() > 0.6) {
             pop = Math.floor(rand() * 10) + 1;
             population += pop;
             features.push('Inhabited');
@@ -112,6 +112,15 @@ export function generateSystemData() {
             type,
             features,
             pop
+        });
+    }
+
+    if (rand() > 0.65) {
+        planets.push({
+            name: `${name} Belt`,
+            type: rand() > 0.6 ? 'Debris Field' : 'Asteroid Belt',
+            features: rand() > 0.55 ? ['Resource-Rich'] : [],
+            pop: 0
         });
     }
 

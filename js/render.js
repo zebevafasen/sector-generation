@@ -260,7 +260,7 @@ export function updateInfoPanel(id) {
         }
 
         document.getElementById('infoPlanetCount').innerText =
-            system.planets.filter(p => p.type !== 'Artificial' && p.type !== 'Asteroid Belt').length;
+            system.planets.filter(p => p.type !== 'Artificial' && !/belt|field/i.test(p.type)).length;
         document.getElementById('infoPop').innerText = system.totalPop;
 
         if (planetList && beltList && stationList) {
@@ -279,6 +279,7 @@ export function updateInfoPanel(id) {
                 if (normalizedType === 'Desert') markerClass = 'bg-yellow-400';
                 if (normalizedType === 'Oceanic') markerClass = 'bg-cyan-400';
                 if (normalizedType === 'Volcanic') markerClass = 'bg-orange-500';
+                if (normalizedType === 'Arctic') markerClass = 'bg-blue-100';
                 if (normalizedType === 'Barren') markerClass = 'bg-slate-400';
                 if (/belt|field/i.test(normalizedType)) markerClass = 'bg-violet-300';
                 if (normalizedType === 'Artificial') markerClass = 'bg-fuchsia-300';
