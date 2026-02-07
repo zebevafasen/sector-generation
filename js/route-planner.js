@@ -4,6 +4,61 @@ import { EVENTS } from './events.js';
 import { redrawGridAndReselect } from './ui-sync.js';
 import { isHexCoordInBounds, parseHexId } from './utils.js';
 
+class MinPriorityQueue {
+    constructor() {
+        this.items = [];
+    }
+
+    push(node, priority) {
+        this.items.push({ node, priority });
+        this.#bubbleUp(this.items.length - 1);
+    }
+
+    pop() {
+        if (!this.items.length) return null;
+        const first = this.items[0];
+        const last = this.items.pop();
+        if (this.items.length && last) {
+            this.items[0] = last;
+            this.#bubbleDown(0);
+        }
+        return first;
+    }
+
+    get size() {
+        return this.items.length;
+    }
+
+    #bubbleUp(index) {
+        let i = index;
+        while (i > 0) {
+            const parent = Math.floor((i - 1) / 2);
+            if (this.items[parent].priority <= this.items[i].priority) break;
+            [this.items[parent], this.items[i]] = [this.items[i], this.items[parent]];
+            i = parent;
+        }
+    }
+
+    #bubbleDown(index) {
+        let i = index;
+        const len = this.items.length;
+        while (true) {
+            const left = (i * 2) + 1;
+            const right = left + 1;
+            let smallest = i;
+            if (left < len && this.items[left].priority < this.items[smallest].priority) {
+                smallest = left;
+            }
+            if (right < len && this.items[right].priority < this.items[smallest].priority) {
+                smallest = right;
+            }
+            if (smallest === i) break;
+            [this.items[i], this.items[smallest]] = [this.items[smallest], this.items[i]];
+            i = smallest;
+        }
+    }
+}
+
 function getRouteRefs() {
     return {
         pickStartBtn: document.getElementById('routePickStartBtn'),
@@ -116,24 +171,25 @@ function computePath(startHexId, endHexId, width, height) {
     const startHex = `${start.col}-${start.row}`;
     const endHex = `${end.col}-${end.row}`;
     const startKey = makeNodeKey(startHex, 0);
-    const openSet = new Set([startKey]);
+    const openQueue = new MinPriorityQueue();
+    const openNodes = new Set([startKey]);
+    openQueue.push(startKey, hexDistance(start, end));
     const cameFrom = new Map();
     const gScore = new Map([[startKey, 0]]);
     const fScore = new Map([[startKey, hexDistance(start, end)]]);
     let bestEndNode = null;
     let bestEndScore = Number.POSITIVE_INFINITY;
 
-    while (openSet.size) {
+    while (openQueue.size) {
         let current = null;
-        let best = Number.POSITIVE_INFINITY;
-        openSet.forEach((node) => {
-            const score = fScore.has(node) ? fScore.get(node) : Number.POSITIVE_INFINITY;
-            if (score < best) {
-                best = score;
-                current = node;
-            }
-        });
-
+        while (openQueue.size) {
+            const item = openQueue.pop();
+            if (!item) break;
+            if (!openNodes.has(item.node)) continue;
+            current = item.node;
+            openNodes.delete(item.node);
+            break;
+        }
         if (!current) break;
         const currentNode = parseNodeKey(current);
         if (currentNode.hexId === endHex) {
@@ -144,7 +200,6 @@ function computePath(startHexId, endHexId, width, height) {
             }
         }
 
-        openSet.delete(current);
         const currentParsed = parseHexId(currentNode.hexId);
         if (!currentParsed) continue;
 
@@ -158,8 +213,10 @@ function computePath(startHexId, endHexId, width, height) {
             if (tentative < (gScore.get(neighborKey) ?? Number.POSITIVE_INFINITY)) {
                 cameFrom.set(neighborKey, current);
                 gScore.set(neighborKey, tentative);
-                fScore.set(neighborKey, tentative + hexDistance(neighbor, end));
-                openSet.add(neighborKey);
+                const priority = tentative + hexDistance(neighbor, end);
+                fScore.set(neighborKey, priority);
+                openNodes.add(neighborKey);
+                openQueue.push(neighborKey, priority);
             }
         });
     }
