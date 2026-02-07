@@ -5,6 +5,7 @@ import { EVENTS, emitEvent } from './events.js';
 import { readGenerationConfigFromUi } from './sector-config.js';
 import { applySectorPayload } from './storage.js';
 import { selectHex, updateViewTransform } from './render.js';
+import { deepClone } from './utils.js';
 
 const DIRECTIONS = {
     north: { dx: 0, dy: -1 },
@@ -12,10 +13,6 @@ const DIRECTIONS = {
     west: { dx: -1, dy: 0 },
     east: { dx: 1, dy: 0 }
 };
-
-function deepClone(value) {
-    return JSON.parse(JSON.stringify(value));
-}
 
 function getRefs() {
     return {
