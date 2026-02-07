@@ -114,12 +114,18 @@ export const GRID_PRESETS = {
 export const LOCAL_STORAGE_KEY = 'hex-star-sector-gen';
 
 export const NAME_PREFIX = [
-    'Alpha', 'Beta', 'Gamma', 'Delta', 'Omicron', 'Proxima', 'Vega', 'Altair', 'Sirius',
-    'Rigel', 'Kepler', 'Trappist', 'Sol', 'Deneb', 'Corgi', 'Xylar', 'Zeta', 'Epsilon'
+    'Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon', 'Zeta', 'Eta', 'Theta',
+    'Omicron', 'Sigma', 'Tau', 'Kappa',
+    'Vega', 'Altair', 'Sirius', 'Rigel', 'Deneb', 'Arcturus', 'Bellatrix', 'Canopus',
+    'Kepler', 'Trappist', 'Proxima', 'Sol', 'Helios', 'Lyra', 'Orion', 'Draco',
+    'Astra', 'Nova', 'Xylar', 'Nereid', 'Acheron', 'Cygnus', 'Carina', 'Perseus'
 ];
 
 export const NAME_SUFFIX = [
-    'Major', 'Minor', 'Prime', 'IV', 'VII', 'X', 'Ceti', 'Centauri', 'Eridani', 'Sector', 'Expanse'
+    'Major', 'Minor', 'Prime', 'Secundus', 'Tertius', 'Ultima',
+    'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X',
+    'Ceti', 'Centauri', 'Eridani', 'Draconis', 'Lyrae', 'Pegasi',
+    'Reach', 'Frontier', 'Sector', 'Expanse', 'Belt', 'Marches'
 ];
 
 export const state = {
