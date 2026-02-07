@@ -326,9 +326,6 @@ export function updateInfoPanel(id) {
                 if (normalizedType !== 'Artificial' && !/belt|field/i.test(normalizedType) && body.habitable) {
                     html += '<div class="text-[11px] mt-1 pl-5"><span class="inline-block px-1.5 py-0.5 rounded border text-emerald-300 border-emerald-600/60 bg-emerald-900/25">Habitable</span></div>';
                 }
-                if (body.features.length > 0) {
-                    html += `<div class="text-xs text-slate-400 mt-1 pl-5">Detected: ${body.features.join(', ')}</div>`;
-                }
                 li.innerHTML = html;
                 return li;
             };
