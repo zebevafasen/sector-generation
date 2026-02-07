@@ -61,7 +61,7 @@ function getCurrentConfig() {
         densityPreset: parseFloat(document.getElementById('densityPreset')?.value || '0.2'),
         manualMin: parseInt(document.getElementById('manualMin')?.value || '0', 10) || 0,
         manualMax: parseInt(document.getElementById('manualMax')?.value || '0', 10) || 0,
-        generationProfile: document.getElementById('generationProfile')?.value || 'cinematic',
+        generationProfile: document.getElementById('generationProfile')?.value || 'high_adventure',
         realisticPlanetWeights: !!document.getElementById('realisticPlanetWeightsToggle')?.checked
     };
 }
@@ -113,7 +113,7 @@ function applySectorRecord(key, record, options = {}) {
         },
         autoSeed: !!document.getElementById('autoSeedToggle')?.checked,
         realisticPlanetWeights: !!record.config.realisticPlanetWeights,
-        generationProfile: record.config.generationProfile || 'cinematic',
+        generationProfile: record.config.generationProfile || 'high_adventure',
         sectorConfigSnapshot: deepClone(record.config),
         pinnedHexIds: deepClone(record.pinnedHexIds || []),
         selectedHexId: null,

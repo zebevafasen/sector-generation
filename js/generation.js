@@ -58,7 +58,7 @@ function readGenerationConfigFromUi() {
         densityPreset: densityPresetSelect ? parseFloat(densityPresetSelect.value) : 0.2,
         manualMin: manualMinInput ? parseInt(manualMinInput.value, 10) : 0,
         manualMax: manualMaxInput ? parseInt(manualMaxInput.value, 10) : 0,
-        generationProfile: profileSelect ? profileSelect.value : 'cinematic',
+        generationProfile: profileSelect ? profileSelect.value : 'high_adventure',
         realisticPlanetWeights: !!(weightedToggle && weightedToggle.checked)
     };
 }
@@ -95,7 +95,7 @@ function normalizeGenerationConfig(config) {
         manualMax = temp;
     }
 
-    const generationProfile = GENERATION_PROFILES[source.generationProfile] ? source.generationProfile : 'cinematic';
+    const generationProfile = GENERATION_PROFILES[source.generationProfile] ? source.generationProfile : 'high_adventure';
 
     return {
         sizeMode,

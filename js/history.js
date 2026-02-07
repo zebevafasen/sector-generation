@@ -24,7 +24,7 @@ function buildFingerprint(payload) {
         densityMode: payload.densityMode,
         densityPreset: payload.densityPreset,
         manualRange: payload.manualRange || null,
-        generationProfile: payload.generationProfile || 'cinematic',
+        generationProfile: payload.generationProfile || 'high_adventure',
         realisticPlanetWeights: !!payload.realisticPlanetWeights,
         dimensions: payload.dimensions || null,
         pinnedHexIds: payload.pinnedHexIds || [],

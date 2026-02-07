@@ -209,7 +209,7 @@ export function buildSectorPayload(meta = {}) {
         },
         autoSeed: isAutoSeedEnabled(),
         realisticPlanetWeights: isRealisticPlanetWeightingEnabled(),
-        generationProfile: refs.generationProfileSelect ? refs.generationProfileSelect.value : 'cinematic',
+        generationProfile: refs.generationProfileSelect ? refs.generationProfileSelect.value : 'high_adventure',
         sectorConfigSnapshot: state.sectorConfigSnapshot || null,
         pinnedHexIds: Array.isArray(state.pinnedHexIds) ? state.pinnedHexIds : [],
         selectedHexId: state.selectedHexId || null,
@@ -484,7 +484,7 @@ export function applySectorPayload(payload) {
         densityPreset: payload.densityPreset,
         manualMin: payload.manualRange && typeof payload.manualRange.min === 'number' ? payload.manualRange.min : 0,
         manualMax: payload.manualRange && typeof payload.manualRange.max === 'number' ? payload.manualRange.max : 0,
-        generationProfile: payload.generationProfile || 'cinematic',
+        generationProfile: payload.generationProfile || 'high_adventure',
         realisticPlanetWeights: !!payload.realisticPlanetWeights
     };
     state.selectedHexId = null;
