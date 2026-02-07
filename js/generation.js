@@ -31,17 +31,10 @@ import {
 import { autoSaveSectorState, buildSectorPayload } from './storage.js';
 import { ensureSystemStarFields } from './star-system.js';
 import { redrawGridAndReselect, refreshHexInfo, clearSelectionInfo } from './ui-sync.js';
-import { romanize, shuffleArray } from './utils.js';
+import { isHexIdInBounds, parseHexId, romanize, shuffleArray, sortHexIds } from './utils.js';
 
 function deepClone(value) {
     return JSON.parse(JSON.stringify(value));
-}
-
-function isHexIdInBounds(hexId, width, height) {
-    const [cRaw, rRaw] = String(hexId).split('-');
-    const c = parseInt(cRaw, 10);
-    const r = parseInt(rRaw, 10);
-    return Number.isInteger(c) && Number.isInteger(r) && c >= 0 && r >= 0 && c < width && r < height;
 }
 
 function readGenerationConfigFromUi() {
@@ -185,8 +178,9 @@ function generateNameCandidate() {
 }
 
 function parseCoordId(coordId) {
-    const [cRaw, rRaw] = String(coordId || '').split('-');
-    return { c: parseInt(cRaw, 10), r: parseInt(rRaw, 10) };
+    const parsed = parseHexId(coordId);
+    if (!parsed) return { c: NaN, r: NaN };
+    return { c: parsed.col, r: parsed.row };
 }
 
 function areCoordsAdjacent(coordA, coordB) {
@@ -277,19 +271,6 @@ function setAndUseNewSeed(updateInput = true) {
 
 function composeContentSeed(layoutSeed, iteration) {
     return `${layoutSeed}::content:${iteration}`;
-}
-
-function sortHexIds(hexIds) {
-    return [...hexIds].sort((a, b) => {
-        const [acRaw, arRaw] = String(a).split('-');
-        const [bcRaw, brRaw] = String(b).split('-');
-        const ac = parseInt(acRaw, 10);
-        const ar = parseInt(arRaw, 10);
-        const bc = parseInt(bcRaw, 10);
-        const br = parseInt(brRaw, 10);
-        if (ac !== bc) return ac - bc;
-        return ar - br;
-    });
 }
 
 function buildSectorFromConfig(config, fixedSystems = {}) {

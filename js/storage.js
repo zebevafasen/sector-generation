@@ -9,6 +9,7 @@ import { normalizeDensityPresetKey } from './generation-data.js';
 import { getGlobalHexDisplayId } from './render-shared.js';
 import { clearInfoPanel, drawGrid, selectHex } from './render.js';
 import { ensureSystemStarFields, getSystemStars } from './star-system.js';
+import { sortHexIds } from './utils.js';
 
 function getStorageUiRefs() {
     return {
@@ -83,23 +84,6 @@ function classifyBody(body) {
     if (type === 'Artificial') return 'station';
     if (type === 'Asteroid Belt' || type === 'Debris Field') return 'belt';
     return 'planet';
-}
-
-function parseHexId(hexId) {
-    const [cRaw, rRaw] = String(hexId).split('-');
-    return {
-        c: parseInt(cRaw, 10),
-        r: parseInt(rRaw, 10)
-    };
-}
-
-function sortHexIds(hexIds) {
-    return [...hexIds].sort((a, b) => {
-        const left = parseHexId(a);
-        const right = parseHexId(b);
-        if (left.c !== right.c) return left.c - right.c;
-        return left.r - right.r;
-    });
 }
 
 function formatBodyPopulation(pop) {

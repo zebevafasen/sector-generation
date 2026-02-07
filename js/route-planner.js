@@ -2,6 +2,7 @@ import { state } from './config.js';
 import { showStatusMessage } from './core.js';
 import { EVENTS } from './events.js';
 import { redrawGridAndReselect } from './ui-sync.js';
+import { isHexCoordInBounds, parseHexId } from './utils.js';
 
 function getRouteRefs() {
     return {
@@ -17,14 +18,6 @@ function getRouteRefs() {
     };
 }
 
-function parseHexId(hexId) {
-    const [cRaw, rRaw] = String(hexId || '').split('-');
-    const col = parseInt(cRaw, 10);
-    const row = parseInt(rRaw, 10);
-    if (!Number.isInteger(col) || !Number.isInteger(row)) return null;
-    return { col, row };
-}
-
 function getGridDimensions() {
     const snapshot = state.sectorConfigSnapshot
         || (state.lastSectorSnapshot && state.lastSectorSnapshot.sectorConfigSnapshot)
@@ -36,10 +29,6 @@ function getGridDimensions() {
     if (!Number.isFinite(width) || width < 1) width = 8;
     if (!Number.isFinite(height) || height < 1) height = 10;
     return { width, height };
-}
-
-function inBounds(col, row, width, height) {
-    return col >= 0 && row >= 0 && col < width && row < height;
 }
 
 function oddrToCube(col, row) {
@@ -84,7 +73,7 @@ function getNeighbors(col, row, width, height) {
             y: base.y + dir.y,
             z: base.z + dir.z
         }))
-        .filter((next) => inBounds(next.col, next.row, width, height));
+        .filter((next) => isHexCoordInBounds(next.col, next.row, width, height));
 }
 
 function reconstructPath(cameFrom, currentKey) {
@@ -122,7 +111,7 @@ function computePath(startHexId, endHexId, width, height) {
     const start = parseHexId(startHexId);
     const end = parseHexId(endHexId);
     if (!start || !end) return [];
-    if (!inBounds(start.col, start.row, width, height) || !inBounds(end.col, end.row, width, height)) return [];
+    if (!isHexCoordInBounds(start.col, start.row, width, height) || !isHexCoordInBounds(end.col, end.row, width, height)) return [];
 
     const startHex = `${start.col}-${start.row}`;
     const endHex = `${end.col}-${end.row}`;
