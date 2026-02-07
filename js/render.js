@@ -615,6 +615,17 @@ function renderSystemBodyLists(refs, system, id, preselectedBodyIndex) {
     refs.stationList.innerHTML = '';
     resetBodyDetailsPanel();
 
+    const renameBodyAtIndex = (bodyIndex, fallbackName) => {
+        const currentName = system.planets[bodyIndex] ? system.planets[bodyIndex].name : fallbackName;
+        const nextNameRaw = prompt('Rename object', currentName);
+        if (nextNameRaw === null) return;
+        const nextName = nextNameRaw.trim();
+        if (!nextName || !system.planets[bodyIndex]) return;
+        system.planets[bodyIndex].name = nextName;
+        notifySectorDataChanged();
+        updateInfoPanel(id, bodyIndex);
+    };
+
     const renderBody = (body, bodyIndex) => {
         const li = document.createElement('li');
         li.className = 'bg-slate-800/50 p-2 rounded border border-slate-700/50 flex flex-col cursor-pointer transition-colors hover:border-sky-600/60';
@@ -653,14 +664,7 @@ function renderSystemBodyLists(refs, system, id, preselectedBodyIndex) {
             inlineRenameBtn.addEventListener('click', (event) => {
                 event.preventDefault();
                 event.stopPropagation();
-                const currentName = system.planets[bodyIndex] ? system.planets[bodyIndex].name : body.name;
-                const nextNameRaw = prompt('Rename object', currentName);
-                if (nextNameRaw === null) return;
-                const nextName = nextNameRaw.trim();
-                if (!nextName || !system.planets[bodyIndex]) return;
-                system.planets[bodyIndex].name = nextName;
-                notifySectorDataChanged();
-                updateInfoPanel(id, bodyIndex);
+                renameBodyAtIndex(bodyIndex, body.name);
             });
         }
 
@@ -686,16 +690,7 @@ function renderSystemBodyLists(refs, system, id, preselectedBodyIndex) {
             state.selectedBodyIndex = bodyIndex;
             showBodyDetailsPanel(body, li);
             if (refs.renameBodyBtn) {
-                setButtonAction(refs.renameBodyBtn, true, () => {
-                    const currentName = system.planets[bodyIndex] ? system.planets[bodyIndex].name : body.name;
-                    const nextNameRaw = prompt('Rename object', currentName);
-                    if (nextNameRaw === null) return;
-                    const nextName = nextNameRaw.trim();
-                    if (!nextName || !system.planets[bodyIndex]) return;
-                    system.planets[bodyIndex].name = nextName;
-                    notifySectorDataChanged();
-                    updateInfoPanel(id, bodyIndex);
-                });
+                setButtonAction(refs.renameBodyBtn, true, () => renameBodyAtIndex(bodyIndex, body.name));
             }
             if (refs.rerollBodyBtn) {
                 refs.rerollBodyBtn.classList.toggle('hidden', !isPlanetary);
