@@ -4,6 +4,55 @@ import { generateSector, rerollSelectedSystem, rerollUnpinnedSystems, togglePinS
 import { autoSaveSectorState, exportSector, handleImportFile, loadSectorLocal, restoreCachedSectorState, saveSectorLocal, triggerImport } from './storage.js';
 import { setupPanZoom } from './render.js';
 
+function setupPanelToggles() {
+    const bindToggle = (config) => {
+        const sidebar = document.getElementById(config.sidebarId);
+        const header = document.getElementById(config.headerId);
+        const content = document.getElementById(config.contentId);
+        const button = document.getElementById(config.buttonId);
+        if (!sidebar || !header || !content || !button) return;
+
+        const applyState = (collapsed) => {
+            header.classList.toggle('hidden', collapsed);
+            content.classList.toggle('hidden', collapsed);
+            sidebar.classList.toggle('w-full', !collapsed);
+            sidebar.classList.toggle('w-2', collapsed);
+            sidebar.classList.toggle('md:w-96', !collapsed);
+            sidebar.classList.toggle('md:w-3', collapsed);
+            if (config.side === 'left') {
+                button.innerHTML = collapsed ? '&raquo;' : '&laquo;';
+            } else {
+                button.innerHTML = collapsed ? '&laquo;' : '&raquo;';
+            }
+            button.setAttribute('aria-expanded', String(!collapsed));
+        };
+
+        let collapsed = false;
+        applyState(collapsed);
+
+        button.addEventListener('click', () => {
+            collapsed = !collapsed;
+            applyState(collapsed);
+        });
+    };
+
+    bindToggle({
+        sidebarId: 'leftSidebar',
+        headerId: 'leftSidebarHeader',
+        contentId: 'leftSidebarContent',
+        buttonId: 'toggleLeftPanelBtn',
+        side: 'left'
+    });
+
+    bindToggle({
+        sidebarId: 'rightSidebar',
+        headerId: 'rightSidebarHeader',
+        contentId: 'rightSidebarContent',
+        buttonId: 'toggleRightPanelBtn',
+        side: 'right'
+    });
+}
+
 function bindUiEvents() {
     const byId = (id) => document.getElementById(id);
 
@@ -41,6 +90,7 @@ function bindUiEvents() {
 
 window.onload = function() {
     setupPanZoom();
+    setupPanelToggles();
     bindUiEvents();
     const importInput = document.getElementById('importFileInput');
     if (importInput) importInput.addEventListener('change', handleImportFile);
