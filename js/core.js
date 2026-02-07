@@ -13,6 +13,11 @@ function escapeHtml(value) {
 export function setSeed(seedValue) {
     const normalized = String(seedValue);
     state.currentSeed = normalized;
+    setRandomStream(normalized);
+}
+
+export function setRandomStream(seedValue) {
+    const normalized = String(seedValue);
     const seedGenerator = xmur3(normalized);
     state.seededRandomFn = mulberry32(seedGenerator());
 }

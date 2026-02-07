@@ -60,3 +60,27 @@ test('renaming a system can rename linked planet names', async ({ page }) => {
     await expect(firstPlanetNameAfter.startsWith(`${newSystemName} `)).toBeTruthy();
   }
 });
+
+test('reroll unpinned keeps system layout positions stable', async ({ page }) => {
+  await page.goto('/sector_generator.html');
+  await page.locator('#generateSectorBtn').click();
+
+  const beforeHexes = await page.locator('.hex-group:has(circle.star-circle)').evaluateAll((nodes) =>
+    nodes
+      .map((node) => node.getAttribute('data-id'))
+      .filter(Boolean)
+      .sort()
+  );
+  await expect(beforeHexes.length).toBeGreaterThan(0);
+
+  await page.locator('#rerollUnpinnedBtn').click();
+
+  const afterHexes = await page.locator('.hex-group:has(circle.star-circle)').evaluateAll((nodes) =>
+    nodes
+      .map((node) => node.getAttribute('data-id'))
+      .filter(Boolean)
+      .sort()
+  );
+
+  expect(afterHexes).toEqual(beforeHexes);
+});

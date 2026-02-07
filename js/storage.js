@@ -40,6 +40,8 @@ export function buildSectorPayload(meta = {}) {
         version: 1,
         generatedAt: new Date().toISOString(),
         seed: state.currentSeed,
+        layoutSeed: state.layoutSeed || state.currentSeed || '',
+        rerollIteration: Number.isFinite(Number(state.rerollIteration)) ? Number(state.rerollIteration) : 0,
         sizeMode: state.sizeMode,
         sizePreset: state.sizeMode === 'preset' && refs.sizePresetSelect
             ? refs.sizePresetSelect.value
@@ -226,6 +228,8 @@ export function applySectorPayload(payload) {
         state.currentSeed = '';
         state.seededRandomFn = () => Math.random();
     }
+    state.layoutSeed = String(payload.layoutSeed || payload.seed || state.currentSeed || '');
+    state.rerollIteration = Number.isFinite(Number(payload.rerollIteration)) ? Number(payload.rerollIteration) : 0;
 
     state.sectors = payload.sectors || {};
     state.pinnedHexIds = Array.isArray(payload.pinnedHexIds)
