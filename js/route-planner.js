@@ -202,6 +202,45 @@ function setEndpoint(kind, hexId, refs) {
     recalculateRoute(refs);
 }
 
+function handleShortcutSelect(hexId, refs) {
+    if (!hexId || !state.sectors[hexId]) {
+        showStatusMessage('Shortcut route targets must be populated systems.', 'warn');
+        return;
+    }
+
+    const route = state.routePlanner;
+    route.pickMode = null;
+
+    if (!route.startHexId) {
+        route.startHexId = hexId;
+        recalculateRoute(refs);
+        showStatusMessage(`Route start set to ${hexId}. Shift+Left Click destination next.`, 'info');
+        return;
+    }
+
+    if (route.startHexId && route.endHexId) {
+        route.startHexId = hexId;
+        route.endHexId = null;
+        recalculateRoute(refs);
+        showStatusMessage(`New route start set to ${hexId}. Shift+Left Click destination next.`, 'info');
+        return;
+    }
+
+    route.endHexId = hexId;
+    recalculateRoute(refs);
+    showStatusMessage(`Route calculated: ${route.hops} hops.`, 'success');
+}
+
+function clearRoute(refs) {
+    state.routePlanner.startHexId = null;
+    state.routePlanner.endHexId = null;
+    state.routePlanner.pathHexIds = [];
+    state.routePlanner.hops = 0;
+    state.routePlanner.pickMode = null;
+    updateRouteLabels(refs);
+    redrawRoute();
+}
+
 function sanitizeRouteEndpoints(refs) {
     const route = state.routePlanner;
     const beforeStart = route.startHexId;
@@ -240,19 +279,20 @@ export function setupRoutePlanner() {
         recalculateRoute(refs);
     });
     refs.clearBtn?.addEventListener('click', () => {
-        state.routePlanner.startHexId = null;
-        state.routePlanner.endHexId = null;
-        state.routePlanner.pathHexIds = [];
-        state.routePlanner.hops = 0;
-        state.routePlanner.pickMode = null;
-        updateRouteLabels(refs);
-        redrawRoute();
+        clearRoute(refs);
     });
 
     window.addEventListener(EVENTS.HEX_SELECTED, (event) => {
         const hexId = event && event.detail ? event.detail.hexId : null;
         if (!hexId || !state.routePlanner.pickMode) return;
         setEndpoint(state.routePlanner.pickMode, hexId, refs);
+    });
+    window.addEventListener(EVENTS.ROUTE_SHORTCUT_HEX, (event) => {
+        const hexId = event && event.detail ? event.detail.hexId : null;
+        handleShortcutSelect(hexId, refs);
+    });
+    window.addEventListener(EVENTS.ROUTE_SHORTCUT_CLEAR, () => {
+        clearRoute(refs);
     });
 
     window.addEventListener(EVENTS.SECTOR_DATA_CHANGED, () => {

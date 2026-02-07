@@ -609,6 +609,13 @@ export function updateViewTransform() {
 
 export function handleHexClick(e, id, groupElement) {
     if (state.viewState.dragDistance > 5) return;
+    if (e.shiftKey) {
+        emitEvent(EVENTS.ROUTE_SHORTCUT_HEX, { hexId: id });
+        return;
+    }
+    if (state.routePlanner && (state.routePlanner.startHexId || state.routePlanner.endHexId)) {
+        emitEvent(EVENTS.ROUTE_SHORTCUT_CLEAR, { silent: true });
+    }
     selectHex(id, groupElement);
 }
 
