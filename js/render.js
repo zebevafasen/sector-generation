@@ -3,6 +3,7 @@ import { formatStarAgeValue, generateStarAge, getStarClassInfo, hideStarClassInf
 import { getBodyIconMarkup, normalizeBodyType } from './body-icons.js';
 import { EVENTS, emitEvent } from './events.js';
 import { reportSystemInvariantIssues } from './invariants.js';
+import { generatePlanetEnvironment, getDefaultPlanetEnvironment, isPlanetaryBodyType } from './planet-environment.js';
 
 const STAR_GRADIENT_CACHE = {};
 
@@ -52,6 +53,9 @@ function resetBodyDetailsPanel() {
     const editPlanetTypeSelect = document.getElementById('editPlanetTypeSelect');
     const editInhabitPlanetRow = document.getElementById('editInhabitPlanetRow');
     const editInhabitPlanetBtn = document.getElementById('editInhabitPlanetBtn');
+    const envRow = document.getElementById('infoBodyEnvironmentRow');
+    const atmosphereValue = document.getElementById('infoBodyAtmosphere');
+    const temperatureValue = document.getElementById('infoBodyTemperature');
     const placeholder = document.getElementById('infoBodyDetailsPlaceholder');
 
     if (panel) panel.classList.add('hidden');
@@ -73,6 +77,9 @@ function resetBodyDetailsPanel() {
         editInhabitPlanetBtn.innerText = 'Inhabit Planet';
         setInhabitButtonStyle(editInhabitPlanetBtn, false);
     }
+    if (envRow) envRow.classList.add('hidden');
+    if (atmosphereValue) atmosphereValue.innerText = '--';
+    if (temperatureValue) temperatureValue.innerText = '--';
     if (placeholder) placeholder.innerText = 'Detailed stats coming soon.';
 }
 
@@ -104,6 +111,9 @@ function showBodyDetailsPanel(body, anchorEl) {
     const content = document.getElementById('infoBodyDetailsContent');
     const name = document.getElementById('infoBodyDetailsName');
     const type = document.getElementById('infoBodyDetailsType');
+    const envRow = document.getElementById('infoBodyEnvironmentRow');
+    const atmosphereValue = document.getElementById('infoBodyAtmosphere');
+    const temperatureValue = document.getElementById('infoBodyTemperature');
     const placeholder = document.getElementById('infoBodyDetailsPlaceholder');
     const normalizedType = normalizeBodyType(body.type);
 
@@ -112,6 +122,18 @@ function showBodyDetailsPanel(body, anchorEl) {
     if (content) content.classList.remove('hidden');
     if (name) name.innerText = body.name;
     if (type) type.innerText = normalizedType;
+    if (envRow && atmosphereValue && temperatureValue) {
+        if (isPlanetaryBodyType(normalizedType)) {
+            const fallback = getDefaultPlanetEnvironment(normalizedType);
+            atmosphereValue.innerText = body.atmosphere || fallback.atmosphere;
+            temperatureValue.innerText = body.temperature || fallback.temperature;
+            envRow.classList.remove('hidden');
+        } else {
+            envRow.classList.add('hidden');
+            atmosphereValue.innerText = '--';
+            temperatureValue.innerText = '--';
+        }
+    }
     if (placeholder) placeholder.innerText = 'Detailed stats coming soon.';
     if (panel && anchorEl) positionBodyDetailsPanel(panel, anchorEl);
 }
@@ -618,7 +640,11 @@ function renderSystemBodyLists(refs, system, id, preselectedBodyIndex) {
                     refs.editPlanetTypeSelect.onchange = () => {
                         const targetSystem = state.sectors[id];
                         if (!targetSystem || !targetSystem.planets[bodyIndex]) return;
-                        targetSystem.planets[bodyIndex].type = refs.editPlanetTypeSelect.value;
+                        const nextType = refs.editPlanetTypeSelect.value;
+                        targetSystem.planets[bodyIndex].type = nextType;
+                        const nextEnvironment = generatePlanetEnvironment(nextType);
+                        targetSystem.planets[bodyIndex].atmosphere = nextEnvironment.atmosphere;
+                        targetSystem.planets[bodyIndex].temperature = nextEnvironment.temperature;
                         reportSystemInvariantIssues(targetSystem, 'edit-planet-type');
                         notifySectorDataChanged();
                         updateInfoPanel(id, bodyIndex);

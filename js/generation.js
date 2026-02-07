@@ -18,6 +18,7 @@ import {
 import { EVENTS, emitEvent } from './events.js';
 import { reportSystemInvariantIssues } from './invariants.js';
 import { generateStarAge, generateSeedString, isAutoSeedEnabled, rand, setSeed, showStatusMessage } from './core.js';
+import { generatePlanetEnvironment } from './planet-environment.js';
 import { autoSaveSectorState, buildSectorPayload } from './storage.js';
 import { redrawGridAndReselect, refreshHexInfo, clearSelectionInfo } from './ui-sync.js';
 import { romanize, shuffleArray } from './utils.js';
@@ -497,6 +498,7 @@ export function generateSystemData(config = null, context = null) {
             ? pickPlanetTypeForStarClass(sClass, excludedTypes)
             : pickRandomPlanetType(excludedTypes);
         if (type === 'Terrestrial') hasTerrestrial = true;
+        const environment = generatePlanetEnvironment(type, rand);
         let pop = 0;
         const features = [];
 
@@ -515,6 +517,8 @@ export function generateSystemData(config = null, context = null) {
             name: `${name} ${romanize(i + 1)}`,
             type,
             size: generatePlanetSize(type),
+            atmosphere: environment.atmosphere,
+            temperature: environment.temperature,
             features,
             pop,
             habitable: false
@@ -631,10 +635,13 @@ export function addBodyToSelectedSystem(kind) {
         const hasTerrestrial = system.planets.some(body => isPlanetaryBody(body) && body.type === 'Terrestrial');
         const excluded = hasTerrestrial ? new Set(['Terrestrial']) : new Set();
         const type = pickRandomPlanetType(excluded);
+        const environment = generatePlanetEnvironment(type, rand);
         system.planets.push({
             name: `${system.name} ${romanize(1)}`,
             type,
             size: generatePlanetSize(type),
+            atmosphere: environment.atmosphere,
+            temperature: environment.temperature,
             features: [],
             pop: 0,
             habitable: false
