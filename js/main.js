@@ -1,4 +1,4 @@
-import { setDensityMode, setSizeMode, setupFieldInfoTooltips, setupStarClassTooltip } from './controls.js';
+import { setDensityMode, setSizeMode, setupFieldInfoTooltips, setupStarClassTooltip, syncManualDensityLimits } from './controls.js';
 import { randomizeSeed } from './core.js';
 import { EVENTS } from './events.js';
 import { state } from './config.js';
@@ -169,6 +169,14 @@ function bindUiEvents() {
         el.addEventListener('change', autoSaveSectorState);
     });
     refs.seedInput?.addEventListener('input', autoSaveSectorState);
+    refs.gridWidth?.addEventListener('input', syncManualDensityLimits);
+    refs.gridHeight?.addEventListener('input', syncManualDensityLimits);
+    refs.manualMin?.addEventListener('input', syncManualDensityLimits);
+    refs.manualMax?.addEventListener('input', syncManualDensityLimits);
+    refs.gridWidth?.addEventListener('change', syncManualDensityLimits);
+    refs.gridHeight?.addEventListener('change', syncManualDensityLimits);
+    refs.manualMin?.addEventListener('change', syncManualDensityLimits);
+    refs.manualMax?.addEventListener('change', syncManualDensityLimits);
 
     refs.modeSizePresetBtn?.addEventListener('click', autoSaveSectorState);
     refs.modeSizeCustomBtn?.addEventListener('click', autoSaveSectorState);
@@ -234,6 +242,7 @@ window.onload = function() {
     const importInput = document.getElementById('importFileInput');
     if (importInput) importInput.addEventListener('change', handleImportFile);
     setSizeMode('preset');
+    syncManualDensityLimits();
     setEditMode(false);
     updateEditModeUi();
     setupStarClassTooltip();

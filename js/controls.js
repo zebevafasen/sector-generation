@@ -16,9 +16,35 @@ function getControlsRefs() {
         controlsRefsCache.sizePreset = document.getElementById('sizePreset');
         controlsRefsCache.gridWidth = document.getElementById('gridWidth');
         controlsRefsCache.gridHeight = document.getElementById('gridHeight');
+        controlsRefsCache.manualMin = document.getElementById('manualMin');
+        controlsRefsCache.manualMax = document.getElementById('manualMax');
         controlsRefsCache.infoStarClass = document.getElementById('infoStarClass');
     }
     return controlsRefsCache;
+}
+
+export function syncManualDensityLimits() {
+    const refs = getControlsRefs();
+    const width = Math.max(1, parseInt(refs.gridWidth?.value || '1', 10) || 1);
+    const height = Math.max(1, parseInt(refs.gridHeight?.value || '1', 10) || 1);
+    const totalHexes = width * height;
+    const minInput = refs.manualMin;
+    const maxInput = refs.manualMax;
+    if (!minInput || !maxInput) return;
+
+    minInput.max = String(totalHexes);
+    maxInput.max = String(totalHexes);
+
+    let min = parseInt(minInput.value, 10);
+    let max = parseInt(maxInput.value, 10);
+    if (!Number.isFinite(min) || min < 0) min = 0;
+    if (!Number.isFinite(max) || max < 0) max = 0;
+    min = Math.min(min, totalHexes);
+    max = Math.min(max, totalHexes);
+    if (min > max) max = min;
+
+    minInput.value = String(min);
+    maxInput.value = String(max);
 }
 
 export function setDensityMode(mode) {
@@ -61,6 +87,7 @@ export function setSizeMode(mode) {
         presetContainer.classList.add('hidden');
         customContainer.classList.remove('hidden');
     }
+    syncManualDensityLimits();
 }
 
 export function setupStarClassTooltip() {

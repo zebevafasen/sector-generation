@@ -86,6 +86,14 @@ function normalizeGenerationConfig(config) {
     let manualMax = parseInt(source.manualMax, 10);
     if (!Number.isFinite(manualMin) || manualMin < 0) manualMin = 0;
     if (!Number.isFinite(manualMax) || manualMax < 0) manualMax = 0;
+    const totalHexes = width * height;
+    manualMin = Math.min(manualMin, totalHexes);
+    manualMax = Math.min(manualMax, totalHexes);
+    if (manualMin > manualMax) {
+        const temp = manualMin;
+        manualMin = manualMax;
+        manualMax = temp;
+    }
 
     const generationProfile = GENERATION_PROFILES[source.generationProfile] ? source.generationProfile : 'cinematic';
 
@@ -178,6 +186,7 @@ function computeSystemCount(totalHexes, config) {
     let min = config.manualMin;
     let max = config.manualMax;
     if (min < 0) min = 0;
+    if (min > totalHexes) min = totalHexes;
     if (max > totalHexes) max = totalHexes;
     if (min > max) {
         const temp = min;
