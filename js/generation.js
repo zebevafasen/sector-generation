@@ -29,6 +29,7 @@ import {
     pickRandomPlanetType
 } from './planetary-rules.js';
 import { autoSaveSectorState, buildSectorPayload } from './storage.js';
+import { ensureSystemStarFields } from './star-system.js';
 import { redrawGridAndReselect, refreshHexInfo, clearSelectionInfo } from './ui-sync.js';
 import { romanize, shuffleArray } from './utils.js';
 
@@ -121,6 +122,59 @@ function getGenerationConfigSnapshot() {
 
 function getActiveGenerationProfile(profileKey) {
     return GENERATION_PROFILES[profileKey] || GENERATION_PROFILES.cinematic;
+}
+
+function rollStarClass() {
+    const roll = rand();
+    if (roll > 0.99) return 'Black Hole';
+    if (roll > 0.97) return 'Neutron';
+    if (roll > 0.94) return 'O';
+    if (roll > 0.90) return 'B';
+    if (roll > 0.80) return 'A';
+    if (roll > 0.65) return 'F';
+    if (roll > 0.45) return 'G';
+    if (roll > 0.20) return 'K';
+    return 'M';
+}
+
+function pickStarCount(profileKey) {
+    const profile = profileKey || 'high_adventure';
+    const roll = rand();
+    if (profile === 'hard_scifi') {
+        if (roll < 0.03) return 3;
+        if (roll < 0.21) return 2;
+        return 1;
+    }
+    if (profile === 'cinematic') {
+        if (roll < 0.02) return 3;
+        if (roll < 0.16) return 2;
+        return 1;
+    }
+    if (roll < 0.015) return 3;
+    if (roll < 0.115) return 2;
+    return 1;
+}
+
+function generateSystemStars(profileKey, systemName = '') {
+    const starCount = pickStarCount(profileKey);
+    const roleLabels = ['Primary', 'Secondary', 'Tertiary'];
+    const letterLabels = ['A', 'B', 'C'];
+    const stars = [];
+
+    for (let i = 0; i < starCount; i++) {
+        const starClass = rollStarClass();
+        const palette = STAR_VISUALS[starClass] || STAR_VISUALS.default;
+        stars.push({
+            class: starClass,
+            color: palette.core,
+            glow: palette.halo,
+            palette,
+            starAge: generateStarAge(starClass),
+            role: roleLabels[i] || `Companion ${i}`,
+            name: `${systemName || 'Unnamed'} ${letterLabels[i] || String.fromCharCode(65 + i)}`
+        });
+    }
+    return stars;
 }
 
 function generateNameCandidate() {
@@ -299,6 +353,7 @@ function sanitizePinnedHexes(width, height) {
 
 function reconcilePlanetaryBodies(system) {
     if (!system || !Array.isArray(system.planets)) return;
+    ensureSystemStarFields(system);
     system.planets = applyPlanetaryOrderAndNames(system.name, system.planets, rand);
     refreshSystemPlanetPopulation(system, { randomFn: rand });
     refreshSystemPlanetTags(system, { randomFn: rand });
@@ -355,23 +410,15 @@ export function generateSystemData(config = null, context = null) {
     const coordId = context && context.coordId ? context.coordId : null;
     const usedNames = context && context.usedNames ? context.usedNames : new Set();
     const sectorsByCoord = context && context.sectorsByCoord ? context.sectorsByCoord : state.sectors;
-    const randChance = rand();
-    let sClass = 'M';
-    if (randChance > 0.99) sClass = 'Black Hole';
-    else if (randChance > 0.97) sClass = 'Neutron';
-    else if (randChance > 0.94) sClass = 'O';
-    else if (randChance > 0.90) sClass = 'B';
-    else if (randChance > 0.80) sClass = 'A';
-    else if (randChance > 0.65) sClass = 'F';
-    else if (randChance > 0.45) sClass = 'G';
-    else if (randChance > 0.20) sClass = 'K';
-
     const name = generateSystemName(coordId, usedNames, sectorsByCoord);
+    const stars = generateSystemStars(normalized.generationProfile, name);
+    const primaryStar = stars[0];
+    const sClass = primaryStar.class;
 
     const planetCount = Math.floor(rand() * 6) + 1;
     const planets = [];
     let hasTerrestrial = false;
-    const starAge = generateStarAge(sClass);
+    const starAge = primaryStar.starAge;
 
     const useWeightedTypes = normalized.realisticPlanetWeights;
     for (let i = 0; i < planetCount; i++) {
@@ -429,6 +476,7 @@ export function generateSystemData(config = null, context = null) {
     const visuals = STAR_VISUALS[sClass] || STAR_VISUALS.default;
     const generatedSystem = {
         name,
+        stars,
         starClass: sClass,
         color: visuals.core,
         glow: visuals.halo,
@@ -437,6 +485,7 @@ export function generateSystemData(config = null, context = null) {
         planets,
         totalPop: 'None'
     };
+    ensureSystemStarFields(generatedSystem);
     refreshSystemPlanetPopulation(generatedSystem, { forceRecalculate: true, randomFn: rand });
     refreshSystemPlanetTags(generatedSystem, { forceRecalculate: true, randomFn: rand });
     reportSystemInvariantIssues(generatedSystem, 'generate');
