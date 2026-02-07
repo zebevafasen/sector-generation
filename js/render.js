@@ -47,6 +47,7 @@ function resetBodyDetailsPanel() {
     const content = document.getElementById('infoBodyDetailsContent');
     const name = document.getElementById('infoBodyDetailsName');
     const type = document.getElementById('infoBodyDetailsType');
+    const size = document.getElementById('infoBodyDetailsSize');
     const renameBodyBtn = document.getElementById('renameBodyBtn');
     const quickDeleteBodyBtn = document.getElementById('quickDeleteBodyBtn');
     const editPlanetTypeRow = document.getElementById('editPlanetTypeRow');
@@ -70,6 +71,11 @@ function resetBodyDetailsPanel() {
         type.removeAttribute('data-field-tooltip');
         type.removeAttribute('data-field-value');
         type.classList.remove('cursor-help', 'underline', 'decoration-dotted', 'decoration-slate-500/70', 'underline-offset-2');
+    }
+    if (size) {
+        size.innerText = '--';
+        size.classList.add('hidden');
+        size.removeAttribute('data-field-value');
     }
     setButtonAction(renameBodyBtn, false);
     setButtonAction(quickDeleteBodyBtn, false);
@@ -116,6 +122,7 @@ function showBodyDetailsPanel(body, anchorEl) {
     const content = document.getElementById('infoBodyDetailsContent');
     const name = document.getElementById('infoBodyDetailsName');
     const type = document.getElementById('infoBodyDetailsType');
+    const size = document.getElementById('infoBodyDetailsSize');
     const envRow = document.getElementById('infoBodyEnvironmentRow');
     const atmosphereValue = document.getElementById('infoBodyAtmosphere');
     const temperatureValue = document.getElementById('infoBodyTemperature');
@@ -136,6 +143,18 @@ function showBodyDetailsPanel(body, anchorEl) {
             type.removeAttribute('data-field-tooltip');
             type.removeAttribute('data-field-value');
             type.classList.remove('cursor-help', 'underline', 'decoration-dotted', 'decoration-slate-500/70', 'underline-offset-2');
+        }
+    }
+    if (size) {
+        if (isPlanetaryBodyType(normalizedType)) {
+            const sizeLabel = body.size || 'Medium';
+            size.innerText = sizeLabel;
+            size.setAttribute('data-field-value', sizeLabel);
+            size.classList.remove('hidden');
+        } else {
+            size.innerText = '--';
+            size.removeAttribute('data-field-value');
+            size.classList.add('hidden');
         }
     }
     if (envRow && atmosphereValue && temperatureValue) {

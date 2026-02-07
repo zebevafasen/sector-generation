@@ -246,7 +246,7 @@ export function showFieldInfoTooltip(event, field, value) {
 
     panel.innerHTML = `
         <div class="font-semibold text-sky-300 mb-1">${label}</div>
-        <div class="text-slate-400 mb-1">Value: <span class="text-slate-200">${value || 'Unknown'}</span></div>
+        <div class="text-slate-400 mb-1"><span class="text-slate-200">${value || 'Unknown'}</span></div>
         <div class="text-slate-300 leading-snug">${description}</div>
     `;
     panel.classList.remove('hidden');
