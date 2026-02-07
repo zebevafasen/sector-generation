@@ -191,7 +191,7 @@ export function generateSystemData() {
     const num = Math.floor(rand() * 999) + 1;
     const name = rand() > 0.5 ? `${p1}-${num}` : `${p1} ${p2}`;
 
-    const planetCount = Math.floor(rand() * 10) + 1;
+    const planetCount = Math.floor(rand() * 6) + 1;
     const planets = [];
     let population = 0;
     let hasTerrestrial = false;
