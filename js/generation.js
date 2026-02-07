@@ -700,6 +700,58 @@ export function deleteSelectedBody() {
     showStatusMessage('Deleted selected object.', 'success');
 }
 
+export function rerollSelectedPlanet() {
+    const selectedHexId = state.selectedHexId;
+    const system = selectedHexId ? state.sectors[selectedHexId] : null;
+    if (!system) {
+        showStatusMessage('Select a system first.', 'warn');
+        return;
+    }
+    if (!Number.isInteger(state.selectedBodyIndex) || state.selectedBodyIndex < 0 || state.selectedBodyIndex >= system.planets.length) {
+        showStatusMessage('Select a planet to reroll.', 'warn');
+        return;
+    }
+
+    const targetPlanet = system.planets[state.selectedBodyIndex];
+    if (!isPlanetaryBody(targetPlanet)) {
+        showStatusMessage('Only planets can be rerolled.', 'warn');
+        return;
+    }
+
+    const config = getGenerationConfigSnapshot();
+    const generationProfile = getActiveGenerationProfile(config.generationProfile);
+    const hasOtherTerrestrial = system.planets.some((body, idx) =>
+        idx !== state.selectedBodyIndex && isPlanetaryBody(body) && body.type === 'Terrestrial'
+    );
+    const excludedTypes = hasOtherTerrestrial ? new Set(['Terrestrial']) : new Set();
+    const nextType = config.realisticPlanetWeights
+        ? pickPlanetTypeForStarClass(system.starClass, excludedTypes)
+        : pickRandomPlanetType(excludedTypes);
+    const nextEnvironment = generatePlanetEnvironment(nextType, rand);
+
+    targetPlanet.type = nextType;
+    targetPlanet.size = generatePlanetSize(nextType);
+    targetPlanet.atmosphere = nextEnvironment.atmosphere;
+    targetPlanet.temperature = nextEnvironment.temperature;
+    targetPlanet.features = [];
+    targetPlanet.pop = 0;
+    targetPlanet.habitable = false;
+
+    const planetaryBodies = system.planets.filter(isPlanetaryBody);
+    planetaryBodies.forEach(planet => {
+        planet.habitable = false;
+    });
+    assignSystemHabitability(planetaryBodies, generationProfile);
+    reconcilePlanetaryBodies(system);
+
+    const updatedIndex = system.planets.indexOf(targetPlanet);
+    state.selectedBodyIndex = updatedIndex >= 0 ? updatedIndex : null;
+    refreshHexInfo(selectedHexId, state.selectedBodyIndex);
+    reportSystemInvariantIssues(system, 'reroll-planet');
+    refreshSectorSnapshot(config, config.width, config.height);
+    showStatusMessage('Rerolled selected planet.', 'success');
+}
+
 export function rerollSelectedSystem() {
     const selectedHexId = state.selectedHexId;
     if (!selectedHexId || !state.sectors[selectedHexId]) {

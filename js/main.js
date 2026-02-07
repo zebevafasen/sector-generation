@@ -2,7 +2,7 @@ import { setDensityMode, setSizeMode, setupFieldInfoTooltips, setupStarClassTool
 import { randomizeSeed } from './core.js';
 import { EVENTS } from './events.js';
 import { state } from './config.js';
-import { addBodyToSelectedSystem, addSystemAtHex, deleteSelectedBody, deleteSelectedSystem, generateSector, rerollSelectedSystem, rerollUnpinnedSystems, setEditMode, toggleEditMode, togglePinSelectedSystem } from './generation.js';
+import { addBodyToSelectedSystem, addSystemAtHex, deleteSelectedBody, deleteSelectedSystem, generateSector, rerollSelectedPlanet, rerollSelectedSystem, rerollUnpinnedSystems, setEditMode, toggleEditMode, togglePinSelectedSystem } from './generation.js';
 import { autoSaveSectorState, exportSector, handleImportFile, loadSectorLocal, restoreCachedSectorState, saveSectorLocal, triggerImport } from './storage.js';
 import { setupPanZoom, updateInfoPanel, updateViewTransform } from './render.js';
 
@@ -170,6 +170,9 @@ function bindUiEvents() {
     window.addEventListener(EVENTS.REQUEST_DELETE_SELECTED_BODY, () => {
         if (!state.editMode) return;
         deleteSelectedBody();
+    });
+    window.addEventListener(EVENTS.REQUEST_REROLL_SELECTED_PLANET, () => {
+        rerollSelectedPlanet();
     });
     window.addEventListener(EVENTS.EDIT_MODE_CHANGED, () => {
         updateEditModeUi();

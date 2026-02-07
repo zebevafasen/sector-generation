@@ -49,6 +49,7 @@ function resetBodyDetailsPanel() {
     const type = document.getElementById('infoBodyDetailsType');
     const size = document.getElementById('infoBodyDetailsSize');
     const renameBodyBtn = document.getElementById('renameBodyBtn');
+    const rerollBodyBtn = document.getElementById('rerollBodyBtn');
     const quickDeleteBodyBtn = document.getElementById('quickDeleteBodyBtn');
     const editPlanetTypeRow = document.getElementById('editPlanetTypeRow');
     const editPlanetTypeSelect = document.getElementById('editPlanetTypeSelect');
@@ -78,6 +79,8 @@ function resetBodyDetailsPanel() {
         size.removeAttribute('data-field-value');
     }
     setButtonAction(renameBodyBtn, false);
+    setButtonAction(rerollBodyBtn, false);
+    if (rerollBodyBtn) rerollBodyBtn.classList.add('hidden');
     setButtonAction(quickDeleteBodyBtn, false);
     if (editPlanetTypeRow) editPlanetTypeRow.classList.add('hidden');
     if (editPlanetTypeSelect) editPlanetTypeSelect.onchange = null;
@@ -246,6 +249,7 @@ function getInfoPanelRefs() {
         stationSummaryLabel: document.getElementById('infoStationSummaryLabel'),
         renameSystemBtn: document.getElementById('renameSystemBtn'),
         renameBodyBtn: document.getElementById('renameBodyBtn'),
+        rerollBodyBtn: document.getElementById('rerollBodyBtn'),
         quickDeleteBodyBtn: document.getElementById('quickDeleteBodyBtn'),
         editStarClassRow: document.getElementById('editStarClassRow'),
         editStarClassSelect: document.getElementById('editStarClassSelect'),
@@ -654,6 +658,10 @@ function renderSystemBodyLists(refs, system, id, preselectedBodyIndex) {
                 selectedBodyEl = null;
                 state.selectedBodyIndex = null;
                 setButtonAction(refs.renameBodyBtn, false);
+                if (refs.rerollBodyBtn) {
+                    refs.rerollBodyBtn.classList.add('hidden');
+                    setButtonAction(refs.rerollBodyBtn, false);
+                }
                 setButtonAction(refs.quickDeleteBodyBtn, false);
                 resetBodyDetailsPanel();
                 return;
@@ -676,6 +684,16 @@ function renderSystemBodyLists(refs, system, id, preselectedBodyIndex) {
                     notifySectorDataChanged();
                     updateInfoPanel(id, bodyIndex);
                 });
+            }
+            if (refs.rerollBodyBtn) {
+                refs.rerollBodyBtn.classList.toggle('hidden', !isPlanetary);
+                if (isPlanetary) {
+                    setButtonAction(refs.rerollBodyBtn, true, () => {
+                        emitEvent(EVENTS.REQUEST_REROLL_SELECTED_PLANET);
+                    });
+                } else {
+                    setButtonAction(refs.rerollBodyBtn, false);
+                }
             }
             if (refs.editPlanetTypeRow && refs.editPlanetTypeSelect) {
                 const canEditPlanetType = state.editMode && isPlanetary;
@@ -795,6 +813,10 @@ function renderEmptyHexInfo(refs, id) {
     setButtonAction(refs.renameSystemBtn, false);
     disableStarEditControls(refs);
     setButtonAction(refs.renameBodyBtn, false);
+    if (refs.rerollBodyBtn) {
+        refs.rerollBodyBtn.classList.add('hidden');
+        setButtonAction(refs.rerollBodyBtn, false);
+    }
     setButtonAction(refs.quickDeleteBodyBtn, false);
     disablePlanetTypeControls(refs);
     disableInhabitControls(refs);
