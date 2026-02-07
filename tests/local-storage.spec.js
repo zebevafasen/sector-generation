@@ -26,3 +26,27 @@ test('local save/load restores previous sector state', async ({ page }) => {
   const afterSystems = Number((afterSystemsText.match(/(\d+)/) || [0, 0])[1]);
   expect(afterSystems).toBe(beforeSystems);
 });
+
+test('load local falls back when primary saved payload is invalid', async ({ page }) => {
+  await page.goto('/sector_generator.html');
+  await page.locator('#generateSectorBtn').click();
+
+  const snapshot = await page.evaluate(() => {
+    const raw = window.localStorage.getItem('hex-star-sector-gen:autosave');
+    if (!raw) return null;
+    return JSON.parse(raw);
+  });
+  expect(snapshot).toBeTruthy();
+
+  await page.evaluate((payload) => {
+    window.localStorage.setItem('hex-star-sector-gen:manual', '{invalid-json');
+    window.localStorage.setItem('hex-star-sector-gen', JSON.stringify(payload));
+  }, snapshot);
+
+  const before = await page.locator('#statusTotalSystems').innerText();
+  await page.locator('#loadSectorLocalBtn').click();
+  const after = await page.locator('#statusTotalSystems').innerText();
+
+  expect(after).toBe(before);
+  await expect(page.locator('#statusMessage')).toContainText('ignored invalid older save', { ignoreCase: true });
+});

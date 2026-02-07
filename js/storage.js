@@ -38,6 +38,32 @@ function updateStatusLabels(refs, totalHexes, totalSystems) {
     if (refs.statusTotalSystems) refs.statusTotalSystems.innerText = `${totalSystems} Systems`;
 }
 
+function readFirstValidPayloadFromStorage(keys) {
+    if (!(typeof window !== 'undefined' && window.localStorage)) {
+        return { payload: null, sourceKey: null, errors: [] };
+    }
+
+    const errors = [];
+    for (const key of keys) {
+        if (!key) continue;
+        const raw = window.localStorage.getItem(key);
+        if (!raw) continue;
+        try {
+            const parsed = JSON.parse(raw);
+            const validation = validateSectorPayload(parsed);
+            if (!validation.ok) {
+                errors.push(`${key}: ${validation.error}`);
+                continue;
+            }
+            return { payload: validation.payload, sourceKey: key, errors };
+        } catch {
+            errors.push(`${key}: unreadable JSON`);
+        }
+    }
+
+    return { payload: null, sourceKey: null, errors };
+}
+
 function getSafeSeedValue(seed) {
     return String(seed || 'sector').replace(/[^a-z0-9_-]/gi, '').toLowerCase() || 'sector';
 }
@@ -229,14 +255,13 @@ export function autoSaveSectorState() {
 export function restoreCachedSectorState() {
     if (!(typeof window !== 'undefined' && window.localStorage)) return false;
     try {
-        const raw = window.localStorage.getItem(AUTO_SAVE_STORAGE_KEY)
-            || window.localStorage.getItem(MANUAL_SAVE_STORAGE_KEY)
-            || window.localStorage.getItem(LOCAL_STORAGE_KEY);
-        if (!raw) return false;
-        const payload = JSON.parse(raw);
-        const validation = validateSectorPayload(payload);
-        if (!validation.ok) return false;
-        applySectorPayload(validation.payload);
+        const result = readFirstValidPayloadFromStorage([
+            AUTO_SAVE_STORAGE_KEY,
+            MANUAL_SAVE_STORAGE_KEY,
+            LOCAL_STORAGE_KEY
+        ]);
+        if (!result.payload) return false;
+        applySectorPayload(result.payload);
         return true;
     } catch (err) {
         console.error(err);
@@ -269,21 +294,18 @@ export function loadSectorLocal() {
         return;
     }
     try {
-        const raw = window.localStorage.getItem(MANUAL_SAVE_STORAGE_KEY)
-            || window.localStorage.getItem(LOCAL_STORAGE_KEY);
-        if (!raw) {
+        const result = readFirstValidPayloadFromStorage([
+            MANUAL_SAVE_STORAGE_KEY,
+            LOCAL_STORAGE_KEY
+        ]);
+        if (!result.payload) {
             showStatusMessage('No saved sector found.', 'warn');
             return;
         }
-        const payload = JSON.parse(raw);
-        const validation = validateSectorPayload(payload);
-        if (!validation.ok) {
-            showStatusMessage(`Saved sector is invalid: ${validation.error}`, 'error');
-            return;
-        }
-        applySectorPayload(validation.payload);
-        if (validation.warning) {
-            showStatusMessage(`Loaded saved sector with warnings: ${validation.warning}`, 'warn');
+        applySectorPayload(result.payload);
+        if (result.errors.length) {
+            const firstError = result.errors[0];
+            showStatusMessage(`Loaded saved sector (ignored invalid older save: ${firstError}).`, 'warn');
             return;
         }
         showStatusMessage('Loaded saved sector.', 'success');
