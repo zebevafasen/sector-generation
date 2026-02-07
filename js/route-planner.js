@@ -98,6 +98,23 @@ function reconstructPath(cameFrom, currentKey) {
     return path;
 }
 
+function makeNodeKey(hexId, emptyStreak) {
+    return `${hexId}|${emptyStreak}`;
+}
+
+function parseNodeKey(nodeKey) {
+    const [hexId, streakRaw] = String(nodeKey).split('|');
+    const emptyStreak = parseInt(streakRaw, 10);
+    return {
+        hexId,
+        emptyStreak: Number.isInteger(emptyStreak) ? emptyStreak : 0
+    };
+}
+
+function isSystemHex(hexId) {
+    return !!(state.sectors && state.sectors[hexId]);
+}
+
 function computePath(startHexId, endHexId, width, height) {
     if (!startHexId || !endHexId) return [];
     if (startHexId === endHexId) return [startHexId];
@@ -107,12 +124,15 @@ function computePath(startHexId, endHexId, width, height) {
     if (!start || !end) return [];
     if (!inBounds(start.col, start.row, width, height) || !inBounds(end.col, end.row, width, height)) return [];
 
-    const startKey = `${start.col}-${start.row}`;
-    const endKey = `${end.col}-${end.row}`;
+    const startHex = `${start.col}-${start.row}`;
+    const endHex = `${end.col}-${end.row}`;
+    const startKey = makeNodeKey(startHex, 0);
     const openSet = new Set([startKey]);
     const cameFrom = new Map();
     const gScore = new Map([[startKey, 0]]);
     const fScore = new Map([[startKey, hexDistance(start, end)]]);
+    let bestEndNode = null;
+    let bestEndScore = Number.POSITIVE_INFINITY;
 
     while (openSet.size) {
         let current = null;
@@ -126,14 +146,25 @@ function computePath(startHexId, endHexId, width, height) {
         });
 
         if (!current) break;
-        if (current === endKey) return reconstructPath(cameFrom, current);
+        const currentNode = parseNodeKey(current);
+        if (currentNode.hexId === endHex) {
+            const currentScore = gScore.get(current) ?? Number.POSITIVE_INFINITY;
+            if (currentScore < bestEndScore) {
+                bestEndNode = current;
+                bestEndScore = currentScore;
+            }
+        }
 
         openSet.delete(current);
-        const currentParsed = parseHexId(current);
+        const currentParsed = parseHexId(currentNode.hexId);
         if (!currentParsed) continue;
 
         getNeighbors(currentParsed.col, currentParsed.row, width, height).forEach((neighbor) => {
-            const neighborKey = `${neighbor.col}-${neighbor.row}`;
+            const neighborHexId = `${neighbor.col}-${neighbor.row}`;
+            const nextStreak = isSystemHex(neighborHexId) ? 0 : currentNode.emptyStreak + 1;
+            if (nextStreak > 2) return;
+
+            const neighborKey = makeNodeKey(neighborHexId, nextStreak);
             const tentative = (gScore.get(current) ?? Number.POSITIVE_INFINITY) + 1;
             if (tentative < (gScore.get(neighborKey) ?? Number.POSITIVE_INFINITY)) {
                 cameFrom.set(neighborKey, current);
@@ -144,7 +175,8 @@ function computePath(startHexId, endHexId, width, height) {
         });
     }
 
-    return [];
+    if (!bestEndNode) return [];
+    return reconstructPath(cameFrom, bestEndNode).map((nodeKey) => parseNodeKey(nodeKey).hexId);
 }
 
 function updateRouteLabels(refs) {
@@ -186,7 +218,11 @@ function recalculateRoute(refs, options = {}) {
     route.pathHexIds = computePath(route.startHexId, route.endHexId, width, height);
     route.hops = route.pathHexIds.length > 1 ? route.pathHexIds.length - 1 : 0;
     updateRouteLabels(refs);
-    showStatusMessage(`Route ${route.startHexId} -> ${route.endHexId}: ${route.hops} hops`, 'success', { persist: true });
+    if (!route.pathHexIds.length) {
+        showStatusMessage(`No valid route ${route.startHexId} -> ${route.endHexId} (max 2 empty hexes before a system).`, 'warn', { persist: true });
+    } else {
+        showStatusMessage(`Route ${route.startHexId} -> ${route.endHexId}: ${route.hops} hops`, 'success', { persist: true });
+    }
     if (shouldRedraw) redrawRoute();
 }
 
