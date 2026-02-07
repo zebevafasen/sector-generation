@@ -1,9 +1,4 @@
-import { isPlanetaryBodyType as isPlanetaryType } from './body-classification.js';
 import { pickWeighted } from './utils.js';
-
-export function isPlanetaryBodyType(type) {
-    return isPlanetaryType(type);
-}
 
 export function generatePlanetEnvironment(type, randomFn = Math.random) {
     const byType = {

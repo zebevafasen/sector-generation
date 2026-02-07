@@ -18,10 +18,6 @@ export const STAR_VISUALS = {
     default: { core: '#ffffff', mid: '#ffe5b4', halo: '#fff5d5' }
 };
 
-export const STAR_COLORS = Object.fromEntries(
-    Object.entries(STAR_VISUALS).map(([key, palette]) => [key, palette.core])
-);
-
 export const STAR_CLASS_INFO = {
     O: {
         name: 'O-type (Blue Hypergiant)',

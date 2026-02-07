@@ -119,12 +119,3 @@ export function setPrimaryStarClass(system, nextClass, nextAge = null) {
     ensureSystemStarFields(system);
 }
 
-export function summarizeSystemStarClasses(system) {
-    const stars = getSystemStars(system);
-    if (!stars.length) return 'Class Unknown';
-    const primary = stars[0];
-    const companions = stars.slice(1);
-    if (!companions.length) return `Class ${primary.class} Star`;
-    const companionClasses = companions.map(star => star.class).join(' + ');
-    return `Class ${primary.class} + ${companionClasses}`;
-}

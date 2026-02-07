@@ -5,7 +5,7 @@ import {
     HABITABLE_WORLD_SUFFIXES,
     STAR_CLASS_PLANET_WEIGHTS
 } from './generation-data.js';
-import { isPlanetaryBody as isPlanetaryBodyShared } from './body-classification.js';
+import { isPlanetaryBody } from './body-classification.js';
 import { pickWeighted, romanize, shuffleArray } from './utils.js';
 
 function pickWeightedType(weights, rand, excludedTypes = new Set()) {
@@ -125,10 +125,6 @@ export function assignSystemHabitability(planets, profile, rand) {
             extraHabitableCount++;
         }
     });
-}
-
-export function isPlanetaryBody(body) {
-    return isPlanetaryBodyShared(body);
 }
 
 export function applyPlanetaryOrderAndNames(systemName, bodies, rand) {
