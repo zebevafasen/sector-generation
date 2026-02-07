@@ -12,7 +12,7 @@ import {
 } from './generation-data.js';
 import { EVENTS, emitEvent } from './events.js';
 import { reportSystemInvariantIssues } from './invariants.js';
-import { generateStarAge, generateSeedString, isAutoSeedEnabled, rand, setSeed, showStatusMessage } from './core.js';
+import { generateStarAge, generateSeedString, isAutoSeedEnabled, rand, setRandomStream, setSeed, showStatusMessage } from './core.js';
 import { isArtificialBodyType, isBeltOrFieldBodyType } from './body-classification.js';
 import { generatePlanetEnvironment } from './planet-environment.js';
 import { refreshSystemPlanetPopulation } from './planet-population.js';
@@ -211,6 +211,23 @@ function setAndUseNewSeed(updateInput = true) {
     return seed;
 }
 
+function composeContentSeed(layoutSeed, iteration) {
+    return `${layoutSeed}::content:${iteration}`;
+}
+
+function sortHexIds(hexIds) {
+    return [...hexIds].sort((a, b) => {
+        const [acRaw, arRaw] = String(a).split('-');
+        const [bcRaw, brRaw] = String(b).split('-');
+        const ac = parseInt(acRaw, 10);
+        const ar = parseInt(arRaw, 10);
+        const bc = parseInt(bcRaw, 10);
+        const br = parseInt(brRaw, 10);
+        if (ac !== bc) return ac - bc;
+        return ar - br;
+    });
+}
+
 function buildSectorFromConfig(config, fixedSystems = {}) {
     const normalized = normalizeGenerationConfig(config);
     const width = normalized.width;
@@ -294,6 +311,8 @@ export function generateSector() {
     }
 
     const config = normalizeGenerationConfig(readGenerationConfigFromUi());
+    state.layoutSeed = seedUsed;
+    state.rerollIteration = 0;
     const built = buildSectorFromConfig(config, {});
 
     state.sectors = built.sectors;
@@ -691,17 +710,42 @@ export function rerollUnpinnedSystems() {
         }
     });
 
-    const seedUsed = setAndUseNewSeed(false);
-    const built = buildSectorFromConfig(config, fixedSystems);
+    const layoutSeed = state.layoutSeed || state.currentSeed || setAndUseNewSeed(false);
+    const nextIteration = (parseInt(state.rerollIteration, 10) || 0) + 1;
+    const contentSeed = composeContentSeed(layoutSeed, nextIteration);
+    setRandomStream(contentSeed);
+
+    const nextSectors = {};
+    Object.entries(fixedSystems).forEach(([hexId, system]) => {
+        nextSectors[hexId] = deepClone(system);
+    });
+    const usedNames = new Set(
+        Object.values(nextSectors)
+            .map(system => (system && system.name ? system.name : null))
+            .filter(Boolean)
+    );
+    const targetHexIds = sortHexIds(Object.keys(state.sectors || {}));
+    targetHexIds.forEach((hexId) => {
+        if (nextSectors[hexId]) return;
+        nextSectors[hexId] = generateSystemData(config, {
+            coordId: hexId,
+            usedNames,
+            sectorsByCoord: nextSectors
+        });
+        reportSystemInvariantIssues(nextSectors[hexId], 'reroll-unpinned');
+    });
     const selectedHexId = state.selectedHexId;
 
-    state.sectors = built.sectors;
-    sanitizePinnedHexes(built.width, built.height);
+    state.layoutSeed = layoutSeed;
+    state.rerollIteration = nextIteration;
+    state.currentSeed = layoutSeed;
+    state.sectors = nextSectors;
+    sanitizePinnedHexes(width, height);
 
-    redrawGridAndReselect(built.width, built.height, { selectedHexId });
-    updateSectorStatus(built.totalHexes, built.systemCount);
-    refreshSectorSnapshot(config, built.width, built.height, 'Reroll Unpinned');
-    showStatusMessage(`Rerolled unpinned systems with seed ${seedUsed}.`, 'success');
+    redrawGridAndReselect(width, height, { selectedHexId });
+    updateSectorStatus(width * height, Object.keys(nextSectors).length);
+    refreshSectorSnapshot(config, width, height, 'Reroll Unpinned');
+    showStatusMessage(`Rerolled unpinned systems (layout seed ${layoutSeed}, pass ${nextIteration}).`, 'success');
 }
 
 export function createSectorRecord(options = {}) {

@@ -127,6 +127,8 @@ export const state = {
     selectedBodyIndex: null,
     selectedSystemData: null,
     currentSeed: '',
+    layoutSeed: '',
+    rerollIteration: 0,
     seededRandomFn: () => Math.random(),
     lastSectorSnapshot: null,
     sectorConfigSnapshot: null,
