@@ -1,12 +1,33 @@
 ﻿import { GRID_PRESETS, state } from './config.js';
 import { hideStarClassInfo, showStarClassInfo } from './core.js';
 
+const controlsRefsCache = {};
+
+function getControlsRefs() {
+    if (!controlsRefsCache.modePresetBtn) {
+        controlsRefsCache.modePresetBtn = document.getElementById('modePresetBtn');
+        controlsRefsCache.modeManualBtn = document.getElementById('modeManualBtn');
+        controlsRefsCache.densityPresetContainer = document.getElementById('densityPresetContainer');
+        controlsRefsCache.densityManualContainer = document.getElementById('densityManualContainer');
+        controlsRefsCache.modeSizePresetBtn = document.getElementById('modeSizePresetBtn');
+        controlsRefsCache.modeSizeCustomBtn = document.getElementById('modeSizeCustomBtn');
+        controlsRefsCache.sizePresetContainer = document.getElementById('sizePresetContainer');
+        controlsRefsCache.sizeCustomContainer = document.getElementById('sizeCustomContainer');
+        controlsRefsCache.sizePreset = document.getElementById('sizePreset');
+        controlsRefsCache.gridWidth = document.getElementById('gridWidth');
+        controlsRefsCache.gridHeight = document.getElementById('gridHeight');
+        controlsRefsCache.infoStarClass = document.getElementById('infoStarClass');
+    }
+    return controlsRefsCache;
+}
+
 export function setDensityMode(mode) {
     state.densityMode = mode;
-    const btnPreset = document.getElementById('modePresetBtn');
-    const btnManual = document.getElementById('modeManualBtn');
-    const divPreset = document.getElementById('densityPresetContainer');
-    const divManual = document.getElementById('densityManualContainer');
+    const refs = getControlsRefs();
+    const btnPreset = refs.modePresetBtn;
+    const btnManual = refs.modeManualBtn;
+    const divPreset = refs.densityPresetContainer;
+    const divManual = refs.densityManualContainer;
 
     if (mode === 'preset') {
         btnPreset.className = 'flex-1 py-1 text-xs rounded bg-sky-600 text-white shadow transition-all';
@@ -23,10 +44,11 @@ export function setDensityMode(mode) {
 
 export function setSizeMode(mode) {
     state.sizeMode = mode;
-    const btnPreset = document.getElementById('modeSizePresetBtn');
-    const btnCustom = document.getElementById('modeSizeCustomBtn');
-    const presetContainer = document.getElementById('sizePresetContainer');
-    const customContainer = document.getElementById('sizeCustomContainer');
+    const refs = getControlsRefs();
+    const btnPreset = refs.modeSizePresetBtn;
+    const btnCustom = refs.modeSizeCustomBtn;
+    const presetContainer = refs.sizePresetContainer;
+    const customContainer = refs.sizeCustomContainer;
 
     if (mode === 'preset') {
         btnPreset.className = 'flex-1 py-1 text-xs rounded bg-sky-600 text-white shadow transition-all';
@@ -42,23 +64,24 @@ export function setSizeMode(mode) {
 }
 
 export function getSelectedGridSize() {
+    const refs = getControlsRefs();
     if (state.sizeMode === 'preset') {
-        const select = document.getElementById('sizePreset');
-        const key = select ? select.value : 'standard';
+        const key = refs.sizePreset ? refs.sizePreset.value : 'standard';
         const preset = GRID_PRESETS[key] || GRID_PRESETS.standard;
         return { width: preset.width, height: preset.height, key };
     }
-    let w = parseInt(document.getElementById('gridWidth').value, 10);
-    let h = parseInt(document.getElementById('gridHeight').value, 10);
+    let w = parseInt(refs.gridWidth.value, 10);
+    let h = parseInt(refs.gridHeight.value, 10);
     if (w < 1) w = 1;
     if (h < 1) h = 1;
-    document.getElementById('gridWidth').value = w;
-    document.getElementById('gridHeight').value = h;
+    refs.gridWidth.value = w;
+    refs.gridHeight.value = h;
     return { width: w, height: h, key: 'custom' };
 }
 
 export function setupStarClassTooltip() {
-    const starClassEl = document.getElementById('infoStarClass');
+    const refs = getControlsRefs();
+    const starClassEl = refs.infoStarClass;
     if (!starClassEl) return;
 
     const handleEnter = (e) => showStarClassInfo(e);
