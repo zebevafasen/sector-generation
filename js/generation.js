@@ -737,12 +737,22 @@ export function rerollSelectedPlanet() {
     targetPlanet.temperature = nextEnvironment.temperature;
     targetPlanet.features = [];
     targetPlanet.pop = 0;
-    targetPlanet.habitable = wasHabitable;
+    targetPlanet.habitable = wasHabitable && isHabitableCandidateType(nextType);
 
     const planetaryBodies = system.planets.filter(isPlanetaryBody);
     const hasAnyHabitable = planetaryBodies.some(planet => !!planet.habitable);
     if (!hasAnyHabitable) {
-        targetPlanet.habitable = true;
+        const fallbackCandidate = planetaryBodies.find(planet => isHabitableCandidateType(planet.type));
+        if (fallbackCandidate) {
+            fallbackCandidate.habitable = true;
+        } else {
+            targetPlanet.type = 'Terrestrial';
+            targetPlanet.size = generatePlanetSize('Terrestrial');
+            const fallbackEnvironment = generatePlanetEnvironment('Terrestrial', rand);
+            targetPlanet.atmosphere = fallbackEnvironment.atmosphere;
+            targetPlanet.temperature = fallbackEnvironment.temperature;
+            targetPlanet.habitable = true;
+        }
     }
     reconcilePlanetaryBodies(system);
 
