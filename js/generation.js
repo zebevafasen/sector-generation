@@ -25,8 +25,9 @@ const STAR_CLASS_PLANET_WEIGHTS = {
     default: { 'Gas Giant': 0.18, Terrestrial: 0.22, Oceanic: 0.14, Volcanic: 0.11, Desert: 0.15, Barren: 0.12, Arctic: 0.08 }
 };
 
-function pickWeightedType(weights) {
+function pickWeightedType(weights, excludedTypes = new Set()) {
     const candidates = PLANET_TYPES
+        .filter(type => !excludedTypes.has(type))
         .map(type => ({ type, weight: weights[type] || 0 }))
         .filter(item => item.weight > 0);
 
@@ -44,9 +45,17 @@ function pickWeightedType(weights) {
     return candidates[candidates.length - 1].type;
 }
 
-function pickPlanetTypeForStarClass(starClass) {
+function pickPlanetTypeForStarClass(starClass, excludedTypes = new Set()) {
     const weights = STAR_CLASS_PLANET_WEIGHTS[starClass] || STAR_CLASS_PLANET_WEIGHTS.default;
-    return pickWeightedType(weights);
+    return pickWeightedType(weights, excludedTypes);
+}
+
+function pickRandomPlanetType(excludedTypes = new Set()) {
+    const candidates = PLANET_TYPES.filter(type => !excludedTypes.has(type));
+    if (!candidates.length) {
+        return PLANET_TYPES[Math.floor(rand() * PLANET_TYPES.length)];
+    }
+    return candidates[Math.floor(rand() * candidates.length)];
 }
 
 export function generateSector() {
@@ -126,13 +135,16 @@ export function generateSystemData() {
     const planetCount = Math.floor(rand() * 10) + 1;
     const planets = [];
     let population = 0;
+    let hasTerrestrial = false;
     const starAge = generateStarAge(sClass);
 
     const useWeightedTypes = isRealisticPlanetWeightingEnabled();
     for (let i = 0; i < planetCount; i++) {
+        const excludedTypes = hasTerrestrial ? new Set(['Terrestrial']) : new Set();
         const type = useWeightedTypes
-            ? pickPlanetTypeForStarClass(sClass)
-            : PLANET_TYPES[Math.floor(rand() * PLANET_TYPES.length)];
+            ? pickPlanetTypeForStarClass(sClass, excludedTypes)
+            : pickRandomPlanetType(excludedTypes);
+        if (type === 'Terrestrial') hasTerrestrial = true;
         let pop = 0;
         const features = [];
 
