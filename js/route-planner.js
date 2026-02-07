@@ -5,8 +5,6 @@ import { redrawGridAndReselect } from './ui-sync.js';
 
 function getRouteRefs() {
     return {
-        panelToggleBtn: document.getElementById('routeToggleBtn'),
-        panelContent: document.getElementById('routePanelContent'),
         pickStartBtn: document.getElementById('routePickStartBtn'),
         pickEndBtn: document.getElementById('routePickEndBtn'),
         swapBtn: document.getElementById('routeSwapBtn'),
@@ -258,16 +256,6 @@ function sanitizeRouteEndpoints(refs) {
 
 export function setupRoutePlanner() {
     const refs = getRouteRefs();
-    if (!refs.panelContent) return;
-
-    refs.panelToggleBtn?.addEventListener('click', () => {
-        const isCollapsed = refs.panelContent.classList.toggle('hidden');
-        if (refs.panelToggleBtn) {
-            refs.panelToggleBtn.innerText = isCollapsed ? '+' : '-';
-            refs.panelToggleBtn.title = isCollapsed ? 'Expand route panel' : 'Collapse route panel';
-            refs.panelToggleBtn.setAttribute('aria-label', isCollapsed ? 'Expand route panel' : 'Collapse route panel');
-        }
-    });
 
     refs.pickStartBtn?.addEventListener('click', () => {
         state.routePlanner.pickMode = 'start';
