@@ -1,12 +1,14 @@
 import { getDefaultPlanetEnvironment } from './planet-environment.js';
 import { isPlanetaryBodyType, normalizeBodyType } from './body-classification.js';
 import { formatPopulationBillions } from './planet-population.js';
+import { getBodyIconMarkup } from './body-icons.js';
 import { escapeHtml, setButtonAction, setInhabitButtonStyle } from './info-panel-ui.js';
 
 export function resetBodyDetailsPanel() {
     const panel = document.getElementById('infoBodyDetailsPanel');
     const empty = document.getElementById('infoBodyDetailsEmpty');
     const content = document.getElementById('infoBodyDetailsContent');
+    const icon = document.getElementById('infoBodyDetailsIcon');
     const name = document.getElementById('infoBodyDetailsName');
     const type = document.getElementById('infoBodyDetailsType');
     const size = document.getElementById('infoBodyDetailsSize');
@@ -32,6 +34,7 @@ export function resetBodyDetailsPanel() {
         empty.innerText = 'Select a planet, belt, or station to inspect.';
     }
     if (content) content.classList.add('hidden');
+    if (icon) icon.innerHTML = '';
     if (name) name.innerText = 'Body';
     if (type) {
         type.innerText = 'Type';
@@ -93,6 +96,7 @@ export function showBodyDetailsPanel(body, anchorEl) {
     const panel = document.getElementById('infoBodyDetailsPanel');
     const empty = document.getElementById('infoBodyDetailsEmpty');
     const content = document.getElementById('infoBodyDetailsContent');
+    const icon = document.getElementById('infoBodyDetailsIcon');
     const name = document.getElementById('infoBodyDetailsName');
     const type = document.getElementById('infoBodyDetailsType');
     const size = document.getElementById('infoBodyDetailsSize');
@@ -109,6 +113,7 @@ export function showBodyDetailsPanel(body, anchorEl) {
     if (panel) panel.classList.remove('hidden');
     if (empty) empty.classList.add('hidden');
     if (content) content.classList.remove('hidden');
+    if (icon) icon.innerHTML = getBodyIconMarkup(normalizedType);
     if (name) name.innerText = body.name;
     if (type) {
         type.innerText = normalizedType;

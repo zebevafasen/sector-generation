@@ -402,7 +402,10 @@
         <div id="infoBodyDetailsEmpty" class="text-xs text-slate-500 italic">Select a planet, belt, or station to inspect.</div>
         <div id="infoBodyDetailsContent" class="hidden">
             <div class="flex justify-between items-baseline gap-3">
-                <h4 id="infoBodyDetailsName" class="text-sm font-semibold text-sky-200">Body</h4>
+                <h4 class="text-sm font-semibold text-sky-200 inline-flex items-center gap-2">
+                    <span id="infoBodyDetailsIcon" aria-hidden="true"></span>
+                    <span id="infoBodyDetailsName">Body</span>
+                </h4>
                 <div class="text-right">
                     <span id="infoBodyDetailsType" class="block text-[11px] text-slate-400">Type</span>
                     <span id="infoBodyDetailsSize" class="hidden text-[11px] text-slate-500 cursor-help underline decoration-dotted decoration-slate-500/70 underline-offset-2" data-field-tooltip="size">--</span>
