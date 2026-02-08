@@ -116,6 +116,7 @@ export function createStorageApplyService(deps) {
             generationProfile: nextPayload.generationProfile || 'high_adventure',
             starDistribution: nextPayload.starDistribution === 'standard' ? 'standard' : 'clusters',
             realisticPlanetWeights: !!nextPayload.realisticPlanetWeights,
+            generationRolloutStage: 'full_release',
             clusterV2Enabled: true,
             crossSectorContextEnabled: true,
             centerBiasStrength: 1.35,

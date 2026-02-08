@@ -1,4 +1,5 @@
 import { normalizeDensityPresetKey } from './generation-data.js';
+import { normalizeGenerationRolloutStage } from './generation-rollout.js';
 import { JUMP_GATE_POI_CATEGORY, normalizeJumpGateState, normalizePoiCategory } from './jump-gate-model.js';
 import { MAX_GRID_DIMENSION, MIN_GRID_DIMENSION } from './config.js';
 import { HOME_SECTOR_KEY, isSectorKey } from './sector-address.js';
@@ -270,6 +271,7 @@ function sanitizeSectorConfigSnapshot(value) {
     return {
         ...value,
         starDistribution: value.starDistribution === 'standard' ? 'standard' : 'clusters',
+        generationRolloutStage: normalizeGenerationRolloutStage(value.generationRolloutStage, 'full_release'),
         clusterV2Enabled: value.clusterV2Enabled ?? true,
         crossSectorContextEnabled: value.crossSectorContextEnabled ?? true,
         centerBiasStrength: Math.max(0, toFinite(value.centerBiasStrength, 1.35)),

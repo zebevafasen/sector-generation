@@ -1,3 +1,5 @@
+import { normalizeGenerationRolloutStage } from './generation-rollout.js';
+
 const DEFAULT_STAR_CLASS_PLANET_WEIGHTS = {
     O: { 'Gas Giant': 0.28, Terrestrial: 0.07, Oceanic: 0.02, Volcanic: 0.24, Desert: 0.17, Barren: 0.20, Arctic: 0.02 },
     B: { 'Gas Giant': 0.26, Terrestrial: 0.09, Oceanic: 0.03, Volcanic: 0.20, Desert: 0.17, Barren: 0.20, Arctic: 0.05 },
@@ -214,6 +216,7 @@ const DEFAULT_STAR_COUNT_THRESHOLDS_BY_PROFILE = {
 };
 
 const DEFAULT_GENERATION_SETTINGS = {
+    generationRolloutStage: 'full_release',
     clusterV2Enabled: true,
     crossSectorContextEnabled: true,
     centerBiasStrength: 1.35,
@@ -268,6 +271,7 @@ function sanitizeGenerationSettings(value = {}) {
         : {};
 
     return {
+        generationRolloutStage: normalizeGenerationRolloutStage(source.generationRolloutStage, base.generationRolloutStage),
         clusterV2Enabled: source.clusterV2Enabled ?? base.clusterV2Enabled,
         crossSectorContextEnabled: source.crossSectorContextEnabled ?? base.crossSectorContextEnabled,
         centerBiasStrength: Math.max(0, toFiniteNumber(source.centerBiasStrength, base.centerBiasStrength)),
@@ -335,6 +339,7 @@ export function hydrateGenerationData(loadedData = {}) {
     STAR_CLASS_ROLL_TABLE = loadedData.starClassRollTable || DEFAULT_STAR_CLASS_ROLL_TABLE;
     STAR_COUNT_THRESHOLDS_BY_PROFILE = loadedData.starCountThresholdsByProfile || DEFAULT_STAR_COUNT_THRESHOLDS_BY_PROFILE;
     const legacySettings = {
+        generationRolloutStage: loadedData.generationRolloutStage,
         clusterV2Enabled: loadedData.clusterV2Enabled,
         crossSectorContextEnabled: loadedData.crossSectorContextEnabled,
         centerBiasStrength: loadedData.centerBiasStrength,

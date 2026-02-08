@@ -88,9 +88,11 @@ This document breaks the procedural generation redesign into phased, step-by-ste
 - Removed: no functional removals in this phase.
 
 ### Phase 10 - Completed
-- Added: explicit feature-flag handling (`clusterV2Enabled`, `crossSectorContextEnabled`) in normalized settings.
-- Changed: rollout path is currently configured to run with modern defaults and built-in legacy fallback.
-- Removed: legacy path not removed yet by design (rollback window preserved).
+- Added: staged rollout controller (`js/generation-rollout.js`) with explicit phases: `flags_off`, `home_v2`, `neighbor_context`, `full_release`, and `manual`.
+- Added: `generationRolloutStage` to generation settings/schema hydration, config normalization, and payload sanitization fallbacks.
+- Changed: orchestration now resolves effective per-sector flags from rollout stage before enabling Cluster V2 or cross-sector context.
+- Changed: performance diagnostics now include active rollout stage and effective feature-state booleans.
+- Removed: direct orchestration coupling to raw `clusterV2Enabled` / `crossSectorContextEnabled` toggles (now funneled through rollout resolver).
 
 ### Phase 11 - Completed
 - Added: this per-phase changelog and completed status tracking in `GENERATION_SETTINGS_TODO.md`.

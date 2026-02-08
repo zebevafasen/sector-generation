@@ -5,6 +5,7 @@ import {
     getDensityRatioForPreset,
     normalizeDensityPresetKey
 } from './generation-data.js';
+import { normalizeGenerationRolloutStage } from './generation-rollout.js';
 import { rand } from './core.js';
 import { readGenerationConfigFromUi } from './sector-config.js';
 
@@ -67,6 +68,10 @@ export function normalizeGenerationConfig(config) {
         generationProfile,
         starDistribution,
         realisticPlanetWeights: !!source.realisticPlanetWeights,
+        generationRolloutStage: normalizeGenerationRolloutStage(
+            source.generationRolloutStage,
+            normalizeGenerationRolloutStage(GENERATION_SETTINGS.generationRolloutStage)
+        ),
         clusterV2Enabled: source.clusterV2Enabled ?? GENERATION_SETTINGS.clusterV2Enabled,
         crossSectorContextEnabled: source.crossSectorContextEnabled ?? GENERATION_SETTINGS.crossSectorContextEnabled,
         centerBiasStrength: Math.max(0, toFiniteNumber(source.centerBiasStrength, GENERATION_SETTINGS.centerBiasStrength)),

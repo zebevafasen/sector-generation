@@ -1,4 +1,5 @@
 import { rebuildGenerationContextSummaries } from './generation-context-summary.js';
+import { resolveGenerationRolloutFlags } from './generation-rollout.js';
 
 export function refreshSectorSnapshotAction(config, width, height, changeLabel = 'Update Sector', deps) {
     const {
@@ -125,9 +126,10 @@ export function buildSectorFromConfigAction(config, fixedSystems = {}, options =
     const candidateCoords = allCoords.filter(hexId => !fixedHexIds.has(hexId));
     const sectorKey = options.sectorKey || homeSectorKey;
     const isHomeSector = sectorKey === homeSectorKey;
+    const rollout = resolveGenerationRolloutFlags(normalized, { isHomeSector });
     const layoutSeed = options.layoutSeed || state.layoutSeed || state.currentSeed || '';
     let generationContext = null;
-    if (normalized.crossSectorContextEnabled) {
+    if (rollout.crossSectorContextEnabled) {
         try {
             generationContext = createGenerationContext(layoutSeed, options.knownSectorRecords || {}, normalized);
         } catch (error) {
@@ -156,7 +158,7 @@ export function buildSectorFromConfigAction(config, fixedSystems = {}, options =
     const systemsToGenerate = Math.max(0, systemCount - validFixedEntries.length);
     let generatedCoords = [];
     if (normalized.starDistribution === 'clusters') {
-        if (normalized.clusterV2Enabled) {
+        if (rollout.clusterV2Enabled) {
             try {
                 generatedCoords = selectClusteredSystemCoordsV2(candidateCoords, systemsToGenerate, rand, {
                     width,
@@ -246,8 +248,9 @@ export function buildSectorFromConfigAction(config, fixedSystems = {}, options =
             systemsGenerated: Object.keys(nextSectors).length,
             poiGenerated: Object.keys(deepSpacePois || {}).length,
             clusterMode: normalized.starDistribution,
-            clusterV2Enabled: !!normalized.clusterV2Enabled,
-            contextEnabled: !!normalized.crossSectorContextEnabled,
+            rolloutStage: rollout.stage,
+            clusterV2Enabled: !!rollout.clusterV2Enabled,
+            contextEnabled: !!rollout.crossSectorContextEnabled,
             elapsedMs: Number(elapsed.toFixed(2))
         });
     }

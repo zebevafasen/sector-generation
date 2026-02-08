@@ -182,6 +182,7 @@
     "high_adventure": { "triMaxExclusive": 0.015, "binaryMaxExclusive": 0.115 }
   },
   "generationSettings": {
+    "generationRolloutStage": "full_release",
     "clusterV2Enabled": true,
     "crossSectorContextEnabled": true,
     "centerBiasStrength": 1.35,

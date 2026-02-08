@@ -184,6 +184,58 @@ test.describe('pure logic modules', () => {
     expect(result.registryKeys).toEqual(['goodPair']);
   });
 
+  test('generation rollout stages resolve effective cluster/context flags per sector', async ({ page }) => {
+    await page.goto('/sector_generator.html');
+
+    const result = await page.evaluate(async () => {
+      const rollout = await import('/js/generation-rollout.js');
+      return {
+        flagsOff: rollout.resolveGenerationRolloutFlags(
+          { generationRolloutStage: 'flags_off', clusterV2Enabled: true, crossSectorContextEnabled: true },
+          { isHomeSector: true }
+        ),
+        homeV2Home: rollout.resolveGenerationRolloutFlags(
+          { generationRolloutStage: 'home_v2' },
+          { isHomeSector: true }
+        ),
+        homeV2Neighbor: rollout.resolveGenerationRolloutFlags(
+          { generationRolloutStage: 'home_v2' },
+          { isHomeSector: false }
+        ),
+        neighborContextHome: rollout.resolveGenerationRolloutFlags(
+          { generationRolloutStage: 'neighbor_context' },
+          { isHomeSector: true }
+        ),
+        neighborContextNeighbor: rollout.resolveGenerationRolloutFlags(
+          { generationRolloutStage: 'neighbor_context' },
+          { isHomeSector: false }
+        ),
+        manual: rollout.resolveGenerationRolloutFlags(
+          { generationRolloutStage: 'manual', clusterV2Enabled: false, crossSectorContextEnabled: true },
+          { isHomeSector: true }
+        ),
+        fallbackStage: rollout.normalizeGenerationRolloutStage('not-a-stage')
+      };
+    });
+
+    expect(result.flagsOff.clusterV2Enabled).toBeFalsy();
+    expect(result.flagsOff.crossSectorContextEnabled).toBeFalsy();
+
+    expect(result.homeV2Home.clusterV2Enabled).toBeTruthy();
+    expect(result.homeV2Home.crossSectorContextEnabled).toBeFalsy();
+    expect(result.homeV2Neighbor.clusterV2Enabled).toBeFalsy();
+    expect(result.homeV2Neighbor.crossSectorContextEnabled).toBeFalsy();
+
+    expect(result.neighborContextHome.clusterV2Enabled).toBeTruthy();
+    expect(result.neighborContextHome.crossSectorContextEnabled).toBeFalsy();
+    expect(result.neighborContextNeighbor.clusterV2Enabled).toBeTruthy();
+    expect(result.neighborContextNeighbor.crossSectorContextEnabled).toBeTruthy();
+
+    expect(result.manual.clusterV2Enabled).toBeFalsy();
+    expect(result.manual.crossSectorContextEnabled).toBeTruthy();
+    expect(result.fallbackStage).toBe('full_release');
+  });
+
   test('jump-gate generation enforces max-one-per-sector and edge-only placement', async ({ page }) => {
     await page.goto('/sector_generator.html');
 
