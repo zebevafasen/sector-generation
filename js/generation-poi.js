@@ -123,6 +123,43 @@ function isJumpGateTemplate(template) {
     return template.jumpGateState === 'active' || template.jumpGateState === 'inactive';
 }
 
+function buildPoiFromTemplate(template, randomFn) {
+    const serial = Math.floor(randomFn() * 900) + 100;
+    return {
+        kind: template.kind,
+        poiCategory: isJumpGateTemplate(template)
+            ? JUMP_GATE_POI_CATEGORY
+            : normalizePoiCategory(template.poiCategory),
+        name: `${template.name} ${serial}`,
+        summary: template.summary,
+        risk: template.risk,
+        rewardHint: template.rewardHint,
+        isRefuelingStation: !!template.isRefuelingStation,
+        jumpGateState: template.jumpGateState || null,
+        jumpGatePairId: null,
+        jumpGateLink: null,
+        jumpGateMeta: template.jumpGateMeta && typeof template.jumpGateMeta === 'object'
+            ? JSON.parse(JSON.stringify(template.jumpGateMeta))
+            : null
+    };
+}
+
+function pickWeightedTemplate(weightedTemplates, randomFn) {
+    const totalWeight = weightedTemplates.reduce((sum, entry) => sum + entry.weight, 0);
+    if (totalWeight <= 0) return weightedTemplates.length ? weightedTemplates[weightedTemplates.length - 1].template : null;
+    let roll = randomFn() * totalWeight;
+    let template = weightedTemplates[weightedTemplates.length - 1].template;
+    for (let i = 0; i < weightedTemplates.length; i++) {
+        const candidate = weightedTemplates[i];
+        roll -= candidate.weight;
+        if (roll <= 0) {
+            template = candidate.template;
+            break;
+        }
+    }
+    return template;
+}
+
 export function createDeepSpacePoi(options = {}) {
     const randomFn = options.randomFn || Math.random;
     const edgeDistance = Number.isFinite(options.edgeDistance) ? options.edgeDistance : Number.POSITIVE_INFINITY;
@@ -148,35 +185,35 @@ export function createDeepSpacePoi(options = {}) {
         };
     });
 
-    const totalWeight = weightedTemplates.reduce((sum, entry) => sum + entry.weight, 0);
-    let roll = randomFn() * totalWeight;
-    let template = weightedTemplates[weightedTemplates.length - 1].template;
-    for (let i = 0; i < weightedTemplates.length; i++) {
-        const candidate = weightedTemplates[i];
-        roll -= candidate.weight;
-        if (roll <= 0) {
-            template = candidate.template;
-            break;
-        }
-    }
-    const serial = Math.floor(randomFn() * 900) + 100;
-    return {
-        kind: template.kind,
-        poiCategory: isJumpGateTemplate(template)
-            ? JUMP_GATE_POI_CATEGORY
-            : normalizePoiCategory(template.poiCategory),
-        name: `${template.name} ${serial}`,
-        summary: template.summary,
-        risk: template.risk,
-        rewardHint: template.rewardHint,
-        isRefuelingStation: !!template.isRefuelingStation,
-        jumpGateState: template.jumpGateState || null,
-        jumpGatePairId: null,
-        jumpGateLink: null,
-        jumpGateMeta: template.jumpGateMeta && typeof template.jumpGateMeta === 'object'
-            ? JSON.parse(JSON.stringify(template.jumpGateMeta))
-            : null
-    };
+    const template = pickWeightedTemplate(weightedTemplates, randomFn);
+    return template ? buildPoiFromTemplate(template, randomFn) : null;
+}
+
+function createJumpGatePoi(options = {}) {
+    const randomFn = options.randomFn || Math.random;
+    const edgeDistance = Number.isFinite(options.edgeDistance) ? options.edgeDistance : Number.POSITIVE_INFINITY;
+    const activeJumpGateWeightMultiplier = Number.isFinite(options.activeJumpGateWeightMultiplier)
+        ? Math.max(0.01, options.activeJumpGateWeightMultiplier)
+        : 1;
+    const allowActiveJumpGates = options.allowActiveJumpGates !== false;
+    const weightedTemplates = DEEP_SPACE_POI_TEMPLATES
+        .filter((template) => isJumpGateTemplate(template))
+        .filter((template) => allowActiveJumpGates || template.jumpGateState !== 'active')
+        .map((template) => {
+            const baseWeight = Number.isFinite(template.weight) && template.weight > 0 ? template.weight : 1;
+            const isActiveJumpGate = template.jumpGateState === 'active';
+            const edgeAdjustedWeight = baseWeight * getJumpGateEdgeWeightMultiplier(edgeDistance);
+            const suppressionAdjustedWeight = isActiveJumpGate
+                ? edgeAdjustedWeight * activeJumpGateWeightMultiplier
+                : edgeAdjustedWeight;
+            return {
+                template,
+                weight: suppressionAdjustedWeight
+            };
+        });
+    if (!weightedTemplates.length) return null;
+    const picked = pickWeightedTemplate(weightedTemplates, randomFn);
+    return picked ? buildPoiFromTemplate(picked, randomFn) : null;
 }
 
 export function isJumpGatePoi(poi) {
@@ -223,20 +260,40 @@ export function generateDeepSpacePois(width, height, sectors, options = {}) {
             const hexId = `${c}-${r}`;
             if (sectors[hexId]) continue;
             if (occupiedHexIds.has(hexId)) continue;
-
-            const emptinessScore = computeNeighborhoodEmptinessScore(hexId, width, height, occupiedHexIds);
-            const spawnChance = clamp(0.008 + (Math.pow(emptinessScore, 2) * 0.072), 0.004, 0.085);
-            if (randomFn() > spawnChance) continue;
             const edgeDistance = Math.min(c, r, (width - 1) - c, (height - 1) - r);
             const canRollJumpGateAtHex = canSpawnJumpGateAtAll
                 && jumpGateHexes.length < maxJumpGatesPerSector
                 && edgeDistance <= edgeDistanceMax;
+
+            if (canRollJumpGateAtHex) {
+                const edgeWeight = getJumpGateEdgeWeightMultiplier(edgeDistance);
+                const jumpGateBypassChance = clamp(0.0025 * edgeWeight, 0.0008, 0.0085);
+                if (randomFn() <= jumpGateBypassChance) {
+                    const bypassGate = createJumpGatePoi({
+                        edgeDistance,
+                        activeJumpGateWeightMultiplier,
+                        randomFn,
+                        allowActiveJumpGates: canSpawnActiveJumpGate
+                    });
+                    if (bypassGate) {
+                        jumpGateHexes.push(hexId);
+                        pois[hexId] = bypassGate;
+                        occupiedHexIds.add(hexId);
+                        continue;
+                    }
+                }
+            }
+
+            const emptinessScore = computeNeighborhoodEmptinessScore(hexId, width, height, occupiedHexIds);
+            const spawnChance = clamp(0.008 + (Math.pow(emptinessScore, 2) * 0.072), 0.004, 0.085);
+            if (randomFn() > spawnChance) continue;
             let poi = createDeepSpacePoi({
                 edgeDistance,
                 allowJumpGates: canRollJumpGateAtHex,
                 activeJumpGateWeightMultiplier,
                 randomFn
             });
+            if (!poi) continue;
             if (isJumpGatePoi(poi)) {
                 const isAtGateCap = jumpGateHexes.length >= maxJumpGatesPerSector;
                 const isTooCloseToOtherGate = jumpGateHexes.some((otherHexId) =>

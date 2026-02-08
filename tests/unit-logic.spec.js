@@ -366,6 +366,85 @@ test.describe('pure logic modules', () => {
     expect(result.allEdgeEligible).toBeTruthy();
   });
 
+  test('jump-gate bypass can spawn on edge even when emptiness spawn roll would fail', async ({ page }) => {
+    await page.goto('/sector_generator.html');
+
+    const result = await page.evaluate(async () => {
+      const generationData = await import('/js/generation-data.js');
+      const poi = await import('/js/generation-poi.js');
+      const model = await import('/js/jump-gate-model.js');
+
+      generationData.hydrateGenerationData({
+        jumpGateRules: {
+          maxPerSector: 1,
+          minSectorSeparation: 2,
+          edgeDistanceMax: 1,
+          minHexSeparation: 1,
+          activeSuppressionByDistance: { 1: 0, 2: 0.35, 3: 0.65 },
+          edgeWeightByDistance: { 1: 2.0, 2: 1.3, 3: 1.0, default: 0.2 }
+        },
+        deepSpacePoiTemplates: [
+          {
+            kind: 'Navigation',
+            poiCategory: 'jump_gate',
+            name: 'Active Jump-Gate',
+            summary: 'Gate',
+            risk: 'Low',
+            rewardHint: 'Gate',
+            weight: 1,
+            jumpGateState: 'active'
+          },
+          {
+            kind: 'Navigation',
+            poiCategory: 'jump_gate',
+            name: 'Inactive Jump-Gate',
+            summary: 'Gate',
+            risk: 'Medium',
+            rewardHint: 'Gate',
+            weight: 1,
+            jumpGateState: 'inactive'
+          },
+          {
+            kind: 'Mystery',
+            name: 'Fallback',
+            summary: 'Fallback',
+            risk: 'Unknown',
+            rewardHint: 'Fallback',
+            weight: 1
+          }
+        ]
+      });
+
+      const sectors = {};
+      for (let c = 0; c < 3; c++) {
+        for (let r = 0; r < 3; r++) {
+          const hexId = `${c}-${r}`;
+          if (hexId !== '0-0') sectors[hexId] = { name: `S-${hexId}`, planets: [] };
+        }
+      }
+
+      const rolls = [0.001, 0.2, 0.2, 0.95, 0.95, 0.95];
+      let idx = 0;
+      const randomFn = () => {
+        const next = idx < rolls.length ? rolls[idx] : 0.95;
+        idx++;
+        return next;
+      };
+      const pois = poi.generateDeepSpacePois(3, 3, sectors, {
+        randomFn,
+        sectorKey: 'NNNN',
+        knownSectorRecords: {}
+      });
+      generationData.hydrateGenerationData({});
+      const gateHexes = Object.entries(pois)
+        .filter(([, value]) => model.isJumpGatePoi(value))
+        .map(([hexId]) => hexId);
+      return { gateHexes };
+    });
+
+    expect(result.gateHexes).toEqual(['0-0']);
+  });
+
   test('active jump-gate spawn is suppressed by nearby active-gate sectors and remains deterministic', async ({ page }) => {
     await page.goto('/sector_generator.html');
 

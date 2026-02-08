@@ -52,6 +52,8 @@ This document breaks the procedural generation redesign into phased, step-by-ste
 - Changed: core generation now establishes a center-biased (not fixed-center) pre-generation origin hex, seeds clustered anchor selection from that origin, and uses it as preferred auto-core resolution.
 - Changed: deep-space POI placement is decoupled from core-anchor radial influence and now uses independent deep-space weighting.
 - Changed: deep-space POI spawn weighting now favors hexes with emptier local neighborhoods and avoids POI crowding.
+- Changed: jump-gate template weights were increased and edge-eligible hexes now have a dedicated low-probability jump-gate bypass roll.
+- Changed: jump-gates can bypass strict emptiness-biased POI spawn gating while still respecting gate caps, edge distance, and suppression rules.
 - Changed: manual core override remains authoritative when valid; non-manual core preservation now uses explicit `preferredIsAuto`.
 - Changed: delete/reroll flows now reseat cores through the same resolver path with generation settings, including auto-reselect on core invalidation.
 - Removed: no functional removals in this phase.
