@@ -270,3 +270,31 @@ test('edit mode can add and delete a deep-space POI from empty hexes', async ({ 
   const poiCountAfterDelete = await page.locator('polygon.deep-space-poi-marker').count();
   expect(poiCountAfterDelete).toBe(poiCountBefore);
 });
+
+test('neighbor sector generation is independent from adjacent sectors', async ({ page }) => {
+  await page.goto('/sector_generator.html');
+  await page.locator('#modeSizeCustomBtn').click();
+  await page.locator('#gridWidth').fill('3');
+  await page.locator('#gridHeight').fill('3');
+  await page.locator('#modeManualBtn').click();
+  await page.locator('#manualMin').fill('0');
+  await page.locator('#manualMax').fill('0');
+  await page.locator('#generateSectorBtn').click();
+
+  await page.locator('#editModeToggleBtn').click();
+  await expect(page.locator('#editModeToggleBtn')).toContainText('EDIT MODE: ON');
+  await page.locator('.hex-group[data-id="2-1"]').click();
+  await page.locator('#addSystemHereBtn').click();
+  await expect(page.locator('#statusTotalSystems')).toHaveText('1 Systems');
+
+  await page.evaluate(() => {
+    const currentLabel = document.getElementById('currentSectorLabel');
+    const sourceSectorKey = String(currentLabel?.textContent || '').replace('Current:', '').trim();
+    window.dispatchEvent(new CustomEvent('requestMoveSectorEdge', {
+      detail: { sourceSectorKey, direction: 'east' }
+    }));
+  });
+
+  await expect(page.locator('#statusTotalSystems')).toHaveText('0 Systems');
+  await expect(page.locator('.hex-group[data-id="0-1"] circle.star-circle')).toHaveCount(0);
+});

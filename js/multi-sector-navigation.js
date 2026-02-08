@@ -21,7 +21,7 @@ export function createNavigationService(state, deps) {
         const delta = directions[direction];
         if (!delta) return;
         const targetKey = offsetSectorKey(state.multiSector.currentKey, delta.dx, delta.dy);
-        const targetRecord = getOrCreateSectorRecord(targetKey, direction);
+        const targetRecord = getOrCreateSectorRecord(targetKey);
         if (!targetRecord) return;
         applySectorRecord(targetKey, targetRecord, {
             preferredSelectedHexId: state.selectedHexId,
@@ -83,7 +83,7 @@ export function createNavigationService(state, deps) {
         const delta = directions[direction];
         if (!delta) return;
         const targetKey = offsetSectorKey(sourceSectorKey, delta.dx, delta.dy);
-        const targetRecord = getOrCreateSectorRecordFromSource(sourceSectorKey, targetKey, direction);
+        const targetRecord = getOrCreateSectorRecordFromSource(sourceSectorKey, targetKey);
         if (!targetRecord) return;
         applySectorRecord(targetKey, targetRecord, {
             preferredSelectedHexId: state.selectedHexId,

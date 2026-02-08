@@ -184,47 +184,7 @@ function applySectorRecord(key, record, options = {}) {
     if (showLoadedToast) showStatusMessage(`Loaded sector ${key}.`, 'info');
 }
 
-function buildEdgeContinuityFixedSystems(fromRecord, direction) {
-    const width = fromRecord.config.width;
-    const height = fromRecord.config.height;
-    const fixed = {};
-    const sectors = fromRecord.sectors || {};
-
-    if (direction === 'east') {
-        for (let r = 0; r < height; r++) {
-            const fromHex = `${width - 1}-${r}`;
-            if (!sectors[fromHex]) continue;
-            fixed[`0-${r}`] = deepClone(sectors[fromHex]);
-        }
-        return fixed;
-    }
-    if (direction === 'west') {
-        for (let r = 0; r < height; r++) {
-            const fromHex = `0-${r}`;
-            if (!sectors[fromHex]) continue;
-            fixed[`${width - 1}-${r}`] = deepClone(sectors[fromHex]);
-        }
-        return fixed;
-    }
-    if (direction === 'north') {
-        for (let c = 0; c < width; c++) {
-            const fromHex = `${c}-0`;
-            if (!sectors[fromHex]) continue;
-            fixed[`${c}-${height - 1}`] = deepClone(sectors[fromHex]);
-        }
-        return fixed;
-    }
-    if (direction === 'south') {
-        for (let c = 0; c < width; c++) {
-            const fromHex = `${c}-${height - 1}`;
-            if (!sectors[fromHex]) continue;
-            fixed[`${c}-0`] = deepClone(sectors[fromHex]);
-        }
-    }
-    return fixed;
-}
-
-function getOrCreateSectorRecord(targetKey, direction) {
+function getOrCreateSectorRecord(targetKey) {
     ensureState();
     const existing = state.multiSector.sectorsByKey[targetKey];
     if (existing) return existing;
@@ -232,14 +192,13 @@ function getOrCreateSectorRecord(targetKey, direction) {
     const fromRecord = state.multiSector.sectorsByKey[state.multiSector.currentKey];
     if (!fromRecord) return null;
 
-    const continuityFixed = buildEdgeContinuityFixedSystems(fromRecord, direction);
     const homeSeed = state.multiSector.sectorsByKey[HOME_SECTOR_KEY]?.seed || '';
     const baseSeed = homeSeed || fromRecord.seed || 'sector';
     const seed = `${baseSeed} / ${targetKey}`;
     const record = createSectorRecord({
         config: fromRecord.config,
         seed,
-        fixedSystems: continuityFixed,
+        fixedSystems: {},
         sectorKey: targetKey,
         knownSectorRecords: state.multiSector.sectorsByKey
     });
@@ -288,7 +247,7 @@ function moveDirection(direction) {
     navigationService.moveDirection(direction);
 }
 
-function getOrCreateSectorRecordFromSource(sourceKey, targetKey, direction) {
+function getOrCreateSectorRecordFromSource(sourceKey, targetKey) {
     ensureState();
     const existing = state.multiSector.sectorsByKey[targetKey];
     if (existing) return existing;
@@ -296,14 +255,13 @@ function getOrCreateSectorRecordFromSource(sourceKey, targetKey, direction) {
     const sourceRecord = state.multiSector.sectorsByKey[sourceKey];
     if (!sourceRecord) return null;
 
-    const continuityFixed = direction ? buildEdgeContinuityFixedSystems(sourceRecord, direction) : {};
     const homeSeed = state.multiSector.sectorsByKey[HOME_SECTOR_KEY]?.seed || '';
     const baseSeed = homeSeed || sourceRecord.seed || 'sector';
     const seed = `${baseSeed} / ${targetKey}`;
     const record = createSectorRecord({
         config: sourceRecord.config,
         seed,
-        fixedSystems: continuityFixed,
+        fixedSystems: {},
         sectorKey: targetKey,
         knownSectorRecords: state.multiSector.sectorsByKey
     });
