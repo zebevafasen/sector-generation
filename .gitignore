@@ -11,3 +11,4 @@ pnpm-debug.log*
 .vscode/
 .idea/
 ideas.txt
+LOCAL_TODO.md
