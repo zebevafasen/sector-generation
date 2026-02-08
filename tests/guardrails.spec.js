@@ -298,3 +298,99 @@ test('neighbor sector generation is independent from adjacent sectors', async ({
   await expect(page.locator('#statusTotalSystems')).toHaveText('0 Systems');
   await expect(page.locator('.hex-group[data-id="0-1"] circle.star-circle')).toHaveCount(0);
 });
+
+test('linked jump-gates share the same displayed details', async ({ page }) => {
+  await page.goto('/sector_generator.html');
+  await page.locator('#generateSectorBtn').click();
+
+  await page.evaluate(() => {
+    const autoKey = 'hex-star-sector-gen:autosave';
+    const manualKey = 'hex-star-sector-gen:manual';
+    const raw = window.localStorage.getItem(autoKey);
+    if (!raw) throw new Error('Missing autosave payload.');
+    const payload = JSON.parse(raw);
+
+    const sourceKey = payload.multiSector?.currentKey || 'NNNN';
+    const targetKey = sourceKey === 'NNNN' ? 'NNNO' : 'NNNN';
+    const pairId = 'jg-shared-profile-test';
+    const sourceHexId = '1-1';
+    const targetHexId = '0-0';
+
+    const sourceRecord = payload.multiSector.sectorsByKey[sourceKey];
+    if (!sourceRecord) throw new Error('Missing source sector record.');
+    sourceRecord.sectors = {};
+    sourceRecord.systemCount = 0;
+    sourceRecord.deepSpacePois = {
+      [sourceHexId]: {
+        kind: 'Navigation',
+        name: 'Active Jump-Gate SourceName',
+        summary: 'Source Summary',
+        risk: 'Severe',
+        rewardHint: 'Source Reward',
+        jumpGateState: 'active',
+        jumpGatePairId: pairId,
+        jumpGateLink: { sectorKey: targetKey, hexId: targetHexId }
+      }
+    };
+
+    payload.multiSector.sectorsByKey[targetKey] = {
+      seed: `${payload.seed || 'sector'} / ${targetKey}`,
+      config: sourceRecord.config,
+      sectors: {},
+      deepSpacePois: {
+        [targetHexId]: {
+          kind: 'Navigation',
+          name: 'Active Jump-Gate TargetName',
+          summary: 'Target Summary',
+          risk: 'Low',
+          rewardHint: 'Target Reward',
+          jumpGateState: 'active',
+          jumpGatePairId: pairId,
+          jumpGateLink: { sectorKey: sourceKey, hexId: sourceHexId }
+        }
+      },
+      pinnedHexIds: [],
+      totalHexes: sourceRecord.totalHexes,
+      systemCount: 0
+    };
+
+    payload.multiSector.jumpGateRegistry = {
+      [pairId]: {
+        a: { sectorKey: sourceKey, hexId: sourceHexId },
+        b: { sectorKey: targetKey, hexId: targetHexId }
+      }
+    };
+    payload.multiSector.currentKey = sourceKey;
+    payload.multiSector.selectedSectorKey = sourceKey;
+    payload.sectors = {};
+    payload.deepSpacePois = sourceRecord.deepSpacePois;
+    payload.stats.totalSystems = 0;
+
+    window.localStorage.setItem(manualKey, JSON.stringify(payload));
+  });
+
+  await page.locator('#loadSectorLocalBtn').click();
+
+  await page.evaluate(() => {
+    window.dispatchEvent(new CustomEvent('requestSwitchSectorHex', {
+      detail: { sectorKey: 'NNNO', hexId: '0-0' }
+    }));
+  });
+
+  const synced = await page.evaluate(() => {
+    const raw = window.localStorage.getItem('hex-star-sector-gen:autosave');
+    if (!raw) return null;
+    const payload = JSON.parse(raw);
+    const pair = payload.multiSector?.jumpGateRegistry?.['jg-shared-profile-test'];
+    if (!pair || !pair.a || !pair.b) return null;
+    const source = payload.multiSector?.sectorsByKey?.[pair.a.sectorKey]?.deepSpacePois?.[pair.a.hexId];
+    const target = payload.multiSector?.sectorsByKey?.[pair.b.sectorKey]?.deepSpacePois?.[pair.b.hexId];
+    if (!source || !target) return null;
+    const fields = ['kind', 'name', 'summary', 'risk', 'rewardHint'];
+    const allEqual = fields.every((field) => String(source[field] || '') === String(target[field] || ''));
+    return { allEqual, source, target };
+  });
+
+  expect(synced).toBeTruthy();
+  expect(synced.allEqual).toBeTruthy();
+});

@@ -26,6 +26,30 @@ function getDeterministicRandom(seedText) {
     return mulberry32(seeded);
 }
 
+function getCanonicalJumpGateProfile(pairId, sourcePoi = null, targetPoi = null) {
+    const serial = (xmur3(pairId)() % 900) + 100;
+    const defaultProfile = {
+        kind: 'Navigation',
+        name: `Active Jump-Gate ${serial}`,
+        summary: 'A synchronized jump-gate endpoint tied to a linked remote sector.',
+        risk: 'Low',
+        rewardHint: 'Enables near-instant transit to its paired gate.'
+    };
+    const pickString = (value, fallback) => {
+        const text = typeof value === 'string' ? value.trim() : '';
+        return text || fallback;
+    };
+    const preferred = sourcePoi || targetPoi || {};
+    const secondary = targetPoi || sourcePoi || {};
+    return {
+        kind: pickString(preferred.kind, pickString(secondary.kind, defaultProfile.kind)),
+        name: pickString(preferred.name, pickString(secondary.name, defaultProfile.name)),
+        summary: pickString(preferred.summary, pickString(secondary.summary, defaultProfile.summary)),
+        risk: pickString(preferred.risk, pickString(secondary.risk, defaultProfile.risk)),
+        rewardHint: pickString(preferred.rewardHint, pickString(secondary.rewardHint, defaultProfile.rewardHint))
+    };
+}
+
 function buildSectorOffsetCandidates() {
     const offsets = [];
     for (let dx = -2; dx <= 2; dx++) {
@@ -190,23 +214,28 @@ export function createJumpGateService(state, ensureState) {
             blockedHexes.add(targetHexId);
 
             const sourceRecord = state.multiSector.sectorsByKey[pair.a.sectorKey];
-            if (sourceRecord && sourceRecord.deepSpacePois && sourceRecord.deepSpacePois[pair.a.hexId]) {
-                sourceRecord.deepSpacePois[pair.a.hexId].jumpGateLink = {
-                    sectorKey: pair.b.sectorKey,
-                    hexId: pair.b.hexId
+            const sourcePoi = sourceRecord && sourceRecord.deepSpacePois
+                ? sourceRecord.deepSpacePois[pair.a.hexId] || null
+                : null;
+            const targetPoi = record.deepSpacePois[targetHexId] || null;
+            const profile = getCanonicalJumpGateProfile(pairId, sourcePoi, targetPoi);
+
+            if (sourcePoi) {
+                sourceRecord.deepSpacePois[pair.a.hexId] = {
+                    ...sourcePoi,
+                    ...profile,
+                    jumpGateState: 'active',
+                    jumpGatePairId: pairId,
+                    jumpGateLink: {
+                        sectorKey: pair.b.sectorKey,
+                        hexId: pair.b.hexId
+                    }
                 };
-                sourceRecord.deepSpacePois[pair.a.hexId].jumpGatePairId = pairId;
-                sourceRecord.deepSpacePois[pair.a.hexId].jumpGateState = 'active';
             }
 
-            const existing = record.deepSpacePois[targetHexId] || {};
-            const serial = (xmur3(pairId)() % 900) + 100;
             record.deepSpacePois[targetHexId] = {
-                kind: 'Navigation',
-                name: existing.name && /^active jump-gate\b/i.test(existing.name) ? existing.name : `Active Jump-Gate ${serial}`,
-                summary: 'A synchronized jump-gate endpoint tied to a linked remote sector.',
-                risk: 'Low',
-                rewardHint: 'Enables near-instant transit to its paired gate.',
+                ...(targetPoi || {}),
+                ...profile,
                 jumpGateState: 'active',
                 jumpGatePairId: pairId,
                 jumpGateLink: {
