@@ -29,6 +29,11 @@ import { selectClusteredSystemCoords } from './generation-spatial.js';
 import { generateSystemName, generateSystemStars } from './generation-system.js';
 import { readGenerationConfigFromUi } from './sector-config.js';
 import { generateSystemDataAction, reconcilePlanetaryBodiesAction } from './generation-system-data.js';
+import { setEditModeAction, toggleEditModeAction } from './generation-edit-mode.js';
+import {
+    buildGenerationActionDeps,
+    buildGenerationRerollDeps
+} from './generation-deps.js';
 import {
     addBodyToSelectedSystemAction,
     addPoiAtHexAction,
@@ -161,33 +166,23 @@ export function generateSystemData(config = null, context = null) {
     });
 }
 
-function notifyEditModeChanged() {
-    emitEvent(EVENTS.EDIT_MODE_CHANGED);
-}
-
 export function setEditMode(enabled) {
-    state.editMode = !!enabled;
-    state.selectedBodyIndex = null;
-    notifyEditModeChanged();
+    setEditModeAction(enabled, {
+        state,
+        emitEvent,
+        events: EVENTS
+    });
 }
 
 export function toggleEditMode() {
-    setEditMode(!state.editMode);
-    showStatusMessage(state.editMode ? 'Edit mode enabled.' : 'Edit mode disabled.', 'info');
+    toggleEditModeAction({
+        state,
+        setEditMode,
+        showStatusMessage
+    });
 }
 
-function buildGenerationActionDeps() {
-    return {
-        ...buildGenerationSharedDeps(),
-        redrawHexAndReselect,
-        redrawHexAndSelectHex,
-        refreshHexInfo,
-        clearSelectionInfo,
-        romanize
-    };
-}
-
-function buildGenerationSharedDeps() {
+function buildGenerationDepInputs() {
     return {
         state,
         rand,
@@ -205,17 +200,13 @@ function buildGenerationSharedDeps() {
         pickRandomPlanetType,
         generatePlanetEnvironment,
         generatePlanetSize,
-        reconcilePlanetaryBodies
-    };
-}
-
-function buildGenerationRerollDeps() {
-    return {
-        ...buildGenerationSharedDeps(),
+        reconcilePlanetaryBodies,
         redrawHexAndReselect,
         redrawHexAndSelectHex,
-        redrawGridAndReselect,
         refreshHexInfo,
+        clearSelectionInfo,
+        romanize,
+        redrawGridAndReselect,
         generateDeepSpacePois,
         pickPlanetTypeForStarClass,
         isHabitableCandidateType,
@@ -228,47 +219,47 @@ function buildGenerationRerollDeps() {
 }
 
 export function addSystemAtHex(hexId) {
-    addSystemAtHexAction(hexId, buildGenerationActionDeps());
+    addSystemAtHexAction(hexId, buildGenerationActionDeps(buildGenerationDepInputs()));
 }
 
 export function deleteSelectedSystem() {
-    deleteSelectedSystemAction(buildGenerationActionDeps());
+    deleteSelectedSystemAction(buildGenerationActionDeps(buildGenerationDepInputs()));
 }
 
 export function addPoiAtHex(hexId) {
-    addPoiAtHexAction(hexId, buildGenerationActionDeps());
+    addPoiAtHexAction(hexId, buildGenerationActionDeps(buildGenerationDepInputs()));
 }
 
 export function deletePoiAtHex(hexId) {
-    deletePoiAtHexAction(hexId, buildGenerationActionDeps());
+    deletePoiAtHexAction(hexId, buildGenerationActionDeps(buildGenerationDepInputs()));
 }
 
 export function renamePoiAtHex(hexId) {
-    renamePoiAtHexAction(hexId, buildGenerationActionDeps());
+    renamePoiAtHexAction(hexId, buildGenerationActionDeps(buildGenerationDepInputs()));
 }
 
 export function addBodyToSelectedSystem(kind) {
-    addBodyToSelectedSystemAction(kind, buildGenerationActionDeps());
+    addBodyToSelectedSystemAction(kind, buildGenerationActionDeps(buildGenerationDepInputs()));
 }
 
 export function deleteSelectedBody() {
-    deleteSelectedBodyAction(buildGenerationActionDeps());
+    deleteSelectedBodyAction(buildGenerationActionDeps(buildGenerationDepInputs()));
 }
 
 export function rerollSelectedPlanet() {
-    rerollSelectedPlanetAction(buildGenerationRerollDeps());
+    rerollSelectedPlanetAction(buildGenerationRerollDeps(buildGenerationDepInputs()));
 }
 
 export function rerollSelectedSystem() {
-    rerollSelectedSystemAction(buildGenerationRerollDeps());
+    rerollSelectedSystemAction(buildGenerationRerollDeps(buildGenerationDepInputs()));
 }
 
 export function togglePinSelectedSystem() {
-    togglePinSelectedSystemAction(buildGenerationRerollDeps());
+    togglePinSelectedSystemAction(buildGenerationRerollDeps(buildGenerationDepInputs()));
 }
 
 export function rerollUnpinnedSystems() {
-    rerollUnpinnedSystemsAction(buildGenerationRerollDeps());
+    rerollUnpinnedSystemsAction(buildGenerationRerollDeps(buildGenerationDepInputs()));
 }
 
 export function createSectorRecord(options = {}) {
