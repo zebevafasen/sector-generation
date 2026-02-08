@@ -1,7 +1,7 @@
 import { hexDistanceById } from './generation-spatial.js';
 import { parseHexId } from './utils.js';
 
-const MAX_SYSTEMS_PER_ANCHOR_CLUSTER = 6;
+const MAX_SYSTEMS_PER_ANCHOR_CLUSTER = 5;
 
 function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
@@ -74,8 +74,14 @@ function chooseSecondaryAnchors(primaryAnchor, parsedCandidates, systemsToGenera
     const threshold = Math.max(1, Number(settings.clusterSecondaryAnchorThreshold) || 11);
     const activationThreshold = Math.max(4, Math.min(threshold, 7));
     if (systemsToGenerate < activationThreshold) return [];
-    const targetClusterSize = 4;
-    const desiredAnchorCount = clamp(Math.round(systemsToGenerate / targetClusterSize), 1, 5);
+    const targetClusterSize = 3;
+    const minAnchorsForCapacity = Math.max(1, Math.ceil(systemsToGenerate / MAX_SYSTEMS_PER_ANCHOR_CLUSTER));
+    const maxAnchors = Math.max(1, Math.min(8, parsedCandidates.length));
+    const desiredAnchorCount = clamp(
+        Math.max(Math.round(systemsToGenerate / targetClusterSize), minAnchorsForCapacity),
+        1,
+        maxAnchors
+    );
     const maxAdditional = Math.max(0, desiredAnchorCount - 1);
     const anchors = [];
     for (let i = 0; i < maxAdditional; i++) {
@@ -141,7 +147,7 @@ function computeClusterSizeBias(item, anchors, anchorClusterCounts) {
     if (currentCount >= MAX_SYSTEMS_PER_ANCHOR_CLUSTER) {
         return Number.NEGATIVE_INFINITY;
     }
-    const target = 4;
+    const target = 3;
     if (currentCount < target) {
         return 0.35 + ((target - currentCount) * 0.08);
     }

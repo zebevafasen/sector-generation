@@ -1095,7 +1095,7 @@ test.describe('pure logic modules', () => {
     expect(result.maxLocalNeighbors).toBeLessThanOrEqual(5);
   });
 
-  test('cluster v2 clamps per-anchor cluster size to a maximum of 6', async ({ page }) => {
+  test('cluster v2 clamps per-anchor cluster size to a maximum of 5', async ({ page }) => {
     await page.goto('/sector_generator.html');
 
     const result = await page.evaluate(async () => {
@@ -1136,7 +1136,7 @@ test.describe('pure logic modules', () => {
     });
 
     expect(result.selectedCount).toBe(30);
-    expect(result.maxAnchorClusterSize).toBeLessThanOrEqual(6);
+    expect(result.maxAnchorClusterSize).toBeLessThanOrEqual(5);
   });
 
   test('cluster v2 blends boundary pressure to smooth seams without mirroring', async ({ page }) => {
