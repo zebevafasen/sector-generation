@@ -204,8 +204,18 @@ export function buildSectorFromConfigAction(config, fixedSystems = {}, options =
         preferredIsAuto: !options.preferredCoreSystemManual && !!provisionalCoreHexId,
         settings: normalized,
         generationContext,
-        sectorKey
+        sectorKey,
+        debugScoring: !!normalized.coreScoringDebugEnabled
     });
+    if (normalized.coreScoringDebugEnabled && core.coreSystemHexId && core.debugScores) {
+        const chosenBreakdown = core.debugScores[core.coreSystemHexId] || null;
+        console.debug('[core-scoring]', {
+            sectorKey,
+            chosenHexId: core.coreSystemHexId,
+            chosenBreakdown,
+            scoreCount: Object.keys(core.debugScores).length
+        });
+    }
     const activeJumpGateWeightMultiplier = getActiveJumpGateSectorWeightMultiplier(
         options.sectorKey || homeSectorKey,
         options.knownSectorRecords || {}

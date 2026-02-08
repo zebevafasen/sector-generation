@@ -224,6 +224,7 @@ const DEFAULT_GENERATION_SETTINGS = {
     clusterSecondaryAnchorThreshold: 11,
     clusterEdgeBalance: 0.26,
     clusterCenterVoidProtection: 0.35,
+    coreScoringDebugEnabled: false,
     coreTagWeights: {
         hegemon: 8,
         trade: 6,
@@ -276,6 +277,7 @@ function sanitizeGenerationSettings(value = {}) {
         clusterSecondaryAnchorThreshold: Math.max(1, Math.floor(toFiniteNumber(source.clusterSecondaryAnchorThreshold, base.clusterSecondaryAnchorThreshold))),
         clusterEdgeBalance: Math.max(0, toFiniteNumber(source.clusterEdgeBalance, base.clusterEdgeBalance)),
         clusterCenterVoidProtection: Math.max(0, toFiniteNumber(source.clusterCenterVoidProtection, base.clusterCenterVoidProtection)),
+        coreScoringDebugEnabled: source.coreScoringDebugEnabled ?? base.coreScoringDebugEnabled,
         coreTagWeights: {
             ...base.coreTagWeights,
             ...Object.fromEntries(
@@ -341,6 +343,7 @@ export function hydrateGenerationData(loadedData = {}) {
         clusterSecondaryAnchorThreshold: loadedData.clusterSecondaryAnchorThreshold,
         clusterEdgeBalance: loadedData.clusterEdgeBalance,
         clusterCenterVoidProtection: loadedData.clusterCenterVoidProtection,
+        coreScoringDebugEnabled: loadedData.coreScoringDebugEnabled,
         coreTagWeights: loadedData.coreTagWeights,
         coreTagContributionCap: loadedData.coreTagContributionCap,
         coreTagPerTagCap: loadedData.coreTagPerTagCap,

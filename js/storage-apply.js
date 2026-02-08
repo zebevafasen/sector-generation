@@ -124,6 +124,7 @@ export function createStorageApplyService(deps) {
             clusterSecondaryAnchorThreshold: 11,
             clusterEdgeBalance: 0.26,
             clusterCenterVoidProtection: 0.35,
+            coreScoringDebugEnabled: false,
             coreTagWeights: {},
             coreTagContributionCap: 16,
             coreTagPerTagCap: 8,

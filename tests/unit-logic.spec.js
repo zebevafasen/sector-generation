@@ -461,13 +461,32 @@ test.describe('pure logic modules', () => {
         preferredIsManual: false,
         preferredIsAuto: false
       });
+      const resolvedWithDebug = core.resolveCoreSystemHexId({
+        sectors,
+        width: 4,
+        height: 4,
+        settings: {
+          coreScoreWeights: {
+            base: 0,
+            centrality: 5,
+            population: 10,
+            habitability: 25,
+            context: 0
+          }
+        },
+        debugScoring: true
+      });
 
       return {
         picked,
         resolvedPreferred,
         resolvedInvalidPreferred,
         resolvedAutoPreferred,
-        resolvedIgnoredAutoPreferred
+        resolvedIgnoredAutoPreferred,
+        hasDebugScores: !!(resolvedWithDebug && resolvedWithDebug.debugScores),
+        debugScoreKeys: resolvedWithDebug && resolvedWithDebug.debugScores
+          ? Object.keys(resolvedWithDebug.debugScores).length
+          : 0
       };
     });
 
@@ -488,6 +507,8 @@ test.describe('pure logic modules', () => {
       coreSystemHexId: '2-2',
       coreSystemManual: false
     });
+    expect(result.hasDebugScores).toBeTruthy();
+    expect(result.debugScoreKeys).toBeGreaterThan(0);
   });
 
   test('generation context is deterministic and exposes boundary/core signals', async ({ page }) => {

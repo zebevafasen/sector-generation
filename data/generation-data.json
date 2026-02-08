@@ -192,6 +192,7 @@
     "clusterSecondaryAnchorThreshold": 11,
     "clusterEdgeBalance": 0.26,
     "clusterCenterVoidProtection": 0.35,
+    "coreScoringDebugEnabled": false,
     "coreTagWeights": {
       "hegemon": 8,
       "trade": 6,

@@ -77,6 +77,7 @@ export function normalizeGenerationConfig(config) {
         clusterSecondaryAnchorThreshold: Math.max(1, Math.floor(toFiniteNumber(source.clusterSecondaryAnchorThreshold, GENERATION_SETTINGS.clusterSecondaryAnchorThreshold))),
         clusterEdgeBalance: Math.max(0, toFiniteNumber(source.clusterEdgeBalance, GENERATION_SETTINGS.clusterEdgeBalance)),
         clusterCenterVoidProtection: Math.max(0, toFiniteNumber(source.clusterCenterVoidProtection, GENERATION_SETTINGS.clusterCenterVoidProtection)),
+        coreScoringDebugEnabled: source.coreScoringDebugEnabled ?? GENERATION_SETTINGS.coreScoringDebugEnabled,
         coreTagWeights: {
             ...GENERATION_SETTINGS.coreTagWeights,
             ...Object.fromEntries(

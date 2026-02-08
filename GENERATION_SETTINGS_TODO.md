@@ -55,6 +55,7 @@ This document breaks the procedural generation redesign into phased, step-by-ste
 ### Phase 5 - Completed
 - Added: tag-aware core scoring caps/weights and optional debug score collection in `js/core-system.js`.
 - Changed: core scoring now blends centrality, population, habitability, tag contributions, and context bias.
+- Added: `coreScoringDebugEnabled` generation setting and orchestration logging of chosen core score breakdown in debug mode.
 - Removed: no functional removals in this phase.
 
 ### Phase 6 - Completed
