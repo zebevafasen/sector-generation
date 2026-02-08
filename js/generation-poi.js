@@ -85,7 +85,7 @@ function computePoiTargetCount(width, height, sectors, options, randomFn) {
     const systemCount = Object.keys(sectors || {}).length;
     const availableHexes = Math.max(0, totalHexes - systemCount);
     const densityRatio = getDensityRatioFromConfig(options.config, totalHexes, sectors);
-    const basePoiRatio = clamp(0.018 + (densityRatio * 0.13), 0.012, 0.11);
+    const basePoiRatio = clamp(0.024 + (densityRatio * 0.155), 0.016, 0.12);
     const baseTarget = totalHexes * basePoiRatio;
     const variance = ((randomFn() - 0.5) * 2) * 1.2;
     const target = Math.round(baseTarget + variance);
