@@ -1,4 +1,4 @@
-import { state, STAR_CLASS_INFO } from './config.js';
+import { STAR_AGE_DISPLAY, state, STAR_CLASS_INFO } from './config.js';
 import { getPrimaryStar, getSystemStars } from './star-system.js';
 import { resolveFieldTooltip } from './tooltip-data.js';
 import { xmur3, mulberry32 } from './utils.js';
@@ -94,15 +94,17 @@ export function getStarClassInfo(classCode) {
 export function formatStarAgeValue(value, unit) {
     let valueInMillions = unit === 'Gyr' ? value * 1000 : value;
     if (!Number.isFinite(valueInMillions) || valueInMillions < 0) {
-        return 'Unknown';
+        return STAR_AGE_DISPLAY.unknownLabel || 'Unknown';
     }
     if (valueInMillions >= 1000) {
         const billions = valueInMillions / 1000;
         const decimals = billions >= 100 ? 0 : billions >= 10 ? 1 : 2;
-        return `${billions.toFixed(decimals)} B Years`;
+        const label = STAR_AGE_DISPLAY.billionLabel || 'B Years';
+        return `${billions.toFixed(decimals)} ${label}`;
     }
     const decimals = valueInMillions >= 100 ? 0 : valueInMillions >= 10 ? 1 : 2;
-    return `${valueInMillions.toFixed(decimals)} M Years`;
+    const label = STAR_AGE_DISPLAY.millionLabel || 'M Years';
+    return `${valueInMillions.toFixed(decimals)} ${label}`;
 }
 
 export function formatStarAgeRange(ageRange) {

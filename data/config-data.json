@@ -111,6 +111,11 @@
     "expedition": { "label": "Expedition Grid", "width": 10, "height": 12 },
     "dominion": { "label": "Dominion Net", "width": 12, "height": 16 }
   },
+  "starAgeDisplay": {
+    "millionLabel": "M Years",
+    "billionLabel": "B Years",
+    "unknownLabel": "Unknown"
+  },
   "namePrefix": [
     "Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta", "Eta", "Theta", "Iota", "Kappa",
     "Lambda", "Mu", "Nu", "Xi", "Omicron", "Pi", "Rho", "Sigma", "Tau", "Upsilon",
