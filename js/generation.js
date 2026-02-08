@@ -26,6 +26,8 @@ import { deepClone, isHexIdInBounds, romanize, shuffleArray, sortHexIds } from '
 import { computeSystemCount, getActiveGenerationProfile, getGenerationConfigSnapshot, normalizeGenerationConfig } from './generation-config.js';
 import { createDeepSpacePoi, generateDeepSpacePois, getActiveJumpGateSectorWeightMultiplier } from './generation-poi.js';
 import { selectClusteredSystemCoords } from './generation-spatial.js';
+import { selectClusteredSystemCoordsV2 } from './generation-cluster-v2.js';
+import { createGenerationContext } from './generation-context.js';
 import { generateSystemName, generateSystemStars } from './generation-system.js';
 import { resolveCoreSystemHexId } from './core-system.js';
 import { readGenerationConfigFromUi } from './sector-config.js';
@@ -74,6 +76,8 @@ function getOrchestrationCoreDeps() {
         rand,
         deepClone,
         selectClusteredSystemCoords,
+        selectClusteredSystemCoordsV2,
+        createGenerationContext,
         getActiveJumpGateSectorWeightMultiplier,
         generateDeepSpacePois,
         resolveCoreSystemHexId,

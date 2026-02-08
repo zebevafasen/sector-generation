@@ -78,7 +78,7 @@ function getCurrentConfig() {
         manualMin: 0,
         manualMax: 0,
         generationProfile: 'high_adventure',
-        starDistribution: 'standard',
+        starDistribution: 'clusters',
         realisticPlanetWeights: false
     });
 }
@@ -155,7 +155,7 @@ function applySectorRecord(key, record, options = {}) {
         autoSeed: isAutoSeedEnabled(),
         realisticPlanetWeights: !!record.config.realisticPlanetWeights,
         generationProfile: record.config.generationProfile || 'high_adventure',
-        starDistribution: record.config.starDistribution || 'standard',
+        starDistribution: record.config.starDistribution || 'clusters',
         sectorConfigSnapshot: deepClone(record.config),
         deepSpacePois: deepClone(record.deepSpacePois || {}),
         pinnedHexIds: deepClone(record.pinnedHexIds || []),
@@ -189,27 +189,7 @@ function applySectorRecord(key, record, options = {}) {
 }
 
 function getOrCreateSectorRecord(targetKey) {
-    ensureState();
-    const existing = state.multiSector.sectorsByKey[targetKey];
-    if (existing) return existing;
-
-    const fromRecord = state.multiSector.sectorsByKey[state.multiSector.currentKey];
-    if (!fromRecord) return null;
-
-    const homeSeed = state.multiSector.sectorsByKey[HOME_SECTOR_KEY]?.seed || '';
-    const baseSeed = homeSeed || fromRecord.seed || 'sector';
-    const seed = `${baseSeed} / ${targetKey}`;
-    const record = createSectorRecord({
-        config: fromRecord.config,
-        seed,
-        fixedSystems: {},
-        sectorKey: targetKey,
-        knownSectorRecords: state.multiSector.sectorsByKey
-    });
-    state.multiSector.sectorsByKey[targetKey] = record;
-    jumpGateService.ensureJumpGateLinksForRecord(targetKey, record);
-    jumpGateService.ensureInboundJumpGatesForRecord(targetKey, record);
-    return record;
+    return getOrCreateSectorRecordByKey(targetKey);
 }
 
 function getOrCreateSectorRecordByKey(targetKey) {

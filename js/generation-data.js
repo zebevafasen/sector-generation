@@ -213,6 +213,90 @@ const DEFAULT_STAR_COUNT_THRESHOLDS_BY_PROFILE = {
     high_adventure: { triMaxExclusive: 0.015, binaryMaxExclusive: 0.115 }
 };
 
+const DEFAULT_GENERATION_SETTINGS = {
+    clusterV2Enabled: true,
+    crossSectorContextEnabled: true,
+    centerBiasStrength: 1.35,
+    boundaryContinuityStrength: 0.55,
+    clusterAnchorJitter: 1.25,
+    clusterGrowthDecay: 0.82,
+    clusterSecondaryAnchorThreshold: 11,
+    clusterEdgeBalance: 0.26,
+    clusterCenterVoidProtection: 0.35,
+    coreTagWeights: {
+        hegemon: 8,
+        trade: 6,
+        logistics: 5,
+        capital: 8,
+        science: 2,
+        exploration: 1,
+        colony: -3,
+        frontier: -2,
+        unstable: -5
+    },
+    coreTagContributionCap: 16,
+    coreTagPerTagCap: 8,
+    coreScoreWeights: {
+        base: 0,
+        centrality: 28,
+        population: 10,
+        habitability: 18,
+        context: 8
+    }
+};
+
+function isPlainObject(value) {
+    return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function toFiniteNumber(value, fallback) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function sanitizeGenerationSettings(value = {}) {
+    const source = isPlainObject(value) ? value : {};
+    const base = DEFAULT_GENERATION_SETTINGS;
+    const nextCoreWeights = isPlainObject(source.coreTagWeights)
+        ? source.coreTagWeights
+        : {};
+    const nextCoreScoreWeights = isPlainObject(source.coreScoreWeights)
+        ? source.coreScoreWeights
+        : {};
+
+    return {
+        clusterV2Enabled: source.clusterV2Enabled ?? base.clusterV2Enabled,
+        crossSectorContextEnabled: source.crossSectorContextEnabled ?? base.crossSectorContextEnabled,
+        centerBiasStrength: Math.max(0, toFiniteNumber(source.centerBiasStrength, base.centerBiasStrength)),
+        boundaryContinuityStrength: Math.max(0, toFiniteNumber(source.boundaryContinuityStrength, base.boundaryContinuityStrength)),
+        clusterAnchorJitter: Math.max(0, toFiniteNumber(source.clusterAnchorJitter, base.clusterAnchorJitter)),
+        clusterGrowthDecay: Math.max(0.05, toFiniteNumber(source.clusterGrowthDecay, base.clusterGrowthDecay)),
+        clusterSecondaryAnchorThreshold: Math.max(1, Math.floor(toFiniteNumber(source.clusterSecondaryAnchorThreshold, base.clusterSecondaryAnchorThreshold))),
+        clusterEdgeBalance: Math.max(0, toFiniteNumber(source.clusterEdgeBalance, base.clusterEdgeBalance)),
+        clusterCenterVoidProtection: Math.max(0, toFiniteNumber(source.clusterCenterVoidProtection, base.clusterCenterVoidProtection)),
+        coreTagWeights: {
+            ...base.coreTagWeights,
+            ...Object.fromEntries(
+                Object.entries(nextCoreWeights).map(([tag, weight]) => [
+                    String(tag).trim().toLowerCase(),
+                    toFiniteNumber(weight, 0)
+                ])
+            )
+        },
+        coreTagContributionCap: Math.max(0, toFiniteNumber(source.coreTagContributionCap, base.coreTagContributionCap)),
+        coreTagPerTagCap: Math.max(0, toFiniteNumber(source.coreTagPerTagCap, base.coreTagPerTagCap)),
+        coreScoreWeights: {
+            ...base.coreScoreWeights,
+            ...Object.fromEntries(
+                Object.entries(nextCoreScoreWeights).map(([key, weight]) => [
+                    String(key),
+                    toFiniteNumber(weight, 0)
+                ])
+            )
+        }
+    };
+}
+
 export let STAR_CLASS_PLANET_WEIGHTS = DEFAULT_STAR_CLASS_PLANET_WEIGHTS;
 export let HABITABLE_PLANET_TYPES = new Set(DEFAULT_HABITABLE_PLANET_TYPES);
 export let BASE_HABITABILITY_TYPE_WEIGHT = DEFAULT_BASE_HABITABILITY_TYPE_WEIGHT;
@@ -227,6 +311,7 @@ export let JUMP_GATE_RULES = DEFAULT_JUMP_GATE_RULES;
 export let DEEP_SPACE_POI_TEMPLATES = DEFAULT_DEEP_SPACE_POI_TEMPLATES;
 export let STAR_CLASS_ROLL_TABLE = DEFAULT_STAR_CLASS_ROLL_TABLE;
 export let STAR_COUNT_THRESHOLDS_BY_PROFILE = DEFAULT_STAR_COUNT_THRESHOLDS_BY_PROFILE;
+export let GENERATION_SETTINGS = DEFAULT_GENERATION_SETTINGS;
 
 export function hydrateGenerationData(loadedData = {}) {
     STAR_CLASS_PLANET_WEIGHTS = loadedData.starClassPlanetWeights || DEFAULT_STAR_CLASS_PLANET_WEIGHTS;
@@ -243,6 +328,25 @@ export function hydrateGenerationData(loadedData = {}) {
     DEEP_SPACE_POI_TEMPLATES = loadedData.deepSpacePoiTemplates || DEFAULT_DEEP_SPACE_POI_TEMPLATES;
     STAR_CLASS_ROLL_TABLE = loadedData.starClassRollTable || DEFAULT_STAR_CLASS_ROLL_TABLE;
     STAR_COUNT_THRESHOLDS_BY_PROFILE = loadedData.starCountThresholdsByProfile || DEFAULT_STAR_COUNT_THRESHOLDS_BY_PROFILE;
+    const legacySettings = {
+        clusterV2Enabled: loadedData.clusterV2Enabled,
+        crossSectorContextEnabled: loadedData.crossSectorContextEnabled,
+        centerBiasStrength: loadedData.centerBiasStrength,
+        boundaryContinuityStrength: loadedData.boundaryContinuityStrength,
+        clusterAnchorJitter: loadedData.clusterAnchorJitter,
+        clusterGrowthDecay: loadedData.clusterGrowthDecay,
+        clusterSecondaryAnchorThreshold: loadedData.clusterSecondaryAnchorThreshold,
+        clusterEdgeBalance: loadedData.clusterEdgeBalance,
+        clusterCenterVoidProtection: loadedData.clusterCenterVoidProtection,
+        coreTagWeights: loadedData.coreTagWeights,
+        coreTagContributionCap: loadedData.coreTagContributionCap,
+        coreTagPerTagCap: loadedData.coreTagPerTagCap,
+        coreScoreWeights: loadedData.coreScoreWeights
+    };
+    GENERATION_SETTINGS = sanitizeGenerationSettings({
+        ...legacySettings,
+        ...(isPlainObject(loadedData.generationSettings) ? loadedData.generationSettings : {})
+    });
 }
 
 export function normalizeDensityPresetKey(value) {

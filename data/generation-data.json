@@ -181,6 +181,37 @@
     "cinematic": { "triMaxExclusive": 0.02, "binaryMaxExclusive": 0.16 },
     "high_adventure": { "triMaxExclusive": 0.015, "binaryMaxExclusive": 0.115 }
   },
+  "generationSettings": {
+    "clusterV2Enabled": true,
+    "crossSectorContextEnabled": true,
+    "centerBiasStrength": 1.35,
+    "boundaryContinuityStrength": 0.55,
+    "clusterAnchorJitter": 1.25,
+    "clusterGrowthDecay": 0.82,
+    "clusterSecondaryAnchorThreshold": 11,
+    "clusterEdgeBalance": 0.26,
+    "clusterCenterVoidProtection": 0.35,
+    "coreTagWeights": {
+      "hegemon": 8,
+      "trade": 6,
+      "logistics": 5,
+      "capital": 8,
+      "science": 2,
+      "exploration": 1,
+      "colony": -3,
+      "frontier": -2,
+      "unstable": -5
+    },
+    "coreTagContributionCap": 16,
+    "coreTagPerTagCap": 8,
+    "coreScoreWeights": {
+      "base": 0,
+      "centrality": 28,
+      "population": 10,
+      "habitability": 18,
+      "context": 8
+    }
+  },
   "generationProfiles": {
     "cinematic": {
       "inhabitedChance": 0.45,

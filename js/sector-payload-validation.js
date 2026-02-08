@@ -34,11 +34,19 @@ function sanitizeBody(body) {
 
 function sanitizeSystem(system) {
     if (!isPlainObject(system)) return null;
+    const tags = Array.isArray(system.tags)
+        ? system.tags.map((tag) => String(tag || '').trim()).filter(Boolean)
+        : [];
+    const starTags = Array.isArray(system.starTags)
+        ? system.starTags.map((tag) => String(tag || '').trim()).filter(Boolean)
+        : [];
     const planets = Array.isArray(system.planets)
         ? system.planets.map(sanitizeBody).filter(Boolean)
         : [];
     return {
         ...system,
+        tags,
+        starTags,
         planets
     };
 }
@@ -208,6 +216,47 @@ function sanitizeViewState(value) {
     };
 }
 
+function sanitizeSectorConfigSnapshot(value) {
+    if (!isPlainObject(value)) return null;
+    const toFinite = (raw, fallback) => {
+        const parsed = Number(raw);
+        return Number.isFinite(parsed) ? parsed : fallback;
+    };
+    const coreTagWeights = isPlainObject(value.coreTagWeights)
+        ? Object.fromEntries(
+            Object.entries(value.coreTagWeights).map(([key, weight]) => [
+                String(key).trim().toLowerCase(),
+                toFinite(weight, 0)
+            ])
+        )
+        : {};
+    const coreScoreWeights = isPlainObject(value.coreScoreWeights)
+        ? Object.fromEntries(
+            Object.entries(value.coreScoreWeights).map(([key, weight]) => [
+                String(key),
+                toFinite(weight, 0)
+            ])
+        )
+        : {};
+    return {
+        ...value,
+        starDistribution: value.starDistribution === 'standard' ? 'standard' : 'clusters',
+        clusterV2Enabled: value.clusterV2Enabled ?? true,
+        crossSectorContextEnabled: value.crossSectorContextEnabled ?? true,
+        centerBiasStrength: Math.max(0, toFinite(value.centerBiasStrength, 1.35)),
+        boundaryContinuityStrength: Math.max(0, toFinite(value.boundaryContinuityStrength, 0.55)),
+        clusterAnchorJitter: Math.max(0, toFinite(value.clusterAnchorJitter, 1.25)),
+        clusterGrowthDecay: Math.max(0.05, toFinite(value.clusterGrowthDecay, 0.82)),
+        clusterSecondaryAnchorThreshold: Math.max(1, Math.floor(toFinite(value.clusterSecondaryAnchorThreshold, 11))),
+        clusterEdgeBalance: Math.max(0, toFinite(value.clusterEdgeBalance, 0.26)),
+        clusterCenterVoidProtection: Math.max(0, toFinite(value.clusterCenterVoidProtection, 0.35)),
+        coreTagWeights,
+        coreTagContributionCap: Math.max(0, toFinite(value.coreTagContributionCap, 16)),
+        coreTagPerTagCap: Math.max(0, toFinite(value.coreTagPerTagCap, 8)),
+        coreScoreWeights
+    };
+}
+
 export function validateSectorPayload(rawPayload) {
     if (!isPlainObject(rawPayload)) {
         return { ok: false, error: 'Payload must be an object.' };
@@ -242,7 +291,7 @@ export function validateSectorPayload(rawPayload) {
         generationProfile: typeof rawPayload.generationProfile === 'string' && rawPayload.generationProfile
             ? rawPayload.generationProfile
             : 'high_adventure',
-        starDistribution: rawPayload.starDistribution === 'clusters' ? 'clusters' : 'standard',
+        starDistribution: rawPayload.starDistribution === 'standard' ? 'standard' : 'clusters',
         seed: typeof rawPayload.seed === 'string' ? rawPayload.seed : '',
         layoutSeed: typeof rawPayload.layoutSeed === 'string'
             ? rawPayload.layoutSeed
@@ -274,7 +323,7 @@ export function validateSectorPayload(rawPayload) {
             totalSystems: toNonNegativeInt(rawPayload.stats && rawPayload.stats.totalSystems, Object.keys(sectors).length)
         },
         multiSector: sanitizeMultiSector(rawPayload.multiSector),
-        sectorConfigSnapshot: isPlainObject(rawPayload.sectorConfigSnapshot) ? rawPayload.sectorConfigSnapshot : null
+        sectorConfigSnapshot: sanitizeSectorConfigSnapshot(rawPayload.sectorConfigSnapshot)
     };
 
     const totalDropped = dropped + droppedPois;

@@ -464,4 +464,156 @@ test.describe('pure logic modules', () => {
       coreSystemManual: false
     });
   });
+
+  test('generation context is deterministic and exposes boundary/core signals', async ({ page }) => {
+    await page.goto('/sector_generator.html');
+
+    const result = await page.evaluate(async () => {
+      const ctx = await import('/js/generation-context.js');
+      const context = ctx.createGenerationContext('seed-a', {
+        NNNN: {
+          config: { width: 4, height: 4 },
+          sectors: {
+            '3-1': { planets: [{ tags: ['Trade'] }] },
+            '3-2': { planets: [{ tags: ['Logistics'] }] }
+          },
+          coreSystemHexId: '3-1'
+        },
+        NNNO: {
+          config: { width: 4, height: 4 },
+          sectors: {
+            '0-1': { planets: [{ tags: ['Capital'] }] },
+            '0-2': { planets: [{ tags: ['Trade'] }] },
+            '0-0': { planets: [{ tags: ['Trade'] }] }
+          },
+          coreSystemHexId: '0-1'
+        }
+      }, {
+        crossSectorContextEnabled: true,
+        boundaryContinuityStrength: 1
+      });
+      const edgePressure = context.getEdgePressure('NNNN', 'south');
+      const coreBias = context.getCoreBias('NNNN');
+      const intent = context.getSectorIntent('NNNN');
+      const neighborSummaries = context.getNeighborSummaries('NNNN');
+      return {
+        edgePressure,
+        coreBias,
+        neighborCount: neighborSummaries.length,
+        neighborHasTags: neighborSummaries.some((n) => (n.summary?.dominantTagSignals || []).includes('trade')),
+        intent
+      };
+    });
+
+    expect(result.edgePressure).toBeGreaterThan(0);
+    expect(result.coreBias).toBeGreaterThan(0);
+    expect(result.neighborCount).toBeGreaterThan(0);
+    expect(result.neighborHasTags).toBeTruthy();
+    expect(result.intent.coreBias).toBeGreaterThan(0);
+  });
+
+  test('cluster v2 keeps deterministic picks and improves center occupancy on fixed seed', async ({ page }) => {
+    await page.goto('/sector_generator.html');
+
+    const result = await page.evaluate(async () => {
+      const utils = await import('/js/utils.js');
+      const spatial = await import('/js/generation-spatial.js');
+      const clusterV2 = await import('/js/generation-cluster-v2.js');
+      const metrics = await import('/js/generation-metrics.js');
+
+      const allCoords = [];
+      for (let c = 0; c < 8; c++) {
+        for (let r = 0; r < 10; r++) {
+          allCoords.push(`${c}-${r}`);
+        }
+      }
+
+      const makeRandom = () => utils.mulberry32(utils.xmur3('cluster-v2-deterministic')());
+      const oldPicked = spatial.selectClusteredSystemCoords(allCoords, 24, makeRandom());
+      const v2PickedA = clusterV2.selectClusteredSystemCoordsV2(allCoords, 24, makeRandom(), {
+        width: 8,
+        height: 10,
+        sectorKey: 'NNNN',
+        isHomeSector: true,
+        settings: {
+          centerBiasStrength: 1.35,
+          boundaryContinuityStrength: 0.55,
+          clusterAnchorJitter: 1.25,
+          clusterGrowthDecay: 0.82,
+          clusterSecondaryAnchorThreshold: 11,
+          clusterEdgeBalance: 0.26,
+          clusterCenterVoidProtection: 0.35
+        },
+        generationContext: null
+      });
+      const v2PickedB = clusterV2.selectClusteredSystemCoordsV2(allCoords, 24, makeRandom(), {
+        width: 8,
+        height: 10,
+        sectorKey: 'NNNN',
+        isHomeSector: true,
+        settings: {
+          centerBiasStrength: 1.35,
+          boundaryContinuityStrength: 0.55,
+          clusterAnchorJitter: 1.25,
+          clusterGrowthDecay: 0.82,
+          clusterSecondaryAnchorThreshold: 11,
+          clusterEdgeBalance: 0.26,
+          clusterCenterVoidProtection: 0.35
+        },
+        generationContext: null
+      });
+
+      const oldSectors = Object.fromEntries(oldPicked.map((hexId) => [hexId, {}]));
+      const v2Sectors = Object.fromEntries(v2PickedA.map((hexId) => [hexId, {}]));
+      const oldMetrics = metrics.computeSectorGenerationMetrics({ width: 8, height: 10, sectors: oldSectors });
+      const v2Metrics = metrics.computeSectorGenerationMetrics({ width: 8, height: 10, sectors: v2Sectors });
+
+      return {
+        deterministic: JSON.stringify(v2PickedA) === JSON.stringify(v2PickedB),
+        oldCenter: oldMetrics.centerOccupancyRatio,
+        v2Center: v2Metrics.centerOccupancyRatio
+      };
+    });
+
+    expect(result.deterministic).toBeTruthy();
+    expect(result.v2Center).toBeGreaterThanOrEqual(result.oldCenter);
+  });
+
+  test('core scoring applies tag weights with caps and stays deterministic', async ({ page }) => {
+    await page.goto('/sector_generator.html');
+
+    const result = await page.evaluate(async () => {
+      const core = await import('/js/core-system.js');
+      const settings = {
+        coreTagWeights: { trade: 8, frontier: -5 },
+        coreTagContributionCap: 10,
+        coreTagPerTagCap: 6,
+        coreScoreWeights: { centrality: 5, population: 10, habitability: 25, context: 0, base: 0 }
+      };
+      const sectors = {
+        '1-1': {
+          tags: ['trade', 'trade', 'trade'],
+          planets: [{ pop: 0.6, habitable: true, tags: ['trade'] }]
+        },
+        '2-2': {
+          tags: ['frontier'],
+          planets: [{ pop: 0.8, habitable: true, tags: ['frontier'] }]
+        }
+      };
+      const first = core.pickCoreSystemHexId(sectors, 4, 4, { settings });
+      const second = core.pickCoreSystemHexId(sectors, 4, 4, { settings });
+      const scoreTrade = core.computeCoreSystemScore(sectors['1-1'], '1-1', 4, 4, { settings });
+      const scoreFrontier = core.computeCoreSystemScore(sectors['2-2'], '2-2', 4, 4, { settings });
+      return {
+        first,
+        second,
+        scoreTrade,
+        scoreFrontier
+      };
+    });
+
+    expect(result.first).toBe(result.second);
+    expect(result.first).toBe('1-1');
+    expect(result.scoreTrade).toBeGreaterThan(result.scoreFrontier);
+  });
 });

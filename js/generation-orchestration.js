@@ -44,6 +44,8 @@ export function buildSectorFromConfigAction(config, fixedSystems = {}, options =
         rand,
         deepClone,
         selectClusteredSystemCoords,
+        selectClusteredSystemCoordsV2,
+        createGenerationContext,
         generateSystemData,
         getActiveJumpGateSectorWeightMultiplier,
         generateDeepSpacePois,
@@ -67,6 +69,12 @@ export function buildSectorFromConfigAction(config, fixedSystems = {}, options =
 
     const fixedHexIds = new Set(validFixedEntries.map(([hexId]) => hexId));
     const candidateCoords = allCoords.filter(hexId => !fixedHexIds.has(hexId));
+    const sectorKey = options.sectorKey || homeSectorKey;
+    const isHomeSector = sectorKey === homeSectorKey;
+    const layoutSeed = options.layoutSeed || state.layoutSeed || state.currentSeed || '';
+    const generationContext = normalized.crossSectorContextEnabled
+        ? createGenerationContext(layoutSeed, options.knownSectorRecords || {}, normalized)
+        : null;
 
     let systemCount = computeSystemCount(totalHexes, normalized);
     if (validFixedEntries.length > systemCount) {
@@ -86,9 +94,28 @@ export function buildSectorFromConfigAction(config, fixedSystems = {}, options =
     );
 
     const systemsToGenerate = Math.max(0, systemCount - validFixedEntries.length);
-    const generatedCoords = normalized.starDistribution === 'clusters'
-        ? selectClusteredSystemCoords(candidateCoords, systemsToGenerate, rand)
-        : candidateCoords.slice(0, systemsToGenerate);
+    let generatedCoords = [];
+    if (normalized.starDistribution === 'clusters') {
+        if (normalized.clusterV2Enabled) {
+            try {
+                generatedCoords = selectClusteredSystemCoordsV2(candidateCoords, systemsToGenerate, rand, {
+                    width,
+                    height,
+                    sectorKey,
+                    isHomeSector,
+                    settings: normalized,
+                    generationContext
+                });
+            } catch (error) {
+                console.warn('Cluster V2 failed; falling back to legacy cluster selector.', error);
+                generatedCoords = selectClusteredSystemCoords(candidateCoords, systemsToGenerate, rand);
+            }
+        } else {
+            generatedCoords = selectClusteredSystemCoords(candidateCoords, systemsToGenerate, rand);
+        }
+    } else {
+        generatedCoords = candidateCoords.slice(0, systemsToGenerate);
+    }
 
     generatedCoords.forEach(hexId => {
         nextSectors[hexId] = generateSystemData(normalized, {
@@ -96,6 +123,16 @@ export function buildSectorFromConfigAction(config, fixedSystems = {}, options =
             usedNames,
             sectorsByCoord: nextSectors
         });
+    });
+    const core = resolveCoreSystemHexId({
+        sectors: nextSectors,
+        width,
+        height,
+        preferredHexId: options.preferredCoreSystemHexId || null,
+        preferredIsManual: !!options.preferredCoreSystemManual,
+        settings: normalized,
+        generationContext,
+        sectorKey
     });
     const activeJumpGateWeightMultiplier = getActiveJumpGateSectorWeightMultiplier(
         options.sectorKey || homeSectorKey,
@@ -105,14 +142,8 @@ export function buildSectorFromConfigAction(config, fixedSystems = {}, options =
         activeJumpGateWeightMultiplier,
         randomFn: rand,
         sectorKey: options.sectorKey || homeSectorKey,
-        knownSectorRecords: options.knownSectorRecords || {}
-    });
-    const core = resolveCoreSystemHexId({
-        sectors: nextSectors,
-        width,
-        height,
-        preferredHexId: options.preferredCoreSystemHexId || null,
-        preferredIsManual: !!options.preferredCoreSystemManual
+        knownSectorRecords: options.knownSectorRecords || {},
+        coreSystemHexId: core.coreSystemHexId || null
     });
 
     return {
@@ -173,7 +204,8 @@ export function generateSectorAction(deps) {
     state.rerollIteration = 0;
     const built = buildSectorFromConfig(config, {}, {
         sectorKey: homeSectorKey,
-        knownSectorRecords: {}
+        knownSectorRecords: {},
+        layoutSeed: seedUsed
     });
 
     state.sectors = built.sectors;
@@ -231,6 +263,7 @@ export function createSectorRecordAction(options = {}, deps) {
     const built = buildSectorFromConfig(config, fixedSystems, {
         sectorKey: options && options.sectorKey ? options.sectorKey : homeSectorKey,
         knownSectorRecords: options && options.knownSectorRecords ? options.knownSectorRecords : {},
+        layoutSeed: options && options.layoutSeed ? options.layoutSeed : (state.layoutSeed || state.currentSeed || seed),
         preferredCoreSystemHexId: options && options.preferredCoreSystemHexId ? options.preferredCoreSystemHexId : null,
         preferredCoreSystemManual: !!(options && options.preferredCoreSystemManual)
     });

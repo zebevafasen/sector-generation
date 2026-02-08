@@ -50,6 +50,9 @@ function validateGenerationData(data) {
     if (!data.densityPresetLabels || typeof data.densityPresetLabels !== 'object') {
         throw new Error('generation-data.json densityPresetLabels must be an object');
     }
+    if (data.generationSettings && typeof data.generationSettings !== 'object') {
+        throw new Error('generation-data.json generationSettings must be an object when provided');
+    }
 }
 
 function validateTooltipData(data) {

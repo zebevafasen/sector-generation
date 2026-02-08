@@ -59,7 +59,7 @@ export function createStorageApplyService(deps) {
             refs.generationProfileSelect.value = nextPayload.generationProfile;
         }
         if (refs.starDistributionSelect) {
-            refs.starDistributionSelect.value = nextPayload.starDistribution === 'clusters' ? 'clusters' : 'standard';
+            refs.starDistributionSelect.value = nextPayload.starDistribution === 'standard' ? 'standard' : 'clusters';
         }
         syncDensityPresetForProfile(refs.generationProfileSelect ? refs.generationProfileSelect.value : 'high_adventure');
         if (nextPayload.densityMode) {
@@ -113,8 +113,21 @@ export function createStorageApplyService(deps) {
             manualMin: nextPayload.manualRange && typeof nextPayload.manualRange.min === 'number' ? nextPayload.manualRange.min : 0,
             manualMax: nextPayload.manualRange && typeof nextPayload.manualRange.max === 'number' ? nextPayload.manualRange.max : 0,
             generationProfile: nextPayload.generationProfile || 'high_adventure',
-            starDistribution: nextPayload.starDistribution === 'clusters' ? 'clusters' : 'standard',
-            realisticPlanetWeights: !!nextPayload.realisticPlanetWeights
+            starDistribution: nextPayload.starDistribution === 'standard' ? 'standard' : 'clusters',
+            realisticPlanetWeights: !!nextPayload.realisticPlanetWeights,
+            clusterV2Enabled: true,
+            crossSectorContextEnabled: true,
+            centerBiasStrength: 1.35,
+            boundaryContinuityStrength: 0.55,
+            clusterAnchorJitter: 1.25,
+            clusterGrowthDecay: 0.82,
+            clusterSecondaryAnchorThreshold: 11,
+            clusterEdgeBalance: 0.26,
+            clusterCenterVoidProtection: 0.35,
+            coreTagWeights: {},
+            coreTagContributionCap: 16,
+            coreTagPerTagCap: 8,
+            coreScoreWeights: {}
         };
         if (nextPayload.multiSector && typeof nextPayload.multiSector === 'object') {
             state.multiSector = nextPayload.multiSector;
