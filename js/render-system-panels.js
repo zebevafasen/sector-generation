@@ -10,6 +10,7 @@ import {
     disableInhabitControls,
     disablePlanetTypeControls,
     disableStarEditControls,
+    setStarSummaryLabel,
     setBodySummaryLabels,
     setButtonAction,
     setPinButtonContent,
@@ -265,6 +266,10 @@ export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
     }
     setButtonAction(refs.renameSystemBtn, false);
     setButtonAction(refs.deletePrimaryStarBtn, false);
+    if (refs.addStarInSectionBtn) {
+        refs.addStarInSectionBtn.classList.toggle('hidden', !state.editMode);
+        setButtonAction(refs.addStarInSectionBtn, false);
+    }
     if (refs.deletePrimaryStarBtn) refs.deletePrimaryStarBtn.classList.add('hidden');
     disableStarEditControls(refs);
     setButtonAction(refs.renameBodyBtn, false);
@@ -275,6 +280,7 @@ export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
     setButtonAction(refs.quickDeleteBodyBtn, false);
     disablePlanetTypeControls(refs);
     disableInhabitControls(refs);
+    setStarSummaryLabel(refs, 0);
     setBodySummaryLabels(refs, 0, 0, 0);
     const canPinOrRerollPoi = !!deepSpacePoi;
     const isPinned = !!(id && state.pinnedHexIds && state.pinnedHexIds.includes(id));

@@ -119,3 +119,35 @@ export function setPrimaryStarClass(system, nextClass, nextAge = null) {
     ensureSystemStarFields(system);
 }
 
+export function addCompanionStar(system, options = {}) {
+    if (!system) return { added: false, reason: 'invalid-system' };
+    const maxStars = Math.max(1, Number(options.maxStars) || 3);
+    const starClass = normalizeStarClass(options.starClass || 'G');
+    const generateStarAgeFn = typeof options.generateStarAgeFn === 'function'
+        ? options.generateStarAgeFn
+        : null;
+
+    ensureSystemStarFields(system);
+    if (!Array.isArray(system.stars)) {
+        return { added: false, reason: 'invalid-stars' };
+    }
+    if (system.stars.length >= maxStars) {
+        return { added: false, reason: 'max-stars' };
+    }
+
+    const index = system.stars.length;
+    const palette = STAR_VISUALS[starClass] || STAR_VISUALS.default;
+    const star = {
+        class: starClass,
+        palette,
+        color: palette.core,
+        glow: palette.halo,
+        starAge: generateStarAgeFn ? generateStarAgeFn(starClass) : null,
+        role: STAR_ROLE_LABELS[index] || `Companion ${index}`,
+        name: getDefaultStarName(system.name, index)
+    };
+    system.stars.push(star);
+    ensureSystemStarFields(system);
+    return { added: true, star };
+}
+

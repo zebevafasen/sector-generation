@@ -40,6 +40,7 @@ import {
     disableInhabitControls,
     disablePlanetTypeControls,
     disableStarEditControls,
+    setStarSummaryLabel,
     getInfoPanelRefs,
     setBodySummaryLabels,
     setButtonAction,
@@ -510,6 +511,7 @@ export function clearInfoPanel() {
     }
 
     if (refs.starAgeLabel) refs.starAgeLabel.innerText = 'Age: --';
+    setStarSummaryLabel(refs, 0);
     setButtonAction(refs.renameSystemBtn, false);
     setButtonAction(refs.deletePrimaryStarBtn, false);
     if (refs.deletePrimaryStarBtn) refs.deletePrimaryStarBtn.classList.add('hidden');

@@ -101,4 +101,5 @@ export function updateEditModeUi() {
     if (refs.editAddPlanetInSectionBtn) refs.editAddPlanetInSectionBtn.classList.toggle('hidden', !state.editMode);
     if (refs.editAddBeltInSectionBtn) refs.editAddBeltInSectionBtn.classList.toggle('hidden', !state.editMode);
     if (refs.editAddStationInSectionBtn) refs.editAddStationInSectionBtn.classList.toggle('hidden', !state.editMode);
+    if (refs.editAddStarInSectionBtn) refs.editAddStarInSectionBtn.classList.toggle('hidden', !state.editMode);
 }

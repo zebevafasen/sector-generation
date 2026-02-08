@@ -1,5 +1,6 @@
 import { STAR_CLASS_INFO, STAR_VISUALS, state } from './config.js';
 import { formatStarAgeValue, getStarClassInfo } from './core.js';
+import { setStarSummaryLabel } from './info-panel-ui.js';
 
 function escapeHtml(value) {
     return String(value == null ? '' : value)
@@ -42,6 +43,7 @@ export function applySystemHeaderDisplay({ refs, system, stars, primaryStar, can
             refs.starAgeLabel.innerText += ` • ${stars.length} stars`;
         }
     }
+    setStarSummaryLabel(refs, stars.length);
 
     if (refs.starVisual) {
         const palette = primaryStar.palette || STAR_VISUALS[primaryStar.class] || STAR_VISUALS.default;
