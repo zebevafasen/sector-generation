@@ -3,6 +3,7 @@ import { EVENTS, emitEvent } from './events.js';
 import { isActiveJumpGatePoi, isInactiveJumpGatePoi, isJumpGatePoi } from './jump-gate-model.js';
 import { resetBodyDetailsPanel } from './render-body-details.js';
 import { getGlobalHexDisplayIdForSector } from './render-shared.js';
+import { getSectorDisplayName } from './sector-naming.js';
 import { ensureSystemStarFields, getPrimaryStar, getSystemStars } from './star-system.js';
 import { applySystemHeaderDisplay } from './render-system-header-display.js';
 import { bindSystemHeaderEditControls } from './render-system-header-edit.js';
@@ -146,7 +147,7 @@ export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
         const isActiveGate = isActiveJumpGatePoi(deepSpacePoi);
         const isInactiveGate = isInactiveJumpGatePoi(deepSpacePoi);
         const jumpLinkLabel = (deepSpacePoi.jumpGateLink && deepSpacePoi.jumpGateLink.sectorKey)
-            ? getGlobalHexDisplayIdForSector(deepSpacePoi.jumpGateLink.sectorKey, deepSpacePoi.jumpGateLink.hexId || '')
+            ? `${getSectorDisplayName(deepSpacePoi.jumpGateLink.sectorKey, state.multiSector?.sectorsByKey || {})} (${getGlobalHexDisplayIdForSector(deepSpacePoi.jumpGateLink.sectorKey, deepSpacePoi.jumpGateLink.hexId || '')})`
             : 'Unresolved';
         const jumpGateActionsMarkup = isActiveGate
             ? `

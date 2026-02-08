@@ -87,3 +87,11 @@ export function getSectorCoordsLabel(sectorKey) {
     const y = coord.y >= 0 ? `+${coord.y}` : String(coord.y);
     return `${x},${y}`;
 }
+
+export function formatSectorLabel(sectorKey, sectorsByKey = {}, options = {}) {
+    const key = String(sectorKey || '').trim().toUpperCase();
+    if (!key) return 'Unknown Sector';
+    const includeKey = options.includeKey !== false;
+    const name = getSectorDisplayName(key, sectorsByKey);
+    return includeKey ? `${name} (${key})` : name;
+}

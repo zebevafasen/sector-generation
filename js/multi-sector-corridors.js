@@ -1,4 +1,5 @@
 import { HOME_SECTOR_KEY, makeSectorKeyFromCoords } from './sector-address.js';
+import { formatSectorLabel } from './sector-naming.js';
 
 export function createCorridorService(state, deps) {
     const {
@@ -91,7 +92,11 @@ export function createCorridorService(state, deps) {
         state.multiSector.chartGateCorridorsPending = false;
         renderSectorLinksUi();
         emitSectorDataChanged('Chart Gate Corridors');
-        const listedKeys = missingKeys.slice(0, 6).join(', ');
+        const sectorsByKey = state.multiSector && state.multiSector.sectorsByKey ? state.multiSector.sectorsByKey : {};
+        const listedKeys = missingKeys
+            .slice(0, 6)
+            .map((sectorKey) => formatSectorLabel(sectorKey, sectorsByKey))
+            .join(', ');
         const extra = missingKeys.length > 6 ? ` +${missingKeys.length - 6} more` : '';
         showStatusMessage(
             `Charted ${missingKeys.length} corridor sector${missingKeys.length === 1 ? '' : 's'}: ${listedKeys}${extra}.`,

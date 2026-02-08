@@ -1,5 +1,6 @@
 import { EVENTS } from './events.js';
 import { makeSectorKeyFromCoords, parseSectorKeyToCoords } from './sector-address.js';
+import { formatSectorLabel } from './sector-naming.js';
 
 function updateSingleSectorNavigation(context) {
     const {
@@ -106,7 +107,7 @@ function updateExpandedSectorNavigation(context) {
             const button = document.createElement('button');
             button.type = 'button';
             button.className = 'expanded-sector-edge-btn';
-            button.title = `Generate/load ${direction.key} of ${entry.sectorKey}`;
+            button.title = `Generate/load ${direction.key} of ${formatSectorLabel(entry.sectorKey, state.multiSector?.sectorsByKey || {})}`;
             button.setAttribute('aria-label', button.title);
             button.textContent = '+';
             button.style.position = 'absolute';
