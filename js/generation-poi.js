@@ -1,4 +1,4 @@
-import { DEEP_SPACE_POI_TEMPLATES } from './generation-data.js';
+import { DEEP_SPACE_POI_TEMPLATES, JUMP_GATE_RULES } from './generation-data.js';
 import { HOME_SECTOR_KEY, parseSectorKeyToCoords } from './sector-address.js';
 import { countNeighborSystems, hexDistanceById } from './generation-spatial.js';
 import {
@@ -42,24 +42,36 @@ function getNearbyActiveJumpGateStats(sectorKey, knownSectorRecords = {}) {
 
 function canSpawnActiveJumpGateInSector(sectorKey, knownSectorRecords = {}) {
     const stats = getNearbyActiveJumpGateStats(sectorKey, knownSectorRecords);
+    const minSeparation = Number.isFinite(Number(JUMP_GATE_RULES.minSectorSeparation))
+        ? Math.max(1, Number(JUMP_GATE_RULES.minSectorSeparation))
+        : 2;
     // Minimum separation requirement: nearest active gate must be >= 2 sectors away.
-    return !Number.isFinite(stats.nearestDistance) || stats.nearestDistance >= 2;
+    return !Number.isFinite(stats.nearestDistance) || stats.nearestDistance >= minSeparation;
 }
 
 export function getActiveJumpGateSectorWeightMultiplier(sectorKey, knownSectorRecords = {}) {
     if (!knownSectorRecords || typeof knownSectorRecords !== 'object') return 1;
     const stats = getNearbyActiveJumpGateStats(sectorKey, knownSectorRecords);
-    if (stats.adjacentCount > 0) return 0;
-    if (stats.withinTwoCount > 0) return 0.35;
-    if (stats.withinThreeCount > 0) return 0.65;
+    const suppression = JUMP_GATE_RULES.activeSuppressionByDistance || {};
+    const atOne = Number.isFinite(Number(suppression[1])) ? Math.max(0, Number(suppression[1])) : 0;
+    const atTwo = Number.isFinite(Number(suppression[2])) ? Math.max(0, Number(suppression[2])) : 0.35;
+    const atThree = Number.isFinite(Number(suppression[3])) ? Math.max(0, Number(suppression[3])) : 0.65;
+    if (stats.adjacentCount > 0) return atOne;
+    if (stats.withinTwoCount > 0) return atTwo;
+    if (stats.withinThreeCount > 0) return atThree;
     return 1;
 }
 
 function getJumpGateEdgeWeightMultiplier(edgeDistance) {
-    if (edgeDistance <= 1) return 1.8;
-    if (edgeDistance <= 2) return 1.35;
-    if (edgeDistance <= 3) return 1.05;
-    return 0.28;
+    const weights = JUMP_GATE_RULES.edgeWeightByDistance || {};
+    const atOne = Number.isFinite(Number(weights[1])) ? Number(weights[1]) : 1.8;
+    const atTwo = Number.isFinite(Number(weights[2])) ? Number(weights[2]) : 1.35;
+    const atThree = Number.isFinite(Number(weights[3])) ? Number(weights[3]) : 1.05;
+    const fallback = Number.isFinite(Number(weights.default)) ? Number(weights.default) : 0.28;
+    if (edgeDistance <= 1) return atOne;
+    if (edgeDistance <= 2) return atTwo;
+    if (edgeDistance <= 3) return atThree;
+    return fallback;
 }
 
 function isJumpGateTemplate(template) {
@@ -141,8 +153,15 @@ export function generateDeepSpacePois(width, height, sectors, options = {}) {
         ? Math.max(0.01, options.activeJumpGateWeightMultiplier)
         : 1;
     const jumpGateHexes = [];
-    const maxJumpGatesPerSector = 1;
-    const minJumpGateSeparation = 4;
+    const maxJumpGatesPerSector = Number.isFinite(Number(JUMP_GATE_RULES.maxPerSector))
+        ? Math.max(0, Number(JUMP_GATE_RULES.maxPerSector))
+        : 1;
+    const minJumpGateSeparation = Number.isFinite(Number(JUMP_GATE_RULES.minHexSeparation))
+        ? Math.max(1, Number(JUMP_GATE_RULES.minHexSeparation))
+        : 4;
+    const edgeDistanceMax = Number.isFinite(Number(JUMP_GATE_RULES.edgeDistanceMax))
+        ? Math.max(0, Number(JUMP_GATE_RULES.edgeDistanceMax))
+        : 2;
     const canSpawnActiveJumpGate = canSpawnActiveJumpGateInSector(sectorKey, knownSectorRecords);
     let edgeSlotCount = 0;
     for (let c = 0; c < width; c++) {
@@ -150,7 +169,7 @@ export function generateDeepSpacePois(width, height, sectors, options = {}) {
             const hexId = `${c}-${r}`;
             if (sectors[hexId]) continue;
             const edgeDistance = Math.min(c, r, (width - 1) - c, (height - 1) - r);
-            if (edgeDistance <= 2) edgeSlotCount++;
+            if (edgeDistance <= edgeDistanceMax) edgeSlotCount++;
         }
     }
     const canSpawnJumpGateAtAll = edgeSlotCount > 0;
@@ -169,7 +188,7 @@ export function generateDeepSpacePois(width, height, sectors, options = {}) {
             const edgeDistance = Math.min(c, r, (width - 1) - c, (height - 1) - r);
             const canRollJumpGateAtHex = canSpawnJumpGateAtAll
                 && jumpGateHexes.length < maxJumpGatesPerSector
-                && edgeDistance <= 2;
+                && edgeDistance <= edgeDistanceMax;
             let poi = createDeepSpacePoi({
                 edgeDistance,
                 allowJumpGates: canRollJumpGateAtHex,
@@ -181,7 +200,7 @@ export function generateDeepSpacePois(width, height, sectors, options = {}) {
                 const isTooCloseToOtherGate = jumpGateHexes.some((otherHexId) =>
                     hexDistanceById(otherHexId, hexId) < minJumpGateSeparation
                 );
-                const isOutsideEdgeWindow = edgeDistance > 2;
+                const isOutsideEdgeWindow = edgeDistance > edgeDistanceMax;
                 const isBlockedActiveGate = poi.jumpGateState === 'active' && !canSpawnActiveJumpGate;
                 if (isAtGateCap || isTooCloseToOtherGate || isOutsideEdgeWindow || isBlockedActiveGate) {
                     poi = createDeepSpacePoi({ edgeDistance, allowJumpGates: false, activeJumpGateWeightMultiplier, randomFn });

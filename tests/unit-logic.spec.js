@@ -120,10 +120,28 @@ test.describe('pure logic modules', () => {
         deepSpacePois: {
           '0-1': { name: 'Relay Beacon 101', kind: 'Navigation', summary: 'safe lane marker', risk: 'Low', rewardHint: 'route aid' },
           '1-1': { name: 'Active Jump-Gate 123', kind: 'Navigation', summary: 'legacy named gate', risk: 'Low', rewardHint: 'legacy naming only' },
-          '1-2': { name: 'Stateful Active', kind: 'Navigation', jumpGateState: 'active' },
-          '2-2': { name: 'Stateful Inactive', kind: 'Navigation', jumpGateState: 'inactive' },
+          '1-2': { name: 'Stateful Active', kind: 'Navigation', jumpGateState: 'active', jumpGatePairId: 'pair-a', jumpGateLink: { sectorKey: 'NNNO', hexId: '0-0' } },
+          '2-2': { name: 'Stateful Inactive', kind: 'Navigation', jumpGateState: 'inactive', jumpGatePairId: 'pair-a', jumpGateLink: { sectorKey: 'NNNN', hexId: '1-2' } },
+          '2-1': { name: 'Broken Active', kind: 'Navigation', jumpGateState: 'active', jumpGatePairId: 'broken-without-link' },
           '0-0': { name: 'Should Drop', kind: 'Hazard' },
           '99-99': { name: 'Also Drop', kind: 'Mystery' }
+        },
+        multiSector: {
+          currentKey: 'NNNN',
+          selectedSectorKey: 'NNNN',
+          sectorsByKey: { NNNN: {} },
+          jumpGateRegistry: {
+            goodPair: {
+              a: { sectorKey: 'NNNN', hexId: '1-2' },
+              b: { sectorKey: 'NNNO', hexId: '0-0' },
+              state: 'active'
+            },
+            badPair: {
+              a: { sectorKey: 'NNNN', hexId: 'not-a-hex' },
+              b: { sectorKey: 'INVALID', hexId: '0-0' },
+              state: 'active'
+            }
+          }
         },
         selectedHexId: '99-99',
         pinnedHexIds: ['0-0', '99-99'],
@@ -143,7 +161,9 @@ test.describe('pure logic modules', () => {
         namedGateCategory: valid.ok ? valid.payload.deepSpacePois['1-1'].poiCategory : null,
         namedGateState: valid.ok ? valid.payload.deepSpacePois['1-1'].jumpGateState : null,
         activeStateGateCategory: valid.ok ? valid.payload.deepSpacePois['1-2'].poiCategory : null,
-        inactiveStateGateCategory: valid.ok ? valid.payload.deepSpacePois['2-2'].poiCategory : null
+        inactiveStateGateCategory: valid.ok ? valid.payload.deepSpacePois['2-2'].poiCategory : null,
+        hasBrokenActive: valid.ok ? Object.prototype.hasOwnProperty.call(valid.payload.deepSpacePois, '2-1') : false,
+        registryKeys: valid.ok ? Object.keys((valid.payload.multiSector && valid.payload.multiSector.jumpGateRegistry) || {}) : []
       };
     });
 
@@ -160,6 +180,8 @@ test.describe('pure logic modules', () => {
     expect(result.namedGateState).toBeNull();
     expect(result.activeStateGateCategory).toBe('jump_gate');
     expect(result.inactiveStateGateCategory).toBe('jump_gate');
+    expect(result.hasBrokenActive).toBeFalsy();
+    expect(result.registryKeys).toEqual(['goodPair']);
   });
 
   test('jump-gate generation enforces max-one-per-sector and edge-only placement', async ({ page }) => {
@@ -336,5 +358,51 @@ test.describe('pure logic modules', () => {
     expect(result.northTargetKey).toBeTruthy();
     expect(result.eastX).toBeGreaterThan(0);
     expect(result.northY).toBeLessThan(0);
+  });
+
+  test('jump-gate suppression tuning follows configured distance multipliers', async ({ page }) => {
+    await page.goto('/sector_generator.html');
+
+    const result = await page.evaluate(async () => {
+      const generationData = await import('/js/generation-data.js');
+      const poi = await import('/js/generation-poi.js');
+
+      generationData.hydrateGenerationData({
+        jumpGateRules: {
+          maxPerSector: 1,
+          minSectorSeparation: 2,
+          edgeDistanceMax: 2,
+          minHexSeparation: 4,
+          activeSuppressionByDistance: {
+            1: 0.11,
+            2: 0.22,
+            3: 0.33
+          },
+          edgeWeightByDistance: {
+            1: 2.0,
+            2: 1.5,
+            3: 1.0,
+            default: 0.2
+          }
+        }
+      });
+
+      const fromOne = poi.getActiveJumpGateSectorWeightMultiplier('NNNN', {
+        NNNO: { deepSpacePois: { '0-0': { poiCategory: 'jump_gate', jumpGateState: 'active' } } }
+      });
+      const fromTwo = poi.getActiveJumpGateSectorWeightMultiplier('NNNN', {
+        NNNP: { deepSpacePois: { '0-0': { poiCategory: 'jump_gate', jumpGateState: 'active' } } }
+      });
+      const fromThree = poi.getActiveJumpGateSectorWeightMultiplier('NNNN', {
+        NNNQ: { deepSpacePois: { '0-0': { poiCategory: 'jump_gate', jumpGateState: 'active' } } }
+      });
+
+      generationData.hydrateGenerationData({});
+      return { fromOne, fromTwo, fromThree };
+    });
+
+    expect(result.fromOne).toBe(0.11);
+    expect(result.fromTwo).toBe(0.22);
+    expect(result.fromThree).toBe(0.33);
   });
 });

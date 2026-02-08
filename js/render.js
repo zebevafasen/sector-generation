@@ -167,6 +167,8 @@ function createHexGroup(svg, col, row, sectorKey, sectorRecord = null) {
     if (deepSpacePoi) {
         const palette = getDeepSpacePoiPalette(deepSpacePoi.kind, deepSpacePoi);
         if (isJumpGatePoi(deepSpacePoi)) {
+            const isActiveGate = deepSpacePoi.jumpGateState === 'active';
+            const stateClass = isActiveGate ? 'jump-gate-poi-active' : 'jump-gate-poi-inactive';
             const outer = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
             outer.setAttribute('cx', x);
             outer.setAttribute('cy', y);
@@ -174,7 +176,10 @@ function createHexGroup(svg, col, row, sectorKey, sectorRecord = null) {
             outer.setAttribute('fill', 'none');
             outer.setAttribute('stroke', palette.stroke);
             outer.setAttribute('stroke-width', '1.2');
-            outer.setAttribute('class', 'deep-space-poi-marker jump-gate-poi-marker');
+            outer.setAttribute('class', `deep-space-poi-marker jump-gate-poi-marker ${stateClass}`);
+            if (!isActiveGate) {
+                outer.setAttribute('stroke-dasharray', '1.8 1.8');
+            }
             outer.style.filter = `drop-shadow(0 0 5px ${palette.glow})`;
             g.appendChild(outer);
 
@@ -185,9 +190,22 @@ function createHexGroup(svg, col, row, sectorKey, sectorRecord = null) {
             core.setAttribute('fill', palette.fill);
             core.setAttribute('stroke', palette.stroke);
             core.setAttribute('stroke-width', '0.8');
-            core.setAttribute('class', 'deep-space-poi-marker jump-gate-poi-marker-core');
+            core.setAttribute('class', `deep-space-poi-marker jump-gate-poi-marker-core ${stateClass}`);
             core.style.filter = `drop-shadow(0 0 5px ${palette.glow})`;
             g.appendChild(core);
+
+            if (!isActiveGate) {
+                const strike = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                strike.setAttribute('x1', String(x - 4.5));
+                strike.setAttribute('y1', String(y + 4.5));
+                strike.setAttribute('x2', String(x + 4.5));
+                strike.setAttribute('y2', String(y - 4.5));
+                strike.setAttribute('stroke', palette.stroke);
+                strike.setAttribute('stroke-width', '1');
+                strike.setAttribute('class', 'deep-space-poi-marker jump-gate-poi-marker-strike jump-gate-poi-inactive');
+                strike.style.filter = `drop-shadow(0 0 4px ${palette.glow})`;
+                g.appendChild(strike);
+            }
         } else {
             const marker = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
             marker.setAttribute('points', `${x},${y - 6} ${x + 5},${y} ${x},${y + 6} ${x - 5},${y}`);

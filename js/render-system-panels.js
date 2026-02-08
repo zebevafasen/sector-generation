@@ -141,10 +141,15 @@ export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
                 </div>
                 `
                 : '');
+        const jumpGateStateIndicator = isActiveGate
+            ? '<span class="jump-gate-state-indicator jump-gate-state-active" title="Jump-Gate Active" aria-label="Jump-Gate Active"></span>'
+            : (isInactiveGate
+                ? '<span class="jump-gate-state-indicator jump-gate-state-inactive" title="Jump-Gate Inactive" aria-label="Jump-Gate Inactive"></span>'
+                : '');
         refs.emptyDetails.innerHTML = `
             <div class="space-y-2 text-left">
                 <div class="flex items-center justify-between gap-2">
-                    <p class="text-sm text-slate-200 font-semibold">${escapeHtml(deepSpacePoi.name || 'Deep-Space Site')}</p>
+                    <p class="text-sm text-slate-200 font-semibold inline-flex items-center gap-2">${jumpGateStateIndicator}${escapeHtml(deepSpacePoi.name || 'Deep-Space Site')}</p>
                     <button type="button" id="renamePoiBtn" class="${state.editMode ? '' : 'hidden '}w-6 h-6 inline-flex items-center justify-center text-xs rounded bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:border-violet-500 transition-colors" title="Rename POI" aria-label="Rename POI">✎</button>
                 </div>
                 <p class="text-xs text-slate-400">${escapeHtml(deepSpacePoi.summary || 'Uncatalogued deep-space contact.')}</p>
