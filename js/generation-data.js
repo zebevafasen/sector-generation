@@ -62,6 +62,17 @@ const DEFAULT_DENSITY_PRESET_RATIOS_BY_PROFILE = {
     }
 };
 
+const DEFAULT_DENSITY_PRESET_ORDER = ['void', 'sparse', 'standard', 'busy', 'dense', 'core'];
+
+const DEFAULT_DENSITY_PRESET_LABELS = {
+    void: 'Void',
+    sparse: 'Sparse',
+    standard: 'Standard',
+    busy: 'Busy',
+    dense: 'Dense',
+    core: 'Core'
+};
+
 const DEFAULT_GENERATION_PROFILES = {
     cinematic: {
         inhabitedChance: 0.45,
@@ -165,6 +176,23 @@ const DEFAULT_DEEP_SPACE_POI_TEMPLATES = [
     }
 ];
 
+const DEFAULT_STAR_CLASS_ROLL_TABLE = [
+    { minRollExclusive: 0.99, starClass: 'Black Hole' },
+    { minRollExclusive: 0.97, starClass: 'Neutron' },
+    { minRollExclusive: 0.94, starClass: 'O' },
+    { minRollExclusive: 0.90, starClass: 'B' },
+    { minRollExclusive: 0.80, starClass: 'A' },
+    { minRollExclusive: 0.65, starClass: 'F' },
+    { minRollExclusive: 0.45, starClass: 'G' },
+    { minRollExclusive: 0.20, starClass: 'K' }
+];
+
+const DEFAULT_STAR_COUNT_THRESHOLDS_BY_PROFILE = {
+    hard_scifi: { triMaxExclusive: 0.03, binaryMaxExclusive: 0.21 },
+    cinematic: { triMaxExclusive: 0.02, binaryMaxExclusive: 0.16 },
+    high_adventure: { triMaxExclusive: 0.015, binaryMaxExclusive: 0.115 }
+};
+
 export let STAR_CLASS_PLANET_WEIGHTS = DEFAULT_STAR_CLASS_PLANET_WEIGHTS;
 export let HABITABLE_PLANET_TYPES = new Set(DEFAULT_HABITABLE_PLANET_TYPES);
 export let BASE_HABITABILITY_TYPE_WEIGHT = DEFAULT_BASE_HABITABILITY_TYPE_WEIGHT;
@@ -172,8 +200,12 @@ export let ADJACENT_DUPLICATE_NAME_CHANCE = DEFAULT_ADJACENT_DUPLICATE_NAME_CHAN
 export let HABITABLE_WORLD_SUFFIXES = DEFAULT_HABITABLE_WORLD_SUFFIXES;
 export let DENSITY_PRESET_BASE_RATIOS = DEFAULT_DENSITY_PRESET_BASE_RATIOS;
 export let DENSITY_PRESET_RATIOS_BY_PROFILE = DEFAULT_DENSITY_PRESET_RATIOS_BY_PROFILE;
+export let DENSITY_PRESET_ORDER = DEFAULT_DENSITY_PRESET_ORDER;
+export let DENSITY_PRESET_LABELS = DEFAULT_DENSITY_PRESET_LABELS;
 export let GENERATION_PROFILES = DEFAULT_GENERATION_PROFILES;
 export let DEEP_SPACE_POI_TEMPLATES = DEFAULT_DEEP_SPACE_POI_TEMPLATES;
+export let STAR_CLASS_ROLL_TABLE = DEFAULT_STAR_CLASS_ROLL_TABLE;
+export let STAR_COUNT_THRESHOLDS_BY_PROFILE = DEFAULT_STAR_COUNT_THRESHOLDS_BY_PROFILE;
 
 export function hydrateGenerationData(loadedData = {}) {
     STAR_CLASS_PLANET_WEIGHTS = loadedData.starClassPlanetWeights || DEFAULT_STAR_CLASS_PLANET_WEIGHTS;
@@ -183,8 +215,12 @@ export function hydrateGenerationData(loadedData = {}) {
     HABITABLE_WORLD_SUFFIXES = loadedData.habitableWorldSuffixes || DEFAULT_HABITABLE_WORLD_SUFFIXES;
     DENSITY_PRESET_BASE_RATIOS = loadedData.densityPresetBaseRatios || DEFAULT_DENSITY_PRESET_BASE_RATIOS;
     DENSITY_PRESET_RATIOS_BY_PROFILE = loadedData.densityPresetRatiosByProfile || DEFAULT_DENSITY_PRESET_RATIOS_BY_PROFILE;
+    DENSITY_PRESET_ORDER = loadedData.densityPresetOrder || DEFAULT_DENSITY_PRESET_ORDER;
+    DENSITY_PRESET_LABELS = loadedData.densityPresetLabels || DEFAULT_DENSITY_PRESET_LABELS;
     GENERATION_PROFILES = loadedData.generationProfiles || DEFAULT_GENERATION_PROFILES;
     DEEP_SPACE_POI_TEMPLATES = loadedData.deepSpacePoiTemplates || DEFAULT_DEEP_SPACE_POI_TEMPLATES;
+    STAR_CLASS_ROLL_TABLE = loadedData.starClassRollTable || DEFAULT_STAR_CLASS_ROLL_TABLE;
+    STAR_COUNT_THRESHOLDS_BY_PROFILE = loadedData.starCountThresholdsByProfile || DEFAULT_STAR_COUNT_THRESHOLDS_BY_PROFILE;
 }
 
 export function normalizeDensityPresetKey(value) {
