@@ -41,6 +41,7 @@ This document breaks the procedural generation redesign into phased, step-by-ste
 - Changed: Stage B now enforces local neighbor caps with controlled relaxation, keeping generation robust without stalling.
 - Changed: Stage B scoring now penalizes line-like growth and boosts compact local pocket formation.
 - Changed: secondary-anchor selection now targets compact group sizing around ~5-6 systems per anchor cluster when possible.
+- Changed: anchor-cluster growth now enforces a hard max of 6 systems per anchor cluster.
 - Changed: Stage C now applies deterministic edge-balancing and final occupancy-cap enforcement after center-void protection.
 - Changed: deterministic tie-break ordering tightened (score -> col -> row -> hexId).
 - Changed: orchestration continues routing clustered generation through V2 behind `clusterV2Enabled` with safe fallback.

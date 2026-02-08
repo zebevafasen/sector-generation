@@ -1095,6 +1095,50 @@ test.describe('pure logic modules', () => {
     expect(result.maxLocalNeighbors).toBeLessThanOrEqual(5);
   });
 
+  test('cluster v2 clamps per-anchor cluster size to a maximum of 6', async ({ page }) => {
+    await page.goto('/sector_generator.html');
+
+    const result = await page.evaluate(async () => {
+      const utils = await import('/js/utils.js');
+      const clusterV2 = await import('/js/generation-cluster-v2.js');
+
+      const allCoords = [];
+      for (let c = 0; c < 12; c++) {
+        for (let r = 0; r < 12; r++) {
+          allCoords.push(`${c}-${r}`);
+        }
+      }
+      const rand = utils.mulberry32(utils.xmur3('cluster-v2-clamp-6-test')());
+      const debugCollector = {};
+      const selected = clusterV2.selectClusteredSystemCoordsV2(allCoords, 30, rand, {
+        width: 12,
+        height: 12,
+        sectorKey: 'NNNN',
+        isHomeSector: true,
+        settings: {
+          centerBiasStrength: 1.35,
+          boundaryContinuityStrength: 0.55,
+          clusterAnchorJitter: 1.25,
+          clusterGrowthDecay: 0.82,
+          clusterLocalNeighborCap: 5,
+          clusterSecondaryAnchorThreshold: 7,
+          clusterEdgeBalance: 0.26,
+          clusterCenterVoidProtection: 0.35
+        },
+        generationContext: null,
+        debugCollector
+      });
+
+      return {
+        selectedCount: selected.length,
+        maxAnchorClusterSize: Number(debugCollector.maxAnchorClusterSize || 0)
+      };
+    });
+
+    expect(result.selectedCount).toBe(30);
+    expect(result.maxAnchorClusterSize).toBeLessThanOrEqual(6);
+  });
+
   test('cluster v2 blends boundary pressure to smooth seams without mirroring', async ({ page }) => {
     await page.goto('/sector_generator.html');
 

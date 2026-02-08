@@ -1,6 +1,8 @@
 import { hexDistanceById } from './generation-spatial.js';
 import { parseHexId } from './utils.js';
 
+const MAX_SYSTEMS_PER_ANCHOR_CLUSTER = 6;
+
 function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
 }
@@ -136,6 +138,9 @@ function buildAnchorClusterCounts(selectedHexIds, anchors) {
 function computeClusterSizeBias(item, anchors, anchorClusterCounts) {
     const nearestAnchorIndex = pickNearestAnchorIndex(item.hexId, anchors);
     const currentCount = Number(anchorClusterCounts[nearestAnchorIndex] || 0);
+    if (currentCount >= MAX_SYSTEMS_PER_ANCHOR_CLUSTER) {
+        return Number.NEGATIVE_INFINITY;
+    }
     const target = 4;
     if (currentCount < target) {
         return 0.35 + ((target - currentCount) * 0.08);
@@ -195,6 +200,9 @@ function computeCandidateScore(item, anchors, selectedHexIds, randomFn, options)
     const compactnessBias = computeLocalCompactnessBias(item, selectedHexIds);
     const linearityPenalty = computeLinearityPenalty(item, selectedHexIds);
     const clusterSizeBias = computeClusterSizeBias(item, anchors, options.anchorClusterCounts || []);
+    if (!Number.isFinite(clusterSizeBias)) {
+        return Number.NEGATIVE_INFINITY;
+    }
 
     const cachedMeta = options.candidateMetaByHex && options.candidateMetaByHex.get(item.hexId)
         ? options.candidateMetaByHex.get(item.hexId)
@@ -483,6 +491,9 @@ export function selectClusteredSystemCoordsV2(candidateCoords, systemsToGenerate
         settings,
         options.preferredPrimaryAnchorHexId || null
     );
+    if (options.debugCollector && typeof options.debugCollector === 'object') {
+        options.debugCollector.anchorHexIds = anchors.map((anchor) => anchor.hexId);
+    }
     if (!anchors.length) return candidateCoords.slice(0, systemsToGenerate);
     const stageBGrown = stageBGrowSelection(parsedCandidates, systemsToGenerate, anchors, randomFn, {
         width,
@@ -492,6 +503,11 @@ export function selectClusteredSystemCoordsV2(candidateCoords, systemsToGenerate
         settings,
         generationContext: options.generationContext || null
     });
+    if (options.debugCollector && typeof options.debugCollector === 'object') {
+        const counts = buildAnchorClusterCounts(stageBGrown, anchors);
+        options.debugCollector.anchorClusterCounts = counts;
+        options.debugCollector.maxAnchorClusterSize = counts.length ? Math.max(...counts) : 0;
+    }
     const stageCEdgeBalanced = applyEdgeBalancing(stageBGrown, parsedCandidates, anchors, {
         width,
         height,
