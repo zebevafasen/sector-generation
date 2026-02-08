@@ -1,22 +1,10 @@
 import {
-    GRID_PRESETS,
-    NAME_PREFIX,
-    NAME_SUFFIX,
     STAR_VISUALS,
     state
 } from './config.js';
-import {
-    ADJACENT_DUPLICATE_NAME_CHANCE,
-    DEEP_SPACE_POI_TEMPLATES,
-    GENERATION_PROFILES,
-    STAR_CLASS_ROLL_TABLE,
-    STAR_COUNT_THRESHOLDS_BY_PROFILE,
-    getDensityRatioForPreset,
-    normalizeDensityPresetKey
-} from './generation-data.js';
 import { EVENTS, emitEvent } from './events.js';
 import { reportSystemInvariantIssues } from './invariants.js';
-import { generateStarAge, generateSeedString, isAutoSeedEnabled, rand, setRandomStream, setSeed, showStatusMessage } from './core.js';
+import { generateSeedString, isAutoSeedEnabled, rand, setRandomStream, setSeed, showStatusMessage } from './core.js';
 import { isArtificialBodyType, isBeltOrFieldBodyType, isPlanetaryBody } from './body-classification.js';
 import { generatePlanetEnvironment } from './planet-environment.js';
 import { refreshSystemPlanetPopulation } from './planet-population.js';
@@ -32,189 +20,14 @@ import {
 import { autoSaveSectorState, buildSectorPayload } from './storage.js';
 import { readGenerationConfigFromUi } from './sector-config.js';
 import { getGlobalHexDisplayId } from './render-shared.js';
-import { HOME_SECTOR_KEY, parseSectorKeyToCoords } from './sector-address.js';
+import { HOME_SECTOR_KEY } from './sector-address.js';
 import { ensureSystemStarFields } from './star-system.js';
 import { redrawGridAndReselect, redrawHexAndReselect, redrawHexAndSelectHex, refreshHexInfo, clearSelectionInfo } from './ui-sync.js';
-import { deepClone, isHexIdInBounds, parseHexId, romanize, shuffleArray, sortHexIds } from './utils.js';
-
-function normalizeGenerationConfig(config) {
-    const source = config || {};
-    const sizeMode = source.sizeMode === 'custom' ? 'custom' : 'preset';
-    const presetKey = source.sizePreset && GRID_PRESETS[source.sizePreset] ? source.sizePreset : 'standard';
-
-    let width = parseInt(source.width, 10);
-    let height = parseInt(source.height, 10);
-    if (sizeMode === 'preset') {
-        width = GRID_PRESETS[presetKey].width;
-        height = GRID_PRESETS[presetKey].height;
-    }
-    if (!Number.isFinite(width) || width < 1) width = GRID_PRESETS.standard.width;
-    if (!Number.isFinite(height) || height < 1) height = GRID_PRESETS.standard.height;
-
-    const densityMode = source.densityMode === 'manual' ? 'manual' : 'preset';
-    const densityPreset = normalizeDensityPresetKey(source.densityPreset);
-
-    let manualMin = parseInt(source.manualMin, 10);
-    let manualMax = parseInt(source.manualMax, 10);
-    if (!Number.isFinite(manualMin) || manualMin < 0) manualMin = 0;
-    if (!Number.isFinite(manualMax) || manualMax < 0) manualMax = 0;
-    const totalHexes = width * height;
-    manualMin = Math.min(manualMin, totalHexes);
-    manualMax = Math.min(manualMax, totalHexes);
-    if (manualMin > manualMax) {
-        const temp = manualMin;
-        manualMin = manualMax;
-        manualMax = temp;
-    }
-
-    const generationProfile = GENERATION_PROFILES[source.generationProfile] ? source.generationProfile : 'high_adventure';
-    const starDistribution = source.starDistribution === 'clusters' ? 'clusters' : 'standard';
-
-    return {
-        sizeMode,
-        sizePreset: presetKey,
-        width,
-        height,
-        densityMode,
-        densityPreset,
-        manualMin,
-        manualMax,
-        generationProfile,
-        starDistribution,
-        realisticPlanetWeights: !!source.realisticPlanetWeights
-    };
-}
-
-function getGenerationConfigSnapshot() {
-    if (state.sectorConfigSnapshot) return normalizeGenerationConfig(state.sectorConfigSnapshot);
-    if (state.lastSectorSnapshot && state.lastSectorSnapshot.sectorConfigSnapshot) {
-        return normalizeGenerationConfig(state.lastSectorSnapshot.sectorConfigSnapshot);
-    }
-    return normalizeGenerationConfig(readGenerationConfigFromUi({
-        sizeMode: state.sizeMode,
-        densityMode: state.densityMode
-    }));
-}
-
-function getActiveGenerationProfile(profileKey) {
-    return GENERATION_PROFILES[profileKey] || GENERATION_PROFILES.cinematic;
-}
-
-function rollStarClass() {
-    const roll = rand();
-    for (let i = 0; i < STAR_CLASS_ROLL_TABLE.length; i++) {
-        const entry = STAR_CLASS_ROLL_TABLE[i];
-        if (!entry || !entry.starClass) continue;
-        if (roll > Number(entry.minRollExclusive)) return entry.starClass;
-    }
-    return 'M';
-}
-
-function pickStarCount(profileKey) {
-    const profile = profileKey || 'high_adventure';
-    const roll = rand();
-    const thresholds = STAR_COUNT_THRESHOLDS_BY_PROFILE[profile] || STAR_COUNT_THRESHOLDS_BY_PROFILE.high_adventure;
-    if (roll < Number(thresholds.triMaxExclusive)) return 3;
-    if (roll < Number(thresholds.binaryMaxExclusive)) return 2;
-    return 1;
-}
-
-function generateSystemStars(profileKey, systemName = '') {
-    const starCount = pickStarCount(profileKey);
-    const roleLabels = ['Primary', 'Secondary', 'Tertiary'];
-    const letterLabels = ['A', 'B', 'C'];
-    const stars = [];
-
-    for (let i = 0; i < starCount; i++) {
-        const starClass = rollStarClass();
-        const palette = STAR_VISUALS[starClass] || STAR_VISUALS.default;
-        stars.push({
-            class: starClass,
-            color: palette.core,
-            glow: palette.halo,
-            palette,
-            starAge: generateStarAge(starClass),
-            role: roleLabels[i] || `Companion ${i}`,
-            name: `${systemName || 'Unnamed'} ${letterLabels[i] || String.fromCharCode(65 + i)}`
-        });
-    }
-    return stars;
-}
-
-function generateNameCandidate() {
-    const p1 = NAME_PREFIX[Math.floor(rand() * NAME_PREFIX.length)];
-    const p2 = NAME_SUFFIX[Math.floor(rand() * NAME_SUFFIX.length)];
-    const num = Math.floor(rand() * 999) + 1;
-    return rand() > 0.5 ? `${p1}-${num}` : `${p1} ${p2}`;
-}
-
-function parseCoordId(coordId) {
-    const parsed = parseHexId(coordId);
-    if (!parsed) return { c: NaN, r: NaN };
-    return { c: parsed.col, r: parsed.row };
-}
-
-function areCoordsAdjacent(coordA, coordB) {
-    const a = parseCoordId(coordA);
-    const b = parseCoordId(coordB);
-    if (!Number.isInteger(a.c) || !Number.isInteger(a.r) || !Number.isInteger(b.c) || !Number.isInteger(b.r)) {
-        return false;
-    }
-    const dc = Math.abs(a.c - b.c);
-    const dr = Math.abs(a.r - b.r);
-    return (dc <= 1 && dr <= 1) && !(dc === 0 && dr === 0);
-}
-
-function hasAdjacentDuplicateName(coordId, name, sectorsByCoord) {
-    return Object.entries(sectorsByCoord || {}).some(([otherCoord, system]) =>
-        !!system && system.name === name && areCoordsAdjacent(coordId, otherCoord)
-    );
-}
-
-function generateSystemName(coordId, usedNames, sectorsByCoord) {
-    const MAX_ATTEMPTS = 400;
-    const registry = usedNames || new Set();
-
-    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-        const candidate = generateNameCandidate();
-        if (!registry.has(candidate)) {
-            registry.add(candidate);
-            return candidate;
-        }
-        if (
-            hasAdjacentDuplicateName(coordId, candidate, sectorsByCoord) &&
-            rand() < ADJACENT_DUPLICATE_NAME_CHANCE
-        ) {
-            return candidate;
-        }
-    }
-
-    let fallback = `${generateNameCandidate()}-${Math.floor(rand() * 900) + 100}`;
-    while (registry.has(fallback)) {
-        fallback = `${generateNameCandidate()}-${Math.floor(rand() * 900) + 100}`;
-    }
-    registry.add(fallback);
-    return fallback;
-}
-
-function computeSystemCount(totalHexes, config) {
-    if (config.densityMode === 'preset') {
-        const densityRatio = getDensityRatioForPreset(config.densityPreset, config.generationProfile);
-        return Math.floor(totalHexes * densityRatio);
-    }
-
-    let min = config.manualMin;
-    let max = config.manualMax;
-    if (min < 0) min = 0;
-    if (min > totalHexes) min = totalHexes;
-    if (max > totalHexes) max = totalHexes;
-    if (min > max) {
-        const temp = min;
-        min = max;
-        max = temp;
-    }
-    return Math.floor(rand() * (max - min + 1)) + min;
-}
+import { deepClone, isHexIdInBounds, romanize, shuffleArray, sortHexIds } from './utils.js';
+import { computeSystemCount, getActiveGenerationProfile, getGenerationConfigSnapshot, normalizeGenerationConfig } from './generation-config.js';
+import { createDeepSpacePoi, generateDeepSpacePois, getActiveJumpGateSectorWeightMultiplier } from './generation-poi.js';
+import { selectClusteredSystemCoords } from './generation-spatial.js';
+import { generateSystemName, generateSystemStars } from './generation-system.js';
 
 function refreshSectorSnapshot(config, width, height, changeLabel = 'Update Sector') {
     const totalHexes = width * height;
@@ -242,259 +55,6 @@ function setAndUseNewSeed(updateInput = true) {
 
 function composeContentSeed(layoutSeed, iteration) {
     return `${layoutSeed}::content:${iteration}`;
-}
-
-function countNeighborSystems(hexId, sectors) {
-    const parsed = parseHexId(hexId);
-    if (!parsed) return 0;
-    let count = 0;
-    for (let dc = -1; dc <= 1; dc++) {
-        for (let dr = -1; dr <= 1; dr++) {
-            if (dc === 0 && dr === 0) continue;
-            const neighborHexId = `${parsed.col + dc}-${parsed.row + dr}`;
-            if (sectors[neighborHexId]) count++;
-        }
-    }
-    return count;
-}
-
-function oddrToCube(col, row) {
-    const x = col - ((row - (row & 1)) / 2);
-    const z = row;
-    const y = -x - z;
-    return { x, y, z };
-}
-
-function cubeDistance(a, b) {
-    return Math.max(
-        Math.abs(a.x - b.x),
-        Math.abs(a.y - b.y),
-        Math.abs(a.z - b.z)
-    );
-}
-
-function hexDistanceById(hexA, hexB) {
-    const parsedA = parseHexId(hexA);
-    const parsedB = parseHexId(hexB);
-    if (!parsedA || !parsedB) return Number.POSITIVE_INFINITY;
-    return cubeDistance(
-        oddrToCube(parsedA.col, parsedA.row),
-        oddrToCube(parsedB.col, parsedB.row)
-    );
-}
-
-function parseSectorKey(sectorKey) {
-    return parseSectorKeyToCoords(sectorKey || HOME_SECTOR_KEY);
-}
-
-function isActiveJumpGatePoi(poi) {
-    if (!poi) return false;
-    if (poi.jumpGateState === 'active') return true;
-    return /^active jump-gate\b/i.test(String(poi.name || ''));
-}
-
-function getActiveJumpGateSectorWeightMultiplier(sectorKey, knownSectorRecords = {}) {
-    if (!knownSectorRecords || typeof knownSectorRecords !== 'object') return 1;
-    const center = parseSectorKey(sectorKey);
-    let nearbyActiveCount = 0;
-    Object.entries(knownSectorRecords).forEach(([otherKey, record]) => {
-        if (!record || !record.deepSpacePois || otherKey === sectorKey) return;
-        const other = parseSectorKey(otherKey);
-        const dx = Math.abs(other.x - center.x);
-        const dy = Math.abs(other.y - center.y);
-        if (Math.max(dx, dy) > 2) return;
-        const activeInSector = Object.values(record.deepSpacePois).some(isActiveJumpGatePoi);
-        if (activeInSector) nearbyActiveCount++;
-    });
-    if (nearbyActiveCount <= 0) return 1;
-    return Math.max(0.22, 1 - (nearbyActiveCount * 0.24));
-}
-
-function getJumpGateEdgeWeightMultiplier(edgeDistance) {
-    if (edgeDistance <= 1) return 1.8;
-    if (edgeDistance <= 2) return 1.35;
-    if (edgeDistance <= 3) return 1.05;
-    return 0.28;
-}
-
-function createDeepSpacePoi(options = {}) {
-    const edgeDistance = Number.isFinite(options.edgeDistance) ? options.edgeDistance : Number.POSITIVE_INFINITY;
-    const allowJumpGates = options.allowJumpGates !== false;
-    const activeJumpGateWeightMultiplier = Number.isFinite(options.activeJumpGateWeightMultiplier)
-        ? Math.max(0.01, options.activeJumpGateWeightMultiplier)
-        : 1;
-    const weightedTemplates = DEEP_SPACE_POI_TEMPLATES.filter((template) =>
-        allowJumpGates || !/jump-gate/i.test(String(template.name || ''))
-    ).map((template) => {
-        const baseWeight = Number.isFinite(template.weight) && template.weight > 0 ? template.weight : 1;
-        const isJumpGate = /jump-gate/i.test(String(template.name || ''));
-        const isActiveJumpGate = template.jumpGateState === 'active';
-        const edgeAdjustedWeight = isJumpGate
-            ? baseWeight * getJumpGateEdgeWeightMultiplier(edgeDistance)
-            : baseWeight;
-        const suppressionAdjustedWeight = isActiveJumpGate
-            ? edgeAdjustedWeight * activeJumpGateWeightMultiplier
-            : edgeAdjustedWeight;
-        return {
-            template,
-            weight: suppressionAdjustedWeight
-        };
-    });
-
-    const totalWeight = weightedTemplates.reduce((sum, entry) => sum + entry.weight, 0);
-    let roll = rand() * totalWeight;
-    let template = weightedTemplates[weightedTemplates.length - 1].template;
-    for (let i = 0; i < weightedTemplates.length; i++) {
-        const candidate = weightedTemplates[i];
-        roll -= candidate.weight;
-        if (roll <= 0) {
-            template = candidate.template;
-            break;
-        }
-    }
-    const serial = Math.floor(rand() * 900) + 100;
-    return {
-        kind: template.kind,
-        name: `${template.name} ${serial}`,
-        summary: template.summary,
-        risk: template.risk,
-        rewardHint: template.rewardHint,
-        isRefuelingStation: !!template.isRefuelingStation,
-        jumpGateState: template.jumpGateState || null
-    };
-}
-
-function isJumpGatePoi(poi) {
-    if (!poi) return false;
-    return /jump-gate/i.test(String(poi.name || ''));
-}
-
-function generateDeepSpacePois(width, height, sectors, options = {}) {
-    const pois = {};
-    const activeJumpGateWeightMultiplier = Number.isFinite(options.activeJumpGateWeightMultiplier)
-        ? Math.max(0.01, options.activeJumpGateWeightMultiplier)
-        : 1;
-    const jumpGateHexes = [];
-    const maxJumpGatesPerSector = 2;
-    const minJumpGateSeparation = 4;
-
-    for (let c = 0; c < width; c++) {
-        for (let r = 0; r < height; r++) {
-            const hexId = `${c}-${r}`;
-            if (sectors[hexId]) continue;
-
-            const nearbySystems = countNeighborSystems(hexId, sectors);
-            const baseChance = 0.035;
-            const nearbyBoost = nearbySystems > 0 ? Math.min(0.05, nearbySystems * 0.015) : 0;
-            const remoteBoost = nearbySystems === 0 ? 0.015 : 0;
-            const spawnChance = baseChance + nearbyBoost + remoteBoost;
-            if (rand() > spawnChance) continue;
-            const edgeDistance = Math.min(c, r, (width - 1) - c, (height - 1) - r);
-            let poi = createDeepSpacePoi({ edgeDistance, activeJumpGateWeightMultiplier });
-            if (isJumpGatePoi(poi)) {
-                const isAtGateCap = jumpGateHexes.length >= maxJumpGatesPerSector;
-                const isTooCloseToOtherGate = jumpGateHexes.some(otherHexId =>
-                    hexDistanceById(otherHexId, hexId) < minJumpGateSeparation
-                );
-                if (isAtGateCap || isTooCloseToOtherGate) {
-                    poi = createDeepSpacePoi({ edgeDistance, allowJumpGates: false, activeJumpGateWeightMultiplier });
-                }
-            }
-            if (isJumpGatePoi(poi)) {
-                jumpGateHexes.push(hexId);
-            }
-            pois[hexId] = poi;
-        }
-    }
-    return pois;
-}
-
-function selectClusteredSystemCoords(candidateCoords, systemsToGenerate) {
-    if (systemsToGenerate <= 2 || candidateCoords.length <= 2) {
-        return candidateCoords.slice(0, systemsToGenerate);
-    }
-
-    const shuffled = [...candidateCoords];
-    shuffleArray(shuffled, rand);
-    const targetSystemsPerCluster = 4.5;
-    const clusterCount = Math.max(
-        2,
-        Math.min(
-            shuffled.length,
-            Math.round(systemsToGenerate / targetSystemsPerCluster)
-        )
-    );
-    const parsedCoords = shuffled
-        .map((hexId) => ({ hexId, coord: parseHexId(hexId) }))
-        .filter((item) => !!item.coord);
-    if (!parsedCoords.length) return candidateCoords.slice(0, systemsToGenerate);
-
-    const centers = [];
-    centers.push(parsedCoords[Math.floor(rand() * parsedCoords.length)].coord);
-    while (centers.length < clusterCount) {
-        let best = null;
-        let bestScore = Number.NEGATIVE_INFINITY;
-        parsedCoords.forEach((item) => {
-            const nearest = centers.reduce((min, center) => {
-                const dc = item.coord.col - center.col;
-                const dr = item.coord.row - center.row;
-                const distance = Math.sqrt((dc * dc) + (dr * dr));
-                return Math.min(min, distance);
-            }, Number.POSITIVE_INFINITY);
-            const spreadBias = nearest + (rand() * 0.75);
-            if (spreadBias > bestScore) {
-                bestScore = spreadBias;
-                best = item.coord;
-            }
-        });
-        if (!best) break;
-        centers.push(best);
-    }
-    if (!centers.length) return candidateCoords.slice(0, systemsToGenerate);
-
-    const buckets = centers.map(() => []);
-    candidateCoords.forEach((hexId) => {
-        const parsed = parseHexId(hexId);
-        if (!parsed) return;
-        let nearest = Number.POSITIVE_INFINITY;
-        let nearestIndex = 0;
-        centers.forEach((center, index) => {
-            const dc = parsed.col - center.col;
-            const dr = parsed.row - center.row;
-            const distance = Math.sqrt((dc * dc) + (dr * dr));
-            if (distance < nearest) {
-                nearest = distance;
-                nearestIndex = index;
-            }
-        });
-        buckets[nearestIndex].push({
-            hexId,
-            score: -nearest + (rand() * 1.8)
-        });
-    });
-    buckets.forEach((bucket) => bucket.sort((a, b) => b.score - a.score));
-
-    const spreadCount = systemsToGenerate >= 10 ? Math.max(1, Math.floor(systemsToGenerate * 0.12)) : 0;
-    const clusteredCount = Math.max(0, systemsToGenerate - spreadCount);
-    const selected = [];
-    let cursor = 0;
-    while (selected.length < clusteredCount) {
-        let pickedInPass = false;
-        for (let i = 0; i < buckets.length && selected.length < clusteredCount; i++) {
-            const bucket = buckets[i];
-            const item = bucket[cursor];
-            if (!item) continue;
-            selected.push(item.hexId);
-            pickedInPass = true;
-        }
-        if (!pickedInPass) break;
-        cursor++;
-    }
-    const selectedSet = new Set(selected);
-    const spreadCandidates = shuffled.filter((hexId) => !selectedSet.has(hexId));
-    const spreadPicked = spreadCandidates.slice(0, systemsToGenerate - selected.length);
-
-    return [...selected, ...spreadPicked];
 }
 
 function buildSectorFromConfig(config, fixedSystems = {}, options = {}) {
@@ -535,7 +95,7 @@ function buildSectorFromConfig(config, fixedSystems = {}, options = {}) {
 
     const systemsToGenerate = Math.max(0, systemCount - validFixedEntries.length);
     const generatedCoords = normalized.starDistribution === 'clusters'
-        ? selectClusteredSystemCoords(candidateCoords, systemsToGenerate)
+        ? selectClusteredSystemCoords(candidateCoords, systemsToGenerate, rand)
         : candidateCoords.slice(0, systemsToGenerate);
 
     generatedCoords.forEach(hexId => {
@@ -549,7 +109,7 @@ function buildSectorFromConfig(config, fixedSystems = {}, options = {}) {
         options.sectorKey || HOME_SECTOR_KEY,
         options.knownSectorRecords || {}
     );
-    const deepSpacePois = generateDeepSpacePois(width, height, nextSectors, { activeJumpGateWeightMultiplier });
+    const deepSpacePois = generateDeepSpacePois(width, height, nextSectors, { activeJumpGateWeightMultiplier, randomFn: rand });
 
     return {
         config: normalized,
@@ -640,8 +200,8 @@ export function generateSystemData(config = null, context = null) {
     const coordId = context && context.coordId ? context.coordId : null;
     const usedNames = context && context.usedNames ? context.usedNames : new Set();
     const sectorsByCoord = context && context.sectorsByCoord ? context.sectorsByCoord : state.sectors;
-    const name = generateSystemName(coordId, usedNames, sectorsByCoord);
-    const stars = generateSystemStars(normalized.generationProfile, name);
+    const name = generateSystemName(coordId, usedNames, sectorsByCoord, rand);
+    const stars = generateSystemStars(normalized.generationProfile, name, rand);
     const primaryStar = stars[0];
     const sClass = primaryStar.class;
 
@@ -802,7 +362,7 @@ export function addPoiAtHex(hexId) {
         return;
     }
 
-    state.deepSpacePois[hexId] = createDeepSpacePoi();
+    state.deepSpacePois[hexId] = createDeepSpacePoi({ randomFn: rand });
 
     redrawHexAndSelectHex(hexId);
     refreshSectorSnapshot(config, config.width, config.height, 'Add POI');
@@ -997,7 +557,7 @@ export function rerollSelectedSystem() {
     const config = getGenerationConfigSnapshot();
     const selectedPoi = state.deepSpacePois && state.deepSpacePois[selectedHexId] ? state.deepSpacePois[selectedHexId] : null;
     if (selectedPoi && !state.sectors[selectedHexId]) {
-        state.deepSpacePois[selectedHexId] = createDeepSpacePoi();
+        state.deepSpacePois[selectedHexId] = createDeepSpacePoi({ randomFn: rand });
         redrawHexAndSelectHex(selectedHexId);
         refreshSectorSnapshot(config, config.width, config.height, 'Reroll POI');
         showStatusMessage(`Rerolled POI at ${getGlobalHexDisplayId(selectedHexId)}.`, 'success');
@@ -1116,7 +676,7 @@ export function rerollUnpinnedSystems() {
     state.rerollIteration = nextIteration;
     state.currentSeed = layoutSeed;
     state.sectors = nextSectors;
-    state.deepSpacePois = generateDeepSpacePois(width, height, nextSectors);
+    state.deepSpacePois = generateDeepSpacePois(width, height, nextSectors, { randomFn: rand });
     Object.entries(fixedPois).forEach(([hexId, poi]) => {
         if (!state.sectors[hexId]) {
             state.deepSpacePois[hexId] = deepClone(poi);
