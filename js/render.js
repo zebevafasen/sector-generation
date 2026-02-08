@@ -5,7 +5,7 @@ import { refreshSystemPlanetPopulation } from './planet-population.js';
 import { refreshSystemPlanetTags } from './planet-tags.js';
 import { ensureSystemStarFields, getSystemStars } from './star-system.js';
 import { countSystemBodies } from './body-classification.js';
-import { getCurrentGridDimensions, getGlobalHexDisplayId, renderRouteOverlay, formatGlobalCoord } from './render-shared.js';
+import { formatLocalHexDisplayId, getCurrentGridDimensions, getGlobalHexDisplayId, renderRouteOverlay } from './render-shared.js';
 import { resetBodyDetailsPanel } from './render-body-details.js';
 import { renderSystemBodyLists } from './render-system-bodies.js';
 import { configureSystemHeaderAndStar, renderEmptyHexInfo } from './render-system-panels.js';
@@ -35,19 +35,6 @@ function getDeepSpacePoiPalette(kind) {
     default:
         return { fill: '#94a3b8', stroke: '#e2e8f0', glow: 'rgba(148,163,184,0.7)' };
     }
-}
-
-function parseSectorOffset() {
-    const { width } = getCurrentGridDimensions();
-    const key = state.multiSector && state.multiSector.currentKey ? state.multiSector.currentKey : '0,0';
-    const [xRaw, yRaw] = String(key).split(',');
-    const sectorX = parseInt(xRaw, 10);
-    const sectorY = parseInt(yRaw, 10);
-    return {
-        sectorX: Number.isInteger(sectorX) ? sectorX : 0,
-        sectorY: Number.isInteger(sectorY) ? sectorY : 0,
-        width
-    };
 }
 
 function getStarMarkerRadius(starClass) {
@@ -84,7 +71,7 @@ function redrawAndReselect(hexId, preselectedBodyIndex = null) {
     }
 }
 
-function createHexGroup(svg, col, row, cols, rows, sectorX, sectorY) {
+function createHexGroup(svg, col, row, cols, rows) {
     const hexId = `${col}-${row}`;
     const system = state.sectors[hexId];
     const deepSpacePoi = !system && state.deepSpacePois ? state.deepSpacePois[hexId] : null;
@@ -114,9 +101,7 @@ function createHexGroup(svg, col, row, cols, rows, sectorX, sectorY) {
     text.setAttribute('y', y + HEX_SIZE / 1.5);
     text.setAttribute('text-anchor', 'middle');
     text.setAttribute('class', 'hex-text');
-    const globalC = col + (sectorX * cols);
-    const globalR = row + (sectorY * rows);
-    text.textContent = `${formatGlobalCoord(globalC)}${formatGlobalCoord(globalR)}`;
+    text.textContent = formatLocalHexDisplayId(hexId);
     g.appendChild(text);
 
     if (system) {
@@ -185,8 +170,7 @@ export function redrawHex(hexId) {
     if (!Number.isInteger(col) || !Number.isInteger(row)) return null;
 
     const { width, height } = getCurrentGridDimensions();
-    const { sectorX, sectorY } = parseSectorOffset();
-    const nextGroup = createHexGroup(svg, col, row, width, height, sectorX, sectorY);
+    const nextGroup = createHexGroup(svg, col, row, width, height);
     const existing = viewport.querySelector(`.hex-group[data-id="${hexId}"]`);
     if (!existing) return null;
     viewport.replaceChild(nextGroup, existing);
@@ -268,11 +252,9 @@ export function drawGrid(cols, rows, options = {}) {
     }
     updateViewTransform();
 
-    const { sectorX, sectorY } = parseSectorOffset();
-
     for (let c = 0; c < cols; c++) {
         for (let r = 0; r < rows; r++) {
-            const g = createHexGroup(svg, c, r, cols, rows, sectorX, sectorY);
+            const g = createHexGroup(svg, c, r, cols, rows);
             viewport.appendChild(g);
         }
     }

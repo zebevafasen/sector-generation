@@ -1,5 +1,6 @@
 import { SYSTEM_NAME_PREFIX } from '../names/system_names/system_name_prefix.js';
 import { SYSTEM_NAME_SUFFIX } from '../names/system_names/system_name_suffix.js';
+import { HOME_SECTOR_KEY } from './sector-address.js';
 export const HEX_SIZE = 40;
 export const HEX_WIDTH = Math.sqrt(3) * HEX_SIZE;
 export const HEX_HEIGHT = 2 * HEX_SIZE;
@@ -131,7 +132,7 @@ export const state = {
     sectorConfigSnapshot: null,
     pinnedHexIds: [],
     multiSector: {
-        currentKey: '0,0',
+        currentKey: HOME_SECTOR_KEY,
         sectorsByKey: {},
         jumpGateRegistry: {}
     },

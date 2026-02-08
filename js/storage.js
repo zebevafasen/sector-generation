@@ -7,6 +7,7 @@ import { setDensityMode, setSizeMode, syncDensityPresetForProfile } from './cont
 import { EVENTS, emitEvent } from './events.js';
 import { normalizeDensityPresetKey } from './generation-data.js';
 import { getGlobalHexDisplayId } from './render-shared.js';
+import { HOME_SECTOR_KEY } from './sector-address.js';
 import { clearInfoPanel, drawGrid, selectHex } from './render.js';
 import { readGenerationConfigFromUi } from './sector-config.js';
 import { validateSectorPayload } from './sector-payload-validation.js';
@@ -560,7 +561,7 @@ export function applySectorPayload(payload) {
         }
     } else {
         state.multiSector = {
-            currentKey: '0,0',
+            currentKey: HOME_SECTOR_KEY,
             sectorsByKey: {},
             jumpGateRegistry: {}
         };
