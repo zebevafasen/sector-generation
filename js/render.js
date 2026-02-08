@@ -5,7 +5,7 @@ import { refreshSystemPlanetPopulation } from './planet-population.js';
 import { refreshSystemPlanetTags } from './planet-tags.js';
 import { ensureSystemStarFields, getSystemStars } from './star-system.js';
 import { countSystemBodies } from './body-classification.js';
-import { formatLocalHexDisplayId, getCurrentGridDimensions, getGlobalHexDisplayId, renderRouteOverlay } from './render-shared.js';
+import { formatLocalHexDisplayId, getGlobalHexDisplayId, renderRouteOverlay } from './render-shared.js';
 import { resetBodyDetailsPanel } from './render-body-details.js';
 import { renderSystemBodyLists } from './render-system-bodies.js';
 import { configureSystemHeaderAndStar, renderEmptyHexInfo } from './render-system-panels.js';
@@ -71,7 +71,7 @@ function redrawAndReselect(hexId, preselectedBodyIndex = null) {
     }
 }
 
-function createHexGroup(svg, col, row, cols, rows) {
+function createHexGroup(svg, col, row) {
     const hexId = `${col}-${row}`;
     const system = state.sectors[hexId];
     const deepSpacePoi = !system && state.deepSpacePois ? state.deepSpacePois[hexId] : null;
@@ -169,8 +169,7 @@ export function redrawHex(hexId) {
     const row = parseInt(rowRaw, 10);
     if (!Number.isInteger(col) || !Number.isInteger(row)) return null;
 
-    const { width, height } = getCurrentGridDimensions();
-    const nextGroup = createHexGroup(svg, col, row, width, height);
+    const nextGroup = createHexGroup(svg, col, row);
     const existing = viewport.querySelector(`.hex-group[data-id="${hexId}"]`);
     if (!existing) return null;
     viewport.replaceChild(nextGroup, existing);
@@ -254,7 +253,7 @@ export function drawGrid(cols, rows, options = {}) {
 
     for (let c = 0; c < cols; c++) {
         for (let r = 0; r < rows; r++) {
-            const g = createHexGroup(svg, c, r, cols, rows);
+            const g = createHexGroup(svg, c, r);
             viewport.appendChild(g);
         }
     }

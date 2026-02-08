@@ -249,15 +249,6 @@ function ensureInboundJumpGatesForRecord(sectorKey, record) {
     });
 }
 
-function mapSelectedHexForDirection(selectedHexId) {
-    if (!selectedHexId) return null;
-    const [cRaw, rRaw] = String(selectedHexId).split('-');
-    const c = parseInt(cRaw, 10);
-    const r = parseInt(rRaw, 10);
-    if (!Number.isInteger(c) || !Number.isInteger(r)) return null;
-    return `${c}-${r}`;
-}
-
 function getCurrentConfig() {
     const snapshot = state.sectorConfigSnapshot || (state.lastSectorSnapshot && state.lastSectorSnapshot.sectorConfigSnapshot);
     if (snapshot) return deepClone(snapshot);
@@ -552,9 +543,8 @@ function moveDirection(direction) {
     const targetKey = offsetSectorKey(state.multiSector.currentKey, delta.dx, delta.dy);
     const targetRecord = getOrCreateSectorRecord(targetKey, direction);
     if (!targetRecord) return;
-    const mappedSelectedHexId = mapSelectedHexForDirection(state.selectedHexId);
     applySectorRecord(targetKey, targetRecord, {
-        preferredSelectedHexId: mappedSelectedHexId,
+        preferredSelectedHexId: state.selectedHexId,
         preserveView: true
     });
     emitEvent(EVENTS.SECTOR_DATA_CHANGED, { label: `Switch Sector ${direction}` });
