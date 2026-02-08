@@ -44,16 +44,18 @@ export function formatLocalHexDisplayId(localHexId) {
 
 export function getGlobalHexDisplayId(localHexId) {
     const key = state.multiSector && state.multiSector.currentKey ? state.multiSector.currentKey : HOME_SECTOR_KEY;
-    const local = formatLocalHexDisplayId(localHexId);
-    if (local === '--') return '--';
-    return `${key}${local}`;
+    return formatFullHexDisplayId(key, localHexId);
 }
 
 export function getGlobalHexDisplayIdForSector(sectorKey, localHexId) {
+    return formatFullHexDisplayId(sectorKey, localHexId);
+}
+
+export function formatFullHexDisplayId(sectorKey, localHexId) {
     const key = String(sectorKey || HOME_SECTOR_KEY).trim().toUpperCase();
     const local = formatLocalHexDisplayId(localHexId);
     if (!/^[A-Z]{4}$/.test(key) || local === '--') return '--';
-    return `${key}${local}`;
+    return `${key}-${local}`;
 }
 
 export function renderRouteOverlay(viewport) {
