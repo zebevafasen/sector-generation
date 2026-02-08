@@ -70,6 +70,11 @@ body {
     fill: #94a3b8;
 }
 
+.hex-text-core {
+    fill: #fde047;
+    font-weight: 700;
+}
+
 .sector-frame {
     opacity: 0;
     stroke: #38bdf8;

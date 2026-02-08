@@ -126,7 +126,7 @@ function createHexGroup(svg, col, row, sectorKey, sectorRecord = null) {
     text.setAttribute('y', y + HEX_SIZE * 0.72);
     text.setAttribute('text-anchor', 'middle');
     text.setAttribute('dominant-baseline', 'middle');
-    text.setAttribute('class', 'hex-text');
+    text.setAttribute('class', `hex-text${isCoreSystem ? ' hex-text-core' : ''}`);
     text.textContent = formatLocalHexDisplayId(hexId);
     g.appendChild(text);
 
@@ -171,7 +171,7 @@ function createHexGroup(svg, col, row, sectorKey, sectorRecord = null) {
         }
         if (isCoreSystem) {
             const coreMarker = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-            const markerY = y - Math.max(8, baseRadius + 6);
+            const markerY = y + Math.max(8, baseRadius + 6);
             coreMarker.setAttribute('points', `${x},${markerY - 4} ${x + 4},${markerY} ${x},${markerY + 4} ${x - 4},${markerY}`);
             coreMarker.setAttribute('fill', '#fde047');
             coreMarker.setAttribute('stroke', '#f59e0b');
