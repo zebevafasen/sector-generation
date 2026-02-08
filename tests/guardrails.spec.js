@@ -114,6 +114,72 @@ test('expanded view deselect keeps sector hover highlight available on previousl
   await expect(page.locator(`.sector-layer[data-sector-key="${targetKey}"] .sector-frame.sector-frame-hover`)).toHaveCount(1);
 });
 
+test('stars section is collapsible like body sections', async ({ page }) => {
+  await page.goto('/sector_generator.html');
+  await page.locator('#generateSectorBtn').click();
+
+  const populatedHexes = page.locator('.hex-group').filter({
+    has: page.locator('circle.star-circle')
+  });
+  await expect(populatedHexes.first()).toBeVisible();
+  const selectedHexId = await page.evaluate(() => {
+    const groups = Array.from(document.querySelectorAll('.hex-group'));
+    const match = groups.find((group) => !!group.querySelector('circle.star-circle'));
+    if (!match) return null;
+    match.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    return String(match.getAttribute('data-id') || '');
+  });
+  expect(selectedHexId).toBeTruthy();
+  await expect(page.locator('#systemDetails')).toBeVisible();
+
+  await expect(page.locator('#infoStarDetails')).toBeVisible();
+  await expect(page.locator('#infoStarSummaryLabel')).toContainText('Stars (');
+  await expect(page.locator('#infoStarDetails')).toHaveJSProperty('open', true);
+
+  await page.locator('#infoStarSummary').click();
+  await expect(page.locator('#infoStarDetails')).toHaveJSProperty('open', false);
+
+  await page.locator('#infoStarSummary').click();
+  await expect(page.locator('#infoStarDetails')).toHaveJSProperty('open', true);
+});
+
+test('edit mode star section add button can add stars up to cap', async ({ page }) => {
+  await page.goto('/sector_generator.html');
+  await page.locator('#generateSectorBtn').click();
+  await page.locator('#editModeToggleBtn').click();
+  await expect(page.locator('#editModeToggleBtn')).toContainText('EDIT MODE: ON');
+
+  const populatedHexes = page.locator('.hex-group').filter({
+    has: page.locator('circle.star-circle')
+  });
+  await expect(populatedHexes.first()).toBeVisible();
+  await populatedHexes.first().click({ force: true });
+  await expect(page.locator('.hex.selected')).toHaveCount(1);
+
+  const getStarCount = async () => parseCountFromLabel(await page.locator('#infoStarSummaryLabel').innerText());
+  await expect(page.locator('#editAddStarInSectionBtn')).toBeVisible();
+
+  let stars = await getStarCount();
+  while (stars < 3) {
+    await page.evaluate(() => {
+      const btn = document.getElementById('editAddStarInSectionBtn');
+      if (!btn) throw new Error('Add star button not found.');
+      btn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    });
+    await expect.poll(getStarCount).toBe(stars + 1);
+    const next = await getStarCount();
+    stars = next;
+  }
+
+  expect(stars).toBe(3);
+  await page.evaluate(() => {
+    const btn = document.getElementById('editAddStarInSectionBtn');
+    if (!btn) throw new Error('Add star button not found.');
+    btn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+  });
+  await expect(page.locator('#infoStarSummaryLabel')).toContainText('Stars (3)');
+});
+
 test('route planner can bridge long gaps using refueling-station POIs', async ({ page }) => {
   await page.goto('/sector_generator.html');
   await page.locator('#modeSizeCustomBtn').click();

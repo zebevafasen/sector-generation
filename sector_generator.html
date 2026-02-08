@@ -18,18 +18,17 @@
     <aside id="leftSidebar" class="relative w-full md:w-96 bg-slate-900 border-r border-slate-700 flex flex-col h-full z-10 shadow-2xl">
         
         <!-- Header -->
-        <div id="leftSidebarHeader" class="p-4 border-b border-slate-700 bg-slate-950">
-            <h1 class="text-xl font-bold text-sky-400 tracking-wider uppercase">Sector Gen <span class="text-xs text-slate-500 align-top">v1.2</span></h1>
-            <p class="text-xs text-slate-500 mt-1">Hex-based cartography system</p>
+        <div id="leftSidebarHeader" class="p-3 border-b border-slate-700/50 bg-slate-900">
+            <h1 class="text-sm font-semibold text-slate-200 tracking-wide">HexSector <span class="text-[10px] text-slate-500 align-top">v1.2</span></h1>
         </div>
 
         <!-- Controls (Scrollable part of sidebar) -->
         <div id="leftSidebarContent" class="flex-1 overflow-y-auto p-3 space-y-4">
             
             <!-- Grid Config -->
-            <div class="space-y-3">
-                <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wide">Grid Configuration</h2>
-                
+            <details id="gridConfigSection" open class="sidebar-section">
+                <summary><h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wide">Grid Configuration</h2></summary>
+                <div class="mt-2 space-y-3">
                 <div class="flex gap-2 mb-2 bg-slate-800 p-1 rounded">
                     <button id="modeSizePresetBtn" class="flex-1 py-1 text-xs rounded bg-sky-600 text-white shadow transition-all">Preset</button>
                     <button id="modeSizeCustomBtn" class="flex-1 py-1 text-xs rounded text-slate-400 hover:text-white transition-all">Custom</button>
@@ -55,12 +54,13 @@
                             class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm focus:border-sky-500 focus:outline-none transition-colors">
                     </div>
                 </div>
-            </div>
+                </div>
+            </details>
 
             <!-- Density Config -->
-            <div class="space-y-3">
-                <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wide">Stellar Density</h2>
-                
+            <details id="stellarDensitySection" open class="sidebar-section">
+                <summary><h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wide">Stellar Density</h2></summary>
+                <div class="mt-2 space-y-3">
                 <div class="flex gap-2 mb-2 bg-slate-800 p-1 rounded">
                     <button id="modePresetBtn" class="flex-1 py-1 text-xs rounded bg-sky-600 text-white shadow transition-all">Preset</button>
                     <button id="modeManualBtn" class="flex-1 py-1 text-xs rounded text-slate-400 hover:text-white transition-all">Custom</button>
@@ -86,11 +86,13 @@
                             class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm focus:border-sky-500 focus:outline-none">
                     </div>
                 </div>
-            </div>
+                </div>
+            </details>
 
             <!-- Seed & Data -->
-            <div class="space-y-3">
-                <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wide">Seed & Data</h2>
+            <details id="seedDataSection" open class="sidebar-section">
+                <summary><h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wide">Seed & Data</h2></summary>
+                <div class="mt-2 space-y-3">
                 <div>
                     <label class="flex items-center gap-1 text-xs text-slate-500 mb-1">Generation Profile <span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-slate-600 text-[10px] text-slate-400 cursor-help" title="Cinematic favors dramatic worlds, Hard Sci-Fi favors realism, Standard favors active sectors and hooks.">?</span></label>
                     <select id="generationProfile" class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm focus:border-sky-500 focus:outline-none">
@@ -109,21 +111,6 @@
                         <button id="randomizeSeedBtn" class="px-2 text-xs bg-slate-800 border border-slate-600 rounded text-slate-300 hover:text-white hover:border-sky-500 transition-colors">Randomize</button>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <button id="saveSectorLocalBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors">Save Local</button>
-                    <button id="loadSectorLocalBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors">Load Local</button>
-                    <button id="exportSectorBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors" aria-expanded="false">Export Suite</button>
-                    <button id="triggerImportBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors">Import JSON</button>
-                </div>
-                <div id="exportSuitePanel" class="hidden rounded border border-slate-700 bg-slate-900/70 p-2 space-y-2">
-                    <div class="grid grid-cols-2 gap-2">
-                        <button id="exportJsonBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors">JSON Save</button>
-                        <button id="exportSvgBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors">SVG Map</button>
-                        <button id="exportPngBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors">PNG Map</button>
-                        <button id="exportBriefBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors">GM Brief</button>
-                    </div>
-                    <p class="text-[10px] text-slate-500">Exports use the current map state, including pin/edit changes.</p>
-                </div>
                 <label class="flex items-center gap-2 text-xs text-slate-400">
                     <input type="checkbox" id="autoSeedToggle" class="accent-sky-500 bg-slate-800 border-slate-600 rounded">
                     Auto-new seed on generate
@@ -134,8 +121,31 @@
                     Realistic planet weighting by star class
                     <span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-slate-600 text-[10px] text-slate-400 cursor-help" title="When enabled, planet types are weighted by star class instead of uniform random.">?</span>
                 </label>
-                <input type="file" id="importFileInput" accept="application/json,.json" class="hidden" />
-            </div>
+                </div>
+            </details>
+
+            <!-- Save / Load / I/O -->
+            <details id="ioControlsSection" open class="sidebar-section">
+                <summary><h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wide">Save / Load / I-O</h2></summary>
+                <div class="mt-2 space-y-3">
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="saveSectorLocalBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors">Save Local</button>
+                        <button id="loadSectorLocalBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors">Load Local</button>
+                        <button id="exportSectorBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors" aria-expanded="false">Export Suite</button>
+                        <button id="triggerImportBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors">Import JSON</button>
+                    </div>
+                    <div id="exportSuitePanel" class="hidden rounded border border-slate-700 bg-slate-900/70 p-2 space-y-2">
+                        <div class="grid grid-cols-2 gap-2">
+                            <button id="exportJsonBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors">JSON Save</button>
+                            <button id="exportSvgBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors">SVG Map</button>
+                            <button id="exportPngBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors">PNG Map</button>
+                            <button id="exportBriefBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors">GM Brief</button>
+                        </div>
+                        <p class="text-[10px] text-slate-500">Exports use the current map state, including pin/edit changes.</p>
+                    </div>
+                    <input type="file" id="importFileInput" accept="application/json,.json" class="hidden" />
+                </div>
+            </details>
 
             <button id="generateSectorBtn" class="w-full py-2 bg-sky-600 hover:bg-sky-500 text-white rounded shadow-lg shadow-sky-900/50 font-semibold transition-all active:scale-95">
                 GENERATE SECTOR
@@ -263,29 +273,31 @@
 
     <!-- INFO SIDEBAR -->
     <aside id="rightSidebar" class="relative w-full md:w-96 bg-slate-900 border-t md:border-t-0 md:border-l border-slate-700 flex flex-col h-full z-10 shadow-2xl order-3">
-        <div id="rightSidebarHeader" class="p-4 border-b border-slate-700 bg-slate-950">
+        <div id="rightSidebarHeader" class="p-3 border-b border-slate-700/50 bg-slate-900">
             <div class="flex items-center justify-between gap-2">
-                <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wide">System Information</h2>
+                <h2 class="text-sm font-semibold text-slate-200 tracking-wide">System Information</h2>
                 <button id="editModeToggleBtn" class="px-2 py-1 text-[10px] rounded border border-slate-600 bg-slate-800 text-slate-200 font-semibold tracking-wide transition-colors">
                     EDIT MODE: OFF
                 </button>
             </div>
-            <p class="text-xs text-slate-500 mt-1">Details for the selected hex</p>
         </div>
         <div id="rightSidebarContent" class="flex-1 overflow-y-auto p-4">
             <div id="infoPanel" class="opacity-50 pointer-events-none transition-opacity duration-300">
                 <div class="flex justify-between items-baseline mb-4">
-                    <h2 class="text-xl font-bold text-white" id="infoHexId">--</h2>
+                    <div class="inline-flex items-center gap-2">
+                        <h2 class="text-xl font-bold text-white" id="infoHexId">--</h2>
+                        <span id="infoHexCoreBadge" class="hidden core-system-name-badge" title="Core System" aria-label="Core System">◆</span>
+                    </div>
                     <span class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-600" id="infoType">Empty Space</span>
                 </div>
                 
-                <div class="grid grid-cols-3 gap-2 mb-2">
-                    <button id="pinSelectedSystemBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-amber-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Pin system" aria-label="Pin system">📌</button>
-                    <button id="rerollSelectedSystemBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Reroll system" aria-label="Reroll system">🎲</button>
-                    <button id="setCoreSystemBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 text-slate-200 hover:border-amber-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Set core system" aria-label="Set core system">★</button>
+                <div id="infoTopActionBar" class="hidden grid grid-cols-3 gap-1.5 mb-2">
+                    <button id="pinSelectedSystemBtn" class="w-8 h-8 inline-flex items-center justify-center text-sm rounded bg-slate-800 border border-slate-700 hover:border-amber-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Pin system" aria-label="Pin system">📌</button>
+                    <button id="rerollSelectedSystemBtn" class="w-8 h-8 inline-flex items-center justify-center text-sm rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Reroll system" aria-label="Reroll system">🎲</button>
+                    <button id="setCoreSystemBtn" class="w-8 h-8 inline-flex items-center justify-center text-sm rounded bg-slate-800 border border-slate-700 text-slate-200 hover:border-amber-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Set core system" aria-label="Set core system">★</button>
                 </div>
-                <p id="selectedSystemPinState" class="text-[11px] text-slate-500 mb-3">Pinned: No</p>
-                <p id="selectedSystemCoreState" class="text-[11px] text-slate-500 mb-3">Core: --</p>
+                <p id="selectedSystemPinState" class="hidden text-[11px] text-slate-500 mb-3">Pinned: No</p>
+                <p id="selectedSystemCoreState" class="hidden text-[11px] text-slate-500 mb-3">Core: --</p>
 
                 <div id="systemDetails" class="hidden space-y-4">
                     <div id="editModeControls" class="hidden grid grid-cols-2 gap-2">
@@ -294,37 +306,41 @@
                     </div>
 
                     <!-- Star Info -->
-                    <div class="bg-slate-800/50 p-3 rounded border border-slate-700">
-                        <div class="flex items-center gap-3">
-                            <div id="infoStarVisual" class="w-10 h-10 rounded-full shadow-lg"></div>
-                            <div class="flex-1">
-                                <div class="flex items-center justify-between gap-2">
-                                    <h3 id="infoSystemName" class="font-bold text-sky-300">System Name</h3>
-                                    <div class="inline-flex items-center gap-1">
-                                        <button id="deletePrimaryStarBtn" class="hidden w-6 h-6 inline-flex items-center justify-center text-xs rounded bg-rose-900/35 border border-rose-700 text-rose-200 hover:bg-rose-800/40 hover:border-rose-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Delete primary star" aria-label="Delete primary star">🗑</button>
-                                        <button id="renameSystemBtn" class="w-6 h-6 inline-flex items-center justify-center text-xs rounded bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:border-sky-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Rename system" aria-label="Rename system">✎</button>
+                    <details id="infoStarDetails" open class="relative bg-slate-900/30 rounded border border-slate-800 p-2">
+                        <summary id="infoStarSummary" class="text-xs font-bold text-slate-500 uppercase cursor-pointer select-none flex items-center gap-2 pr-8">
+                            <span id="infoStarSummaryLabel">Stars (0)</span>
+                        </summary>
+                        <button id="editAddStarInSectionBtn" class="hidden absolute top-1.5 right-2 w-5 h-5 inline-flex items-center justify-center rounded border border-slate-600 text-slate-300 hover:text-white hover:border-amber-500" title="Add star" aria-label="Add star">+</button>
+                        <div class="mt-2 space-y-3">
+                            <div class="bg-slate-800/50 p-3 rounded border border-slate-700">
+                                <div class="flex items-center gap-3">
+                                    <div id="infoStarVisual" class="w-10 h-10 rounded-full shadow-lg"></div>
+                                    <div class="flex-1">
+                                        <div class="flex items-center justify-between gap-2">
+                                            <h3 id="infoSystemName" class="font-bold text-sky-300 truncate">System Name</h3>
+                                            <div class="inline-flex items-center gap-1">
+                                                <button id="deletePrimaryStarBtn" class="hidden w-6 h-6 inline-flex items-center justify-center text-xs rounded bg-rose-900/35 border border-rose-700 text-rose-200 hover:bg-rose-800/40 hover:border-rose-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Delete primary star" aria-label="Delete primary star">🗑</button>
+                                                <button id="renameSystemBtn" class="w-6 h-6 inline-flex items-center justify-center text-xs rounded bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:border-sky-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Rename system" aria-label="Rename system">✎</button>
+                                            </div>
+                                        </div>
+                                        <div class="flex flex-wrap gap-3 text-xs mt-0.5">
+                                            <p id="infoStarClass" class="text-slate-400">Class G2V</p>
+                                            <p id="infoStarAge" class="text-slate-500">Age: --</p>
+                                        </div>
+                                        <div id="editStarClassRow" class="hidden mt-2">
+                                            <label class="block text-[10px] text-slate-500 mb-1">Star Type</label>
+                                            <select id="editStarClassSelect" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 focus:border-sky-500 focus:outline-none">
+                                            </select>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="flex flex-wrap gap-3 text-xs mt-0.5">
-                                    <p id="infoStarClass" class="text-slate-400">Class G2V</p>
-                                    <p id="infoStarAge" class="text-slate-500">Age: --</p>
-                                </div>
-                                <div id="editStarClassRow" class="hidden mt-2">
-                                    <label class="block text-[10px] text-slate-500 mb-1">Star Type</label>
-                                    <select id="editStarClassSelect" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 focus:border-sky-500 focus:outline-none">
-                                    </select>
-                                </div>
                             </div>
+                            <div id="infoStarList" class="hidden space-y-3"></div>
                         </div>
-                    </div>
-                    <div id="infoStarList" class="hidden space-y-3"></div>
+                    </details>
 
                     <!-- Stats -->
-                    <div class="grid grid-cols-2 gap-3 text-xs">
-                        <div class="bg-slate-800 p-3 rounded">
-                            <span class="block text-slate-500">Planets</span>
-                            <span id="infoPlanetCount" class="text-lg font-mono text-white">0</span>
-                        </div>
+                    <div class="grid grid-cols-1 gap-3 text-xs">
                         <div class="bg-slate-800 p-3 rounded">
                             <span class="block text-slate-500">Population</span>
                             <span id="infoPop" class="text-lg font-mono text-white">0</span>
@@ -386,7 +402,10 @@
         <div id="infoBodyDetailsEmpty" class="text-xs text-slate-500 italic">Select a planet, belt, or station to inspect.</div>
         <div id="infoBodyDetailsContent" class="hidden">
             <div class="flex justify-between items-baseline gap-3">
-                <h4 id="infoBodyDetailsName" class="text-sm font-semibold text-sky-200">Body</h4>
+                <h4 class="text-sm font-semibold text-sky-200 inline-flex items-center gap-2">
+                    <span id="infoBodyDetailsIcon" aria-hidden="true"></span>
+                    <span id="infoBodyDetailsName">Body</span>
+                </h4>
                 <div class="text-right">
                     <span id="infoBodyDetailsType" class="block text-[11px] text-slate-400">Type</span>
                     <span id="infoBodyDetailsSize" class="hidden text-[11px] text-slate-500 cursor-help underline decoration-dotted decoration-slate-500/70 underline-offset-2" data-field-tooltip="size">--</span>

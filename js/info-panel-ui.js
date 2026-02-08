@@ -1,6 +1,6 @@
 export function setPinButtonStyle(button, isPinned) {
     if (!button) return;
-    const base = 'py-1.5 text-xs rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
+    const base = 'w-8 h-8 inline-flex items-center justify-center text-sm rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
     if (isPinned) {
         button.className = `${base} bg-rose-900/30 border-rose-700 text-rose-200 hover:bg-rose-800/40 hover:border-rose-500`;
     } else {
@@ -44,6 +44,8 @@ export function getInfoPanelRefs() {
     return {
         panel: document.getElementById('infoPanel'),
         hexId: document.getElementById('infoHexId'),
+        hexCoreBadge: document.getElementById('infoHexCoreBadge'),
+        topActionBar: document.getElementById('infoTopActionBar'),
         systemDetails: document.getElementById('systemDetails'),
         emptyDetails: document.getElementById('emptyDetails'),
         typeLabel: document.getElementById('infoType'),
@@ -51,8 +53,9 @@ export function getInfoPanelRefs() {
         starClassLabel: document.getElementById('infoStarClass'),
         starVisual: document.getElementById('infoStarVisual'),
         starAgeLabel: document.getElementById('infoStarAge'),
+        starSummary: document.getElementById('infoStarSummary'),
         starList: document.getElementById('infoStarList'),
-        planetCountLabel: document.getElementById('infoPlanetCount'),
+        starSummaryLabel: document.getElementById('infoStarSummaryLabel'),
         populationLabel: document.getElementById('infoPop'),
         planetList: document.getElementById('infoPlanetList'),
         beltList: document.getElementById('infoBeltList'),
@@ -71,6 +74,7 @@ export function getInfoPanelRefs() {
         editPlanetTypeSelect: document.getElementById('editPlanetTypeSelect'),
         editInhabitPlanetRow: document.getElementById('editInhabitPlanetRow'),
         editInhabitPlanetBtn: document.getElementById('editInhabitPlanetBtn'),
+        addStarInSectionBtn: document.getElementById('editAddStarInSectionBtn'),
         addSystemHereBtn: document.getElementById('addSystemHereBtn'),
         addPoiHereBtn: document.getElementById('addPoiHereBtn'),
         deletePoiHereBtn: document.getElementById('deletePoiHereBtn'),
@@ -86,6 +90,10 @@ export function setBodySummaryLabels(refs, planetCount, beltCount, stationCount)
     if (refs.planetSummaryLabel) refs.planetSummaryLabel.innerText = `Planets (${planetCount})`;
     if (refs.beltSummaryLabel) refs.beltSummaryLabel.innerText = `Belts & Fields (${beltCount})`;
     if (refs.stationSummaryLabel) refs.stationSummaryLabel.innerText = `Stations (${stationCount})`;
+}
+
+export function setStarSummaryLabel(refs, starCount) {
+    if (refs.starSummaryLabel) refs.starSummaryLabel.innerText = `Stars (${Math.max(0, Number(starCount) || 0)})`;
 }
 
 export function disableStarEditControls(refs) {

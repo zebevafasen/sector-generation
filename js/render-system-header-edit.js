@@ -1,7 +1,7 @@
 import { STAR_VISUALS, state } from './config.js';
-import { generateStarAge } from './core.js';
+import { generateStarAge, showStatusMessage } from './core.js';
 import { reportSystemInvariantIssues } from './invariants.js';
-import { removeStarAtIndex, setPrimaryStarClass } from './star-system.js';
+import { addCompanionStar, removeStarAtIndex, setPrimaryStarClass } from './star-system.js';
 import { hasLinkedBodiesToRename, renameBodiesForSystemNameChange } from './system-naming.js';
 import { setButtonAction } from './info-panel-ui.js';
 
@@ -128,6 +128,31 @@ export function bindSystemHeaderEditControls({
             reportSystemInvariantIssues(current, 'delete-primary-star');
             notifySectorDataChanged('Delete Primary Star');
             redrawAndReselect(id, state.selectedBodyIndex);
+        });
+    }
+    if (refs.addStarInSectionBtn) {
+        refs.addStarInSectionBtn.classList.toggle('hidden', !canEditStar);
+        setButtonAction(refs.addStarInSectionBtn, canEditStar, (event) => {
+            if (event && typeof event.preventDefault === 'function') event.preventDefault();
+            if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+            const current = state.sectors[id];
+            if (!current) {
+                showStatusMessage('Select a system first.', 'warn');
+                return;
+            }
+            const result = addCompanionStar(current, {
+                maxStars: 3,
+                starClass: 'G',
+                generateStarAgeFn: generateStarAge
+            });
+            if (!result.added) {
+                showStatusMessage('Max stars reached (3).', 'warn');
+                return;
+            }
+            reportSystemInvariantIssues(current, 'add-star');
+            notifySectorDataChanged('Add Star');
+            redrawAndReselect(id, state.selectedBodyIndex);
+            showStatusMessage('Added new star.', 'success');
         });
     }
 

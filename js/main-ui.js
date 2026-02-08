@@ -2,6 +2,64 @@ import { state } from './config.js';
 import { updateViewTransform } from './render.js';
 import { getMainRefs } from './main-refs.js';
 
+const PANEL_STATE_STORAGE_KEY = 'hex-star-sector-gen:panel-state';
+const PERSISTED_DETAILS_SECTION_IDS = [
+    'gridConfigSection',
+    'stellarDensitySection',
+    'seedDataSection',
+    'ioControlsSection',
+    'infoStarDetails'
+];
+
+function readPersistedPanelState() {
+    if (!(typeof window !== 'undefined' && window.localStorage)) return {};
+    try {
+        const raw = window.localStorage.getItem(PANEL_STATE_STORAGE_KEY);
+        if (!raw) return {};
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return {};
+        return parsed;
+    } catch {
+        return {};
+    }
+}
+
+function writePersistedPanelState(patch) {
+    if (!(typeof window !== 'undefined' && window.localStorage)) return;
+    const nextState = {
+        ...readPersistedPanelState(),
+        ...patch
+    };
+    try {
+        window.localStorage.setItem(PANEL_STATE_STORAGE_KEY, JSON.stringify(nextState));
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+function setSearchPanelToggleUi(refs, isOpen) {
+    if (!refs.searchPanelContent || !refs.searchToggleBtn) return;
+    refs.searchPanelContent.classList.toggle('hidden', !isOpen);
+    refs.searchToggleBtn.innerText = isOpen ? '-' : '+';
+    refs.searchToggleBtn.title = isOpen ? 'Collapse search panel' : 'Expand search panel';
+    refs.searchToggleBtn.setAttribute('aria-label', isOpen ? 'Collapse search panel' : 'Expand search panel');
+}
+
+function bindPersistedDetailsSections() {
+    const persistedState = readPersistedPanelState();
+    PERSISTED_DETAILS_SECTION_IDS.forEach((id) => {
+        const section = document.getElementById(id);
+        if (!section || section.tagName.toLowerCase() !== 'details') return;
+        const persistedOpen = persistedState[id];
+        if (typeof persistedOpen === 'boolean') {
+            section.open = persistedOpen;
+        }
+        section.addEventListener('toggle', () => {
+            writePersistedPanelState({ [id]: section.open });
+        });
+    });
+}
+
 function bindSidebarToggle(config, mapContainer) {
     const sidebar = document.getElementById(config.sidebarId);
     const header = document.getElementById(config.headerId);
@@ -65,18 +123,28 @@ export function setupPanelToggles() {
 }
 
 export function bindSectionToggles(refs) {
+    bindPersistedDetailsSections();
+    const persistedState = readPersistedPanelState();
+
     if (refs.exportSectorBtn && refs.exportSuitePanel) {
+        if (typeof persistedState.exportSuiteOpen === 'boolean') {
+            refs.exportSuitePanel.classList.toggle('hidden', !persistedState.exportSuiteOpen);
+            refs.exportSectorBtn.setAttribute('aria-expanded', String(persistedState.exportSuiteOpen));
+        }
         refs.exportSectorBtn.addEventListener('click', () => {
             const isHidden = refs.exportSuitePanel.classList.toggle('hidden');
             refs.exportSectorBtn.setAttribute('aria-expanded', String(!isHidden));
+            writePersistedPanelState({ exportSuiteOpen: !isHidden });
         });
     }
     if (refs.searchToggleBtn && refs.searchPanelContent) {
+        if (typeof persistedState.searchPanelOpen === 'boolean') {
+            setSearchPanelToggleUi(refs, persistedState.searchPanelOpen);
+        }
         refs.searchToggleBtn.addEventListener('click', () => {
-            const isCollapsed = refs.searchPanelContent.classList.toggle('hidden');
-            refs.searchToggleBtn.innerText = isCollapsed ? '+' : '-';
-            refs.searchToggleBtn.title = isCollapsed ? 'Expand search panel' : 'Collapse search panel';
-            refs.searchToggleBtn.setAttribute('aria-label', isCollapsed ? 'Expand search panel' : 'Collapse search panel');
+            const isOpen = refs.searchPanelContent.classList.contains('hidden');
+            setSearchPanelToggleUi(refs, isOpen);
+            writePersistedPanelState({ searchPanelOpen: isOpen });
         });
     }
 }
@@ -101,4 +169,5 @@ export function updateEditModeUi() {
     if (refs.editAddPlanetInSectionBtn) refs.editAddPlanetInSectionBtn.classList.toggle('hidden', !state.editMode);
     if (refs.editAddBeltInSectionBtn) refs.editAddBeltInSectionBtn.classList.toggle('hidden', !state.editMode);
     if (refs.editAddStationInSectionBtn) refs.editAddStationInSectionBtn.classList.toggle('hidden', !state.editMode);
+    if (refs.editAddStarInSectionBtn) refs.editAddStarInSectionBtn.classList.toggle('hidden', !state.editMode);
 }

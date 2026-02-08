@@ -4,7 +4,6 @@ import { EVENTS, emitEvent } from './events.js';
 import { refreshSystemPlanetPopulation } from './planet-population.js';
 import { refreshSystemPlanetTags } from './planet-tags.js';
 import { ensureSystemStarFields, getSystemStars } from './star-system.js';
-import { countSystemBodies } from './body-classification.js';
 import { formatLocalHexDisplayId, getCurrentGridDimensions, getGlobalHexDisplayId, renderRouteOverlay } from './render-shared.js';
 import {
     buildCurrentSectorEntry,
@@ -40,6 +39,7 @@ import {
     disableInhabitControls,
     disablePlanetTypeControls,
     disableStarEditControls,
+    setStarSummaryLabel,
     getInfoPanelRefs,
     setBodySummaryLabels,
     setButtonAction,
@@ -126,7 +126,7 @@ function createHexGroup(svg, col, row, sectorKey, sectorRecord = null) {
     text.setAttribute('y', y + HEX_SIZE * 0.72);
     text.setAttribute('text-anchor', 'middle');
     text.setAttribute('dominant-baseline', 'middle');
-    text.setAttribute('class', 'hex-text');
+    text.setAttribute('class', `hex-text${isCoreSystem ? ' hex-text-core' : ''}`);
     text.textContent = formatLocalHexDisplayId(hexId);
     g.appendChild(text);
 
@@ -171,7 +171,7 @@ function createHexGroup(svg, col, row, sectorKey, sectorRecord = null) {
         }
         if (isCoreSystem) {
             const coreMarker = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-            const markerY = y - Math.max(8, baseRadius + 6);
+            const markerY = y + Math.max(8, baseRadius + 6);
             coreMarker.setAttribute('points', `${x},${markerY - 4} ${x + 4},${markerY} ${x},${markerY + 4} ${x - 4},${markerY}`);
             coreMarker.setAttribute('fill', '#fde047');
             coreMarker.setAttribute('stroke', '#f59e0b');
@@ -478,7 +478,6 @@ export function updateInfoPanel(id, preselectedBodyIndex = null) {
             updateInfoPanel,
             redrawAndReselect
         });
-        refs.planetCountLabel.innerText = countSystemBodies(system).planets;
         refs.populationLabel.innerText = system.totalPop;
         renderSystemBodyLists({
             refs,
@@ -503,6 +502,8 @@ export function clearInfoPanel() {
     refs.emptyDetails.innerText = 'Select a hex to view data.';
     state.selectedSystemData = null;
     state.selectedBodyIndex = null;
+    if (refs.topActionBar) refs.topActionBar.classList.add('hidden');
+    if (refs.selectedSystemPinState) refs.selectedSystemPinState.classList.add('hidden');
 
     if (refs.starClassLabel) {
         refs.starClassLabel.innerText = 'Class --';
@@ -510,6 +511,7 @@ export function clearInfoPanel() {
     }
 
     if (refs.starAgeLabel) refs.starAgeLabel.innerText = 'Age: --';
+    setStarSummaryLabel(refs, 0);
     setButtonAction(refs.renameSystemBtn, false);
     setButtonAction(refs.deletePrimaryStarBtn, false);
     if (refs.deletePrimaryStarBtn) refs.deletePrimaryStarBtn.classList.add('hidden');
@@ -542,10 +544,14 @@ export function clearInfoPanel() {
         refs.setCoreSystemBtn.disabled = true;
         refs.setCoreSystemBtn.title = 'Set core system';
         refs.setCoreSystemBtn.setAttribute('aria-label', 'Set core system');
-        refs.setCoreSystemBtn.className = 'py-1.5 text-xs rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-slate-900/50 border-slate-700 text-slate-500';
+        refs.setCoreSystemBtn.className = 'w-8 h-8 inline-flex items-center justify-center text-sm rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-slate-900/50 border-slate-700 text-slate-500';
+    }
+    if (refs.hexCoreBadge) {
+        refs.hexCoreBadge.classList.add('hidden');
+        refs.hexCoreBadge.title = '';
+        refs.hexCoreBadge.setAttribute('aria-label', '');
     }
     if (refs.selectedSystemPinState) refs.selectedSystemPinState.innerText = 'Pinned: --';
-    if (refs.selectedSystemCoreState) refs.selectedSystemCoreState.innerText = 'Core: --';
 
     resetBodyDetailsPanel();
 }

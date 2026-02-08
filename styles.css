@@ -4,11 +4,34 @@ body {
     font-family: "Space Grotesk", "Segoe UI", Tahoma, sans-serif;
 }
 
-#leftSidebarContent > .space-y-3 {
+#leftSidebarContent > .sidebar-section {
     border: 1px solid rgba(71, 85, 105, 0.55);
     border-radius: 0.5rem;
     padding: 0.6rem;
     background: rgba(15, 23, 42, 0.42);
+}
+
+#leftSidebarContent > .sidebar-section > summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+#leftSidebarContent > .sidebar-section > summary::-webkit-details-marker {
+    display: none;
+}
+
+#leftSidebarContent > .sidebar-section > summary::after {
+    content: '▸';
+    color: #64748b;
+    font-size: 12px;
+    transition: transform 0.15s ease;
+}
+
+#leftSidebarContent > .sidebar-section[open] > summary::after {
+    transform: rotate(90deg);
 }
 
 #sectorHomeBtn,
@@ -70,6 +93,11 @@ body {
     fill: #94a3b8;
 }
 
+.hex-text-core {
+    fill: #fde047;
+    font-weight: 700;
+}
+
 .sector-frame {
     opacity: 0;
     stroke: #38bdf8;
@@ -117,6 +145,19 @@ body {
 
 .core-system-marker {
     pointer-events: none;
+}
+
+.core-system-name-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    font-size: 11px;
+    line-height: 1;
+    color: #fde047;
+    text-shadow: 0 0 5px rgba(245, 158, 11, 0.9);
+    cursor: help;
 }
 
 .star-class-hint {

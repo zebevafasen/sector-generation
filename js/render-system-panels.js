@@ -10,6 +10,7 @@ import {
     disableInhabitControls,
     disablePlanetTypeControls,
     disableStarEditControls,
+    setStarSummaryLabel,
     setBodySummaryLabels,
     setButtonAction,
     setPinButtonContent,
@@ -98,6 +99,8 @@ export function configureSystemHeaderAndStar({ refs, system, id, preselectedBody
         updateInfoPanel,
         redrawAndReselect
     });
+    if (refs.topActionBar) refs.topActionBar.classList.remove('hidden');
+    if (refs.selectedSystemPinState) refs.selectedSystemPinState.classList.remove('hidden');
 
     const isPinned = !!(state.pinnedHexIds && state.pinnedHexIds.includes(id));
     const isCore = !!(id && state.coreSystemHexId === id && state.sectors && state.sectors[id]);
@@ -119,17 +122,24 @@ export function configureSystemHeaderAndStar({ refs, system, id, preselectedBody
         refs.setCoreSystemBtn.setAttribute('aria-label', isCore ? 'Clear core system' : 'Set core system');
         refs.setCoreSystemBtn.className = state.editMode
             ? (isCore
-                ? 'py-1.5 text-xs rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-amber-900/35 border-amber-600 text-amber-200 hover:bg-amber-800/45 hover:border-amber-400'
-                : 'py-1.5 text-xs rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-slate-800 border-slate-700 text-slate-200 hover:border-amber-400')
-            : 'py-1.5 text-xs rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-slate-900/50 border-slate-700 text-slate-500';
+                ? 'w-8 h-8 inline-flex items-center justify-center text-sm rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-amber-900/35 border-amber-600 text-amber-200 hover:bg-amber-800/45 hover:border-amber-400'
+                : 'w-8 h-8 inline-flex items-center justify-center text-sm rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-slate-800 border-slate-700 text-slate-200 hover:border-amber-400')
+            : 'w-8 h-8 inline-flex items-center justify-center text-sm rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-slate-900/50 border-slate-700 text-slate-500';
+    }
+    if (refs.hexCoreBadge) {
+        refs.hexCoreBadge.classList.toggle('hidden', !isCore);
+        refs.hexCoreBadge.title = isCore ? 'Core System' : '';
+        refs.hexCoreBadge.setAttribute('aria-label', isCore ? 'Core System' : '');
     }
     if (refs.selectedSystemPinState) refs.selectedSystemPinState.innerText = `Pinned: ${isPinned ? 'Yes' : 'No'}`;
-    if (refs.selectedSystemCoreState) refs.selectedSystemCoreState.innerText = `Core: ${isCore ? 'Yes' : 'No'}`;
 }
 
 export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
     refs.systemDetails.classList.add('hidden');
     refs.emptyDetails.classList.remove('hidden');
+    const hasPoi = !!deepSpacePoi;
+    if (refs.topActionBar) refs.topActionBar.classList.toggle('hidden', !hasPoi);
+    if (refs.selectedSystemPinState) refs.selectedSystemPinState.classList.toggle('hidden', !hasPoi);
     if (deepSpacePoi) {
         const poiStyle = getPoiTypeStyle(deepSpacePoi.kind, deepSpacePoi);
         const poiTypeLabel = formatPoiTypeLabel(deepSpacePoi);
@@ -183,7 +193,7 @@ export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
         refs.typeLabel.className = poiStyle.badge;
     } else {
         refs.emptyDetails.innerText = 'Deep space scans indicate no major stellar masses in this sector.';
-        refs.typeLabel.innerText = 'Empty Void';
+        refs.typeLabel.innerText = 'Deep Space';
         refs.typeLabel.className = 'text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-600';
     }
 
@@ -265,6 +275,10 @@ export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
     }
     setButtonAction(refs.renameSystemBtn, false);
     setButtonAction(refs.deletePrimaryStarBtn, false);
+    if (refs.addStarInSectionBtn) {
+        refs.addStarInSectionBtn.classList.toggle('hidden', !state.editMode);
+        setButtonAction(refs.addStarInSectionBtn, false);
+    }
     if (refs.deletePrimaryStarBtn) refs.deletePrimaryStarBtn.classList.add('hidden');
     disableStarEditControls(refs);
     setButtonAction(refs.renameBodyBtn, false);
@@ -275,6 +289,7 @@ export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
     setButtonAction(refs.quickDeleteBodyBtn, false);
     disablePlanetTypeControls(refs);
     disableInhabitControls(refs);
+    setStarSummaryLabel(refs, 0);
     setBodySummaryLabels(refs, 0, 0, 0);
     const canPinOrRerollPoi = !!deepSpacePoi;
     const isPinned = !!(id && state.pinnedHexIds && state.pinnedHexIds.includes(id));
@@ -295,9 +310,13 @@ export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
         refs.setCoreSystemBtn.disabled = true;
         refs.setCoreSystemBtn.title = 'Set core system';
         refs.setCoreSystemBtn.setAttribute('aria-label', 'Set core system');
-        refs.setCoreSystemBtn.className = 'py-1.5 text-xs rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-slate-900/50 border-slate-700 text-slate-500';
+        refs.setCoreSystemBtn.className = 'w-8 h-8 inline-flex items-center justify-center text-sm rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-slate-900/50 border-slate-700 text-slate-500';
+    }
+    if (refs.hexCoreBadge) {
+        refs.hexCoreBadge.classList.add('hidden');
+        refs.hexCoreBadge.title = '';
+        refs.hexCoreBadge.setAttribute('aria-label', '');
     }
     if (refs.selectedSystemPinState) refs.selectedSystemPinState.innerText = canPinOrRerollPoi ? `Pinned: ${isPinned ? 'Yes' : 'No'}` : 'Pinned: --';
-    if (refs.selectedSystemCoreState) refs.selectedSystemCoreState.innerText = 'Core: --';
     resetBodyDetailsPanel();
 }
