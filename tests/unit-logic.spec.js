@@ -461,6 +461,79 @@ test.describe('pure logic modules', () => {
     expect(result.centerVsNone).toBeTruthy();
   });
 
+  test('deep-space POIs prefer hexes with emptier local neighborhoods', async ({ page }) => {
+    await page.goto('/sector_generator.html');
+
+    const result = await page.evaluate(async () => {
+      const poi = await import('/js/generation-poi.js');
+      const spatial = await import('/js/generation-spatial.js');
+
+      const width = 10;
+      const height = 10;
+      const sectors = {};
+      for (let c = 3; c <= 6; c++) {
+        sectors[`${c}-4`] = { name: `S-${c}-4`, planets: [] };
+        sectors[`${c}-5`] = { name: `S-${c}-5`, planets: [] };
+      }
+      sectors['2-5'] = { name: 'S-2-5', planets: [] };
+      sectors['7-4'] = { name: 'S-7-4', planets: [] };
+
+      const pois = poi.generateDeepSpacePois(width, height, sectors, {
+        randomFn: (() => {
+          const seed = 13371337;
+          let x = seed;
+          return () => {
+            x = (x * 1664525 + 1013904223) % 4294967296;
+            return x / 4294967296;
+          };
+        })(),
+        sectorKey: 'NNNN',
+        knownSectorRecords: {}
+      });
+
+      const isInBounds = (c, r) => c >= 0 && r >= 0 && c < width && r < height;
+      const scoreHex = (hexId) => {
+        const [cRaw, rRaw] = String(hexId).split('-');
+        const c = Number(cRaw);
+        const r = Number(rRaw);
+        if (!Number.isFinite(c) || !Number.isFinite(r)) return 0;
+        let total = 0;
+        let occupied = 0;
+        for (let nc = c - 2; nc <= c + 2; nc++) {
+          for (let nr = r - 2; nr <= r + 2; nr++) {
+            if (!isInBounds(nc, nr) || (nc === c && nr === r)) continue;
+            const other = `${nc}-${nr}`;
+            const dist = spatial.hexDistanceById(hexId, other);
+            if (!Number.isFinite(dist) || dist <= 0 || dist > 2) continue;
+            total++;
+            if (sectors[other]) occupied++;
+          }
+        }
+        return total > 0 ? 1 - (occupied / total) : 1;
+      };
+
+      const allCandidateScores = [];
+      for (let c = 0; c < width; c++) {
+        for (let r = 0; r < height; r++) {
+          const hexId = `${c}-${r}`;
+          if (sectors[hexId]) continue;
+          allCandidateScores.push(scoreHex(hexId));
+        }
+      }
+      const poiScores = Object.keys(pois).map(scoreHex);
+      const avg = (values) => values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+
+      return {
+        poiCount: poiScores.length,
+        poiAvgEmptiness: avg(poiScores),
+        baselineAvgEmptiness: avg(allCandidateScores)
+      };
+    });
+
+    expect(result.poiCount).toBeGreaterThan(0);
+    expect(result.poiAvgEmptiness).toBeGreaterThan(result.baselineAvgEmptiness);
+  });
+
   test('jump-gate linking prefers sensible directional sector pairing', async ({ page }) => {
     await page.goto('/sector_generator.html');
 

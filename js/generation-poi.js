@@ -1,6 +1,7 @@
 import { DEEP_SPACE_POI_TEMPLATES, JUMP_GATE_RULES } from './generation-data.js';
 import { HOME_SECTOR_KEY, parseSectorKeyToCoords } from './sector-address.js';
-import { countNeighborSystems, hexDistanceById } from './generation-spatial.js';
+import { hexDistanceById } from './generation-spatial.js';
+import { parseHexId } from './utils.js';
 import {
     isActiveJumpGatePoi,
     isJumpGatePoi as isJumpGatePoiModel,
@@ -10,6 +11,48 @@ import {
 
 function parseSectorKey(sectorKey) {
     return parseSectorKeyToCoords(sectorKey || HOME_SECTOR_KEY);
+}
+
+function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+}
+
+function computeNeighborhoodEmptinessScore(hexId, width, height, occupiedHexIds) {
+    const parsed = parseHexId(hexId);
+    if (!parsed) return 0;
+    let immediateTotal = 0;
+    let immediateOccupied = 0;
+    let nearbyTotal = 0;
+    let nearbyOccupied = 0;
+
+    const minCol = Math.max(0, parsed.col - 2);
+    const maxCol = Math.min(width - 1, parsed.col + 2);
+    const minRow = Math.max(0, parsed.row - 2);
+    const maxRow = Math.min(height - 1, parsed.row + 2);
+
+    for (let c = minCol; c <= maxCol; c++) {
+        for (let r = minRow; r <= maxRow; r++) {
+            const otherHexId = `${c}-${r}`;
+            if (otherHexId === hexId) continue;
+            const distance = hexDistanceById(hexId, otherHexId);
+            if (!Number.isFinite(distance) || distance <= 0 || distance > 2) continue;
+            const isOccupied = occupiedHexIds.has(otherHexId);
+            nearbyTotal++;
+            if (isOccupied) nearbyOccupied++;
+            if (distance <= 1) {
+                immediateTotal++;
+                if (isOccupied) immediateOccupied++;
+            }
+        }
+    }
+
+    const immediateEmptyRatio = immediateTotal > 0
+        ? 1 - (immediateOccupied / immediateTotal)
+        : 1;
+    const nearbyEmptyRatio = nearbyTotal > 0
+        ? 1 - (nearbyOccupied / nearbyTotal)
+        : 1;
+    return clamp((immediateEmptyRatio * 0.72) + (nearbyEmptyRatio * 0.28), 0, 1);
 }
 
 function getNearbyActiveJumpGateStats(sectorKey, knownSectorRecords = {}) {
@@ -163,6 +206,7 @@ export function generateDeepSpacePois(width, height, sectors, options = {}) {
         ? Math.max(0, Number(JUMP_GATE_RULES.edgeDistanceMax))
         : 2;
     const canSpawnActiveJumpGate = canSpawnActiveJumpGateInSector(sectorKey, knownSectorRecords);
+    const occupiedHexIds = new Set(Object.keys(sectors || {}));
     let edgeSlotCount = 0;
     for (let c = 0; c < width; c++) {
         for (let r = 0; r < height; r++) {
@@ -178,12 +222,10 @@ export function generateDeepSpacePois(width, height, sectors, options = {}) {
         for (let r = 0; r < height; r++) {
             const hexId = `${c}-${r}`;
             if (sectors[hexId]) continue;
+            if (occupiedHexIds.has(hexId)) continue;
 
-            const nearbySystems = countNeighborSystems(hexId, sectors);
-            const baseChance = 0.035;
-            const nearbyPenalty = nearbySystems > 0 ? Math.min(0.03, nearbySystems * 0.01) : 0;
-            const remoteBoost = nearbySystems === 0 ? 0.025 : 0;
-            const spawnChance = Math.max(0.01, baseChance + remoteBoost - nearbyPenalty);
+            const emptinessScore = computeNeighborhoodEmptinessScore(hexId, width, height, occupiedHexIds);
+            const spawnChance = clamp(0.008 + (Math.pow(emptinessScore, 2) * 0.072), 0.004, 0.085);
             if (randomFn() > spawnChance) continue;
             const edgeDistance = Math.min(c, r, (width - 1) - c, (height - 1) - r);
             const canRollJumpGateAtHex = canSpawnJumpGateAtAll
@@ -210,6 +252,7 @@ export function generateDeepSpacePois(width, height, sectors, options = {}) {
                 jumpGateHexes.push(hexId);
             }
             pois[hexId] = poi;
+            occupiedHexIds.add(hexId);
         }
     }
     return pois;
