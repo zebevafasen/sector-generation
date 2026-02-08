@@ -16,7 +16,7 @@ import {
     toggleEditMode,
     togglePinSelectedSystem
 } from './generation.js';
-import { travelSelectedJumpGate } from './multi-sector.js';
+import { activateSelectedJumpGate, travelSelectedJumpGate } from './multi-sector.js';
 import {
     autoSaveSectorState,
     exportSector,
@@ -128,6 +128,10 @@ function bindAppEventHandlers(deps) {
     });
     window.addEventListener(EVENTS.REQUEST_TRAVEL_JUMP_GATE, () => {
         travelSelectedJumpGate();
+    });
+    window.addEventListener(EVENTS.REQUEST_ACTIVATE_JUMP_GATE, () => {
+        if (!state.editMode) return;
+        activateSelectedJumpGate();
     });
     window.addEventListener(EVENTS.REQUEST_DELETE_SELECTED_BODY, () => {
         if (!state.editMode) return;

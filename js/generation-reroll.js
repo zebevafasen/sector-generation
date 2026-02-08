@@ -1,3 +1,5 @@
+import { HOME_SECTOR_KEY } from './sector-address.js';
+
 export function rerollSelectedPlanetAction(deps) {
     const {
         state,
@@ -249,7 +251,17 @@ export function rerollUnpinnedSystemsAction(deps) {
     state.rerollIteration = nextIteration;
     state.currentSeed = layoutSeed;
     state.sectors = nextSectors;
-    state.deepSpacePois = generateDeepSpacePois(width, height, nextSectors, { randomFn: rand });
+    const currentSectorKey = state.multiSector && state.multiSector.currentKey
+        ? state.multiSector.currentKey
+        : HOME_SECTOR_KEY;
+    const knownSectorRecords = state.multiSector && state.multiSector.sectorsByKey && typeof state.multiSector.sectorsByKey === 'object'
+        ? state.multiSector.sectorsByKey
+        : {};
+    state.deepSpacePois = generateDeepSpacePois(width, height, nextSectors, {
+        randomFn: rand,
+        sectorKey: currentSectorKey,
+        knownSectorRecords
+    });
     Object.entries(fixedPois).forEach(([hexId, poi]) => {
         if (!state.sectors[hexId]) {
             state.deepSpacePois[hexId] = deepClone(poi);

@@ -119,8 +119,29 @@ test.describe('pure logic modules', () => {
         },
         deepSpacePois: {
           '0-1': { name: 'Relay Beacon 101', kind: 'Navigation', summary: 'safe lane marker', risk: 'Low', rewardHint: 'route aid' },
+          '1-1': { name: 'Active Jump-Gate 123', kind: 'Navigation', summary: 'legacy named gate', risk: 'Low', rewardHint: 'legacy naming only' },
+          '1-2': { name: 'Stateful Active', kind: 'Navigation', jumpGateState: 'active', jumpGatePairId: 'pair-a', jumpGateLink: { sectorKey: 'NNNO', hexId: '0-0' } },
+          '2-2': { name: 'Stateful Inactive', kind: 'Navigation', jumpGateState: 'inactive', jumpGatePairId: 'pair-a', jumpGateLink: { sectorKey: 'NNNN', hexId: '1-2' } },
+          '2-1': { name: 'Broken Active', kind: 'Navigation', jumpGateState: 'active', jumpGatePairId: 'broken-without-link' },
           '0-0': { name: 'Should Drop', kind: 'Hazard' },
           '99-99': { name: 'Also Drop', kind: 'Mystery' }
+        },
+        multiSector: {
+          currentKey: 'NNNN',
+          selectedSectorKey: 'NNNN',
+          sectorsByKey: { NNNN: {} },
+          jumpGateRegistry: {
+            goodPair: {
+              a: { sectorKey: 'NNNN', hexId: '1-2' },
+              b: { sectorKey: 'NNNO', hexId: '0-0' },
+              state: 'active'
+            },
+            badPair: {
+              a: { sectorKey: 'NNNN', hexId: 'not-a-hex' },
+              b: { sectorKey: 'INVALID', hexId: '0-0' },
+              state: 'active'
+            }
+          }
         },
         selectedHexId: '99-99',
         pinnedHexIds: ['0-0', '99-99'],
@@ -136,7 +157,13 @@ test.describe('pure logic modules', () => {
         validPinnedHexIds: valid.ok ? valid.payload.pinnedHexIds : [],
         validManualRange: valid.ok ? valid.payload.manualRange : null,
         secondPlanetType: valid.ok ? valid.payload.sectors['0-0'].planets[1].type : null,
-        validPois: valid.ok ? Object.keys(valid.payload.deepSpacePois || {}) : []
+        validPois: valid.ok ? Object.keys(valid.payload.deepSpacePois || {}) : [],
+        namedGateCategory: valid.ok ? valid.payload.deepSpacePois['1-1'].poiCategory : null,
+        namedGateState: valid.ok ? valid.payload.deepSpacePois['1-1'].jumpGateState : null,
+        activeStateGateCategory: valid.ok ? valid.payload.deepSpacePois['1-2'].poiCategory : null,
+        inactiveStateGateCategory: valid.ok ? valid.payload.deepSpacePois['2-2'].poiCategory : null,
+        hasBrokenActive: valid.ok ? Object.prototype.hasOwnProperty.call(valid.payload.deepSpacePois, '2-1') : false,
+        registryKeys: valid.ok ? Object.keys((valid.payload.multiSector && valid.payload.multiSector.jumpGateRegistry) || {}) : []
       };
     });
 
@@ -148,6 +175,234 @@ test.describe('pure logic modules', () => {
     expect(result.validPinnedHexIds).toEqual(['0-0']);
     expect(result.validManualRange).toEqual({ min: 2, max: 12 });
     expect(result.secondPlanetType).toBe('Barren');
-    expect(result.validPois).toEqual(['0-1']);
+    expect(result.validPois).toEqual(['0-1', '1-1', '1-2', '2-2']);
+    expect(result.namedGateCategory).toBeNull();
+    expect(result.namedGateState).toBeNull();
+    expect(result.activeStateGateCategory).toBe('jump_gate');
+    expect(result.inactiveStateGateCategory).toBe('jump_gate');
+    expect(result.hasBrokenActive).toBeFalsy();
+    expect(result.registryKeys).toEqual(['goodPair']);
+  });
+
+  test('jump-gate generation enforces max-one-per-sector and edge-only placement', async ({ page }) => {
+    await page.goto('/sector_generator.html');
+
+    const result = await page.evaluate(async () => {
+      const generationData = await import('/js/generation-data.js');
+      const poi = await import('/js/generation-poi.js');
+      const model = await import('/js/jump-gate-model.js');
+
+      generationData.hydrateGenerationData({
+        deepSpacePoiTemplates: [
+          {
+            kind: 'Navigation',
+            poiCategory: 'jump_gate',
+            name: 'Inactive Jump-Gate',
+            summary: 'Gate',
+            risk: 'Low',
+            rewardHint: 'Gate',
+            weight: 9,
+            jumpGateState: 'inactive'
+          },
+          {
+            kind: 'Mystery',
+            name: 'Anomaly',
+            summary: 'Fallback',
+            risk: 'Unknown',
+            rewardHint: 'Fallback',
+            weight: 1
+          }
+        ]
+      });
+
+      const pois = poi.generateDeepSpacePois(8, 8, {}, {
+        randomFn: () => 0,
+        sectorKey: 'NNNN',
+        knownSectorRecords: {}
+      });
+      generationData.hydrateGenerationData({});
+
+      const gateHexes = Object.entries(pois)
+        .filter(([, value]) => model.isJumpGatePoi(value))
+        .map(([hexId]) => hexId);
+      const edgeDistances = gateHexes.map((hexId) => {
+        const [cRaw, rRaw] = String(hexId).split('-');
+        const c = Number(cRaw);
+        const r = Number(rRaw);
+        return Math.min(c, r, 7 - c, 7 - r);
+      });
+
+      return {
+        gateCount: gateHexes.length,
+        allEdgeEligible: edgeDistances.every((distance) => distance <= 2)
+      };
+    });
+
+    expect(result.gateCount).toBeLessThanOrEqual(1);
+    expect(result.allEdgeEligible).toBeTruthy();
+  });
+
+  test('active jump-gate spawn is suppressed by nearby active-gate sectors and remains deterministic', async ({ page }) => {
+    await page.goto('/sector_generator.html');
+
+    const result = await page.evaluate(async () => {
+      const generationData = await import('/js/generation-data.js');
+      const poi = await import('/js/generation-poi.js');
+      const model = await import('/js/jump-gate-model.js');
+      const utils = await import('/js/utils.js');
+
+      generationData.hydrateGenerationData({
+        deepSpacePoiTemplates: [
+          {
+            kind: 'Navigation',
+            poiCategory: 'jump_gate',
+            name: 'Active Jump-Gate',
+            summary: 'Gate',
+            risk: 'Low',
+            rewardHint: 'Gate',
+            weight: 9,
+            jumpGateState: 'active'
+          },
+          {
+            kind: 'Hazard',
+            name: 'Storm',
+            summary: 'Fallback',
+            risk: 'High',
+            rewardHint: 'Fallback',
+            weight: 1
+          }
+        ]
+      });
+
+      const knownSectorRecords = {
+        NNNO: {
+          deepSpacePois: {
+            '0-0': { poiCategory: 'jump_gate', jumpGateState: 'active' }
+          }
+        }
+      };
+      const makePois = () => {
+        const rand = utils.mulberry32(utils.xmur3('phase2-deterministic')());
+        return poi.generateDeepSpacePois(8, 8, {}, {
+          randomFn: rand,
+          sectorKey: 'NNNN',
+          knownSectorRecords
+        });
+      };
+
+      const first = makePois();
+      const second = makePois();
+      generationData.hydrateGenerationData({});
+
+      const activeCount = Object.values(first).filter((value) => model.isActiveJumpGatePoi(value)).length;
+      return {
+        activeCount,
+        deterministic: JSON.stringify(first) === JSON.stringify(second)
+      };
+    });
+
+    expect(result.activeCount).toBe(0);
+    expect(result.deterministic).toBeTruthy();
+  });
+
+  test('jump-gate linking prefers sensible directional sector pairing', async ({ page }) => {
+    await page.goto('/sector_generator.html');
+
+    const result = await page.evaluate(async () => {
+      const gates = await import('/js/multi-sector-jump-gates.js');
+      const sectorAddress = await import('/js/sector-address.js');
+
+      const run = (hexId) => {
+        const state = {
+          currentSeed: 'seed-directional',
+          layoutSeed: 'seed-directional',
+          multiSector: {
+            jumpGateRegistry: {},
+            sectorsByKey: {
+              NNNN: {
+                config: { width: 8, height: 8 },
+                sectors: {},
+                deepSpacePois: {
+                  [hexId]: {
+                    kind: 'Navigation',
+                    poiCategory: 'jump_gate',
+                    name: 'Jump-Gate Test',
+                    jumpGateState: 'active'
+                  }
+                }
+              }
+            }
+          }
+        };
+        const ensureState = () => {};
+        const service = gates.createJumpGateService(state, ensureState);
+        service.ensureJumpGateLinksForRecord('NNNN', state.multiSector.sectorsByKey.NNNN);
+        const pair = Object.values(state.multiSector.jumpGateRegistry)[0];
+        return pair && pair.b ? pair.b.sectorKey : null;
+      };
+
+      const eastTargetKey = run('7-4');
+      const northTargetKey = run('4-0');
+      const east = sectorAddress.parseSectorKeyToCoords(eastTargetKey);
+      const north = sectorAddress.parseSectorKeyToCoords(northTargetKey);
+
+      return {
+        eastTargetKey,
+        northTargetKey,
+        eastX: east ? east.x : null,
+        northY: north ? north.y : null
+      };
+    });
+
+    expect(result.eastTargetKey).toBeTruthy();
+    expect(result.northTargetKey).toBeTruthy();
+    expect(result.eastX).toBeGreaterThan(0);
+    expect(result.northY).toBeLessThan(0);
+  });
+
+  test('jump-gate suppression tuning follows configured distance multipliers', async ({ page }) => {
+    await page.goto('/sector_generator.html');
+
+    const result = await page.evaluate(async () => {
+      const generationData = await import('/js/generation-data.js');
+      const poi = await import('/js/generation-poi.js');
+
+      generationData.hydrateGenerationData({
+        jumpGateRules: {
+          maxPerSector: 1,
+          minSectorSeparation: 2,
+          edgeDistanceMax: 2,
+          minHexSeparation: 4,
+          activeSuppressionByDistance: {
+            1: 0.11,
+            2: 0.22,
+            3: 0.33
+          },
+          edgeWeightByDistance: {
+            1: 2.0,
+            2: 1.5,
+            3: 1.0,
+            default: 0.2
+          }
+        }
+      });
+
+      const fromOne = poi.getActiveJumpGateSectorWeightMultiplier('NNNN', {
+        NNNO: { deepSpacePois: { '0-0': { poiCategory: 'jump_gate', jumpGateState: 'active' } } }
+      });
+      const fromTwo = poi.getActiveJumpGateSectorWeightMultiplier('NNNN', {
+        NNNP: { deepSpacePois: { '0-0': { poiCategory: 'jump_gate', jumpGateState: 'active' } } }
+      });
+      const fromThree = poi.getActiveJumpGateSectorWeightMultiplier('NNNN', {
+        NNNQ: { deepSpacePois: { '0-0': { poiCategory: 'jump_gate', jumpGateState: 'active' } } }
+      });
+
+      generationData.hydrateGenerationData({});
+      return { fromOne, fromTwo, fromThree };
+    });
+
+    expect(result.fromOne).toBe(0.11);
+    expect(result.fromTwo).toBe(0.22);
+    expect(result.fromThree).toBe(0.33);
   });
 });

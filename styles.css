@@ -121,6 +121,48 @@ body {
     text-underline-offset: 4px;
 }
 
+.jump-gate-poi-marker.jump-gate-poi-active {
+    opacity: 1;
+}
+
+.jump-gate-poi-marker.jump-gate-poi-inactive {
+    opacity: 0.88;
+}
+
+.jump-gate-poi-marker-strike {
+    pointer-events: none;
+}
+
+.jump-gate-state-indicator {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    flex: 0 0 auto;
+}
+
+.jump-gate-state-active {
+    background: radial-gradient(circle at 35% 35%, #67e8f9 0%, #06b6d4 55%, #0e7490 100%);
+    box-shadow: 0 0 5px rgba(34, 211, 238, 0.8);
+}
+
+.jump-gate-state-inactive {
+    background: radial-gradient(circle at 35% 35%, #fcd34d 0%, #f59e0b 55%, #92400e 100%);
+    box-shadow: 0 0 4px rgba(245, 158, 11, 0.6);
+    position: relative;
+}
+
+.jump-gate-state-inactive::after {
+    content: '';
+    position: absolute;
+    left: 1px;
+    top: 4px;
+    width: 8px;
+    height: 1px;
+    background: rgba(30, 41, 59, 0.95);
+    transform: rotate(-35deg);
+}
+
 .route-shortcut-active .hex-group.route-eligible .hex {
     cursor: crosshair;
 }

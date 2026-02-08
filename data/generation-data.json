@@ -75,6 +75,23 @@
     "dense": "Dense",
     "core": "Core"
   },
+  "jumpGateRules": {
+    "maxPerSector": 1,
+    "minSectorSeparation": 2,
+    "edgeDistanceMax": 2,
+    "minHexSeparation": 4,
+    "activeSuppressionByDistance": {
+      "1": 0,
+      "2": 0.35,
+      "3": 0.65
+    },
+    "edgeWeightByDistance": {
+      "1": 1.8,
+      "2": 1.35,
+      "3": 1.05,
+      "default": 0.28
+    }
+  },
   "deepSpacePoiTemplates": [
     {
       "kind": "Navigation",
@@ -121,6 +138,7 @@
     },
     {
       "kind": "Navigation",
+      "poiCategory": "jump_gate",
       "name": "Active Jump-Gate",
       "summary": "A functioning gate nexus that can sling ships across major corridor distances.",
       "risk": "Low",
@@ -130,6 +148,7 @@
     },
     {
       "kind": "Navigation",
+      "poiCategory": "jump_gate",
       "name": "Inactive Jump-Gate",
       "summary": "A dormant gate structure with partial telemetry and unstable startup traces.",
       "risk": "Medium",

@@ -6,7 +6,7 @@ import { readGenerationConfigFromUi } from './sector-config.js';
 import { HOME_SECTOR_KEY, offsetSectorKey, parseSectorKeyToCoords } from './sector-address.js';
 import { getGlobalHexDisplayIdForSector } from './render-shared.js';
 import { applySectorPayload } from './storage.js';
-import { centerViewOnSector, findHexGroup, selectHex, updateViewTransform } from './render.js';
+import { centerViewOnSector, findHexGroup, redrawHex, selectHex, updateViewTransform } from './render.js';
 import { deepClone } from './utils.js';
 import { createJumpGateService } from './multi-sector-jump-gates.js';
 import { createCorridorService } from './multi-sector-corridors.js';
@@ -355,6 +355,36 @@ export function travelSelectedJumpGate() {
     });
     emitEvent(EVENTS.SECTOR_DATA_CHANGED, { label: 'Travel Jump Gate' });
     showStatusMessage(`Jumped to sector ${targetSectorKey} at ${getGlobalHexDisplayIdForSector(targetSectorKey, targetHexId)}.`, 'success');
+}
+
+export function activateSelectedJumpGate() {
+    ensureState();
+    saveCurrentSectorRecord();
+    const sectorKey = state.multiSector.currentKey || HOME_SECTOR_KEY;
+    const hexId = state.selectedHexId;
+    if (!hexId) {
+        showStatusMessage('Select an inactive jump-gate first.', 'warn');
+        return;
+    }
+    const activated = jumpGateService.activateJumpGateAt(sectorKey, hexId);
+    if (!activated) {
+        showStatusMessage('Selected POI is not an inactive jump-gate.', 'warn');
+        return;
+    }
+
+    const currentRecord = state.multiSector.sectorsByKey[sectorKey];
+    if (currentRecord) {
+        state.deepSpacePois = deepClone(currentRecord.deepSpacePois || {});
+    }
+    const refreshedGroup = redrawHex(hexId);
+    if (refreshedGroup) {
+        selectHex(hexId, refreshedGroup);
+    } else {
+        const group = findHexGroup(hexId, sectorKey);
+        if (group) selectHex(hexId, group);
+    }
+    emitEvent(EVENTS.SECTOR_DATA_CHANGED, { label: 'Activate Jump Gate' });
+    showStatusMessage('Jump-gate activated and linked endpoint synchronized.', 'success');
 }
 
 export function setupMultiSectorLinks() {

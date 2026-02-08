@@ -323,6 +323,7 @@ test('linked jump-gates share details but keep distinct names', async ({ page })
     sourceRecord.deepSpacePois = {
       [sourceHexId]: {
         kind: 'Navigation',
+        poiCategory: 'jump_gate',
         name: 'Active Jump-Gate SourceName',
         summary: 'Source Summary',
         risk: 'Severe',
@@ -340,6 +341,7 @@ test('linked jump-gates share details but keep distinct names', async ({ page })
       deepSpacePois: {
         [targetHexId]: {
           kind: 'Navigation',
+          poiCategory: 'jump_gate',
           name: 'Active Jump-Gate TargetName',
           summary: 'Target Summary',
           risk: 'Low',
@@ -395,4 +397,120 @@ test('linked jump-gates share details but keep distinct names', async ({ page })
   expect(synced).toBeTruthy();
   expect(synced.sharedEqual).toBeTruthy();
   expect(synced.distinctNames).toBeTruthy();
+});
+
+test('inactive jump-gates stay linked and activation in edit mode synchronizes both endpoints', async ({ page }) => {
+  await page.goto('/sector_generator.html');
+  await page.locator('#generateSectorBtn').click();
+
+  await page.evaluate(() => {
+    const autoKey = 'hex-star-sector-gen:autosave';
+    const manualKey = 'hex-star-sector-gen:manual';
+    const raw = window.localStorage.getItem(autoKey);
+    if (!raw) throw new Error('Missing autosave payload.');
+    const payload = JSON.parse(raw);
+
+    const sourceKey = payload.multiSector?.currentKey || 'NNNN';
+    const targetKey = sourceKey === 'NNNN' ? 'NNNO' : 'NNNN';
+    const pairId = 'jg-inactive-activation-test';
+    const sourceHexId = '1-1';
+    const targetHexId = '0-0';
+
+    const sourceRecord = payload.multiSector.sectorsByKey[sourceKey];
+    sourceRecord.sectors = {};
+    sourceRecord.systemCount = 0;
+    sourceRecord.deepSpacePois = {
+      [sourceHexId]: {
+        kind: 'Navigation',
+        poiCategory: 'jump_gate',
+        name: 'Jump-Gate Source Inactive',
+        summary: 'Shared Summary',
+        risk: 'Medium',
+        rewardHint: 'Shared Reward',
+        jumpGateState: 'inactive',
+        jumpGatePairId: pairId,
+        jumpGateLink: { sectorKey: targetKey, hexId: targetHexId }
+      }
+    };
+
+    payload.multiSector.sectorsByKey[targetKey] = {
+      seed: `${payload.seed || 'sector'} / ${targetKey}`,
+      config: sourceRecord.config,
+      sectors: {},
+      deepSpacePois: {
+        [targetHexId]: {
+          kind: 'Navigation',
+          poiCategory: 'jump_gate',
+          name: 'Jump-Gate Target Inactive',
+          summary: 'Shared Summary',
+          risk: 'Medium',
+          rewardHint: 'Shared Reward',
+          jumpGateState: 'inactive',
+          jumpGatePairId: pairId,
+          jumpGateLink: { sectorKey: sourceKey, hexId: sourceHexId }
+        }
+      },
+      pinnedHexIds: [],
+      totalHexes: sourceRecord.totalHexes,
+      systemCount: 0
+    };
+
+    payload.multiSector.jumpGateRegistry = {
+      [pairId]: {
+        a: { sectorKey: sourceKey, hexId: sourceHexId },
+        b: { sectorKey: targetKey, hexId: targetHexId },
+        state: 'inactive'
+      }
+    };
+    payload.multiSector.currentKey = sourceKey;
+    payload.multiSector.selectedSectorKey = sourceKey;
+    payload.sectors = {};
+    payload.deepSpacePois = sourceRecord.deepSpacePois;
+    payload.stats.totalSystems = 0;
+
+    window.localStorage.setItem(manualKey, JSON.stringify(payload));
+  });
+
+  await page.locator('#loadSectorLocalBtn').click();
+  await page.locator('.hex-group[data-id="1-1"]').click();
+  await page.locator('#editModeToggleBtn').click();
+  await expect(page.locator('#editModeToggleBtn')).toContainText('EDIT MODE: ON');
+  await expect(page.locator('#activateJumpGateBtn')).toBeVisible();
+  await page.locator('#activateJumpGateBtn').click();
+  await expect(page.locator('#statusMessage')).toContainText('activated');
+  await expect(page.locator('#activateJumpGateBtn')).toHaveCount(0);
+  await expect(page.locator('#travelJumpGateBtn')).toBeVisible();
+
+  const synced = await page.evaluate(() => {
+    const raw = window.localStorage.getItem('hex-star-sector-gen:autosave');
+    if (!raw) return null;
+    const payload = JSON.parse(raw);
+    const pair = payload.multiSector?.jumpGateRegistry?.['jg-inactive-activation-test'];
+    if (!pair || !pair.a || !pair.b) return null;
+    const source = payload.multiSector?.sectorsByKey?.[pair.a.sectorKey]?.deepSpacePois?.[pair.a.hexId];
+    const target = payload.multiSector?.sectorsByKey?.[pair.b.sectorKey]?.deepSpacePois?.[pair.b.hexId];
+    if (!source || !target) return null;
+    return {
+      sourceName: source.name,
+      targetName: target.name,
+      sourceSummary: source.summary,
+      targetSummary: target.summary,
+      sourceState: source.jumpGateState,
+      targetState: target.jumpGateState,
+      pairState: pair.state,
+      sourceLink: source.jumpGateLink,
+      targetLink: target.jumpGateLink
+    };
+  });
+
+  expect(synced).toBeTruthy();
+  expect(synced.sourceState).toBe('active');
+  expect(synced.targetState).toBe('active');
+  expect(synced.pairState).toBe('active');
+  expect(String(synced.sourceName || '')).not.toMatch(/inactive/i);
+  expect(String(synced.targetName || '')).not.toMatch(/inactive/i);
+  expect(String(synced.sourceSummary || '')).toMatch(/functioning gate nexus/i);
+  expect(String(synced.targetSummary || '')).toMatch(/functioning gate nexus/i);
+  expect(synced.sourceLink).toBeTruthy();
+  expect(synced.targetLink).toBeTruthy();
 });

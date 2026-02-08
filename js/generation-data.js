@@ -103,6 +103,24 @@ const DEFAULT_GENERATION_PROFILES = {
     }
 };
 
+const DEFAULT_JUMP_GATE_RULES = {
+    maxPerSector: 1,
+    minSectorSeparation: 2,
+    edgeDistanceMax: 2,
+    minHexSeparation: 4,
+    activeSuppressionByDistance: {
+        1: 0,
+        2: 0.35,
+        3: 0.65
+    },
+    edgeWeightByDistance: {
+        1: 1.8,
+        2: 1.35,
+        3: 1.05,
+        default: 0.28
+    }
+};
+
 const DEFAULT_DEEP_SPACE_POI_TEMPLATES = [
     {
         kind: 'Navigation',
@@ -149,6 +167,7 @@ const DEFAULT_DEEP_SPACE_POI_TEMPLATES = [
     },
     {
         kind: 'Navigation',
+        poiCategory: 'jump_gate',
         name: 'Active Jump-Gate',
         summary: 'A functioning gate nexus that can sling ships across major corridor distances.',
         risk: 'Low',
@@ -158,6 +177,7 @@ const DEFAULT_DEEP_SPACE_POI_TEMPLATES = [
     },
     {
         kind: 'Navigation',
+        poiCategory: 'jump_gate',
         name: 'Inactive Jump-Gate',
         summary: 'A dormant gate structure with partial telemetry and unstable startup traces.',
         risk: 'Medium',
@@ -203,6 +223,7 @@ export let DENSITY_PRESET_RATIOS_BY_PROFILE = DEFAULT_DENSITY_PRESET_RATIOS_BY_P
 export let DENSITY_PRESET_ORDER = DEFAULT_DENSITY_PRESET_ORDER;
 export let DENSITY_PRESET_LABELS = DEFAULT_DENSITY_PRESET_LABELS;
 export let GENERATION_PROFILES = DEFAULT_GENERATION_PROFILES;
+export let JUMP_GATE_RULES = DEFAULT_JUMP_GATE_RULES;
 export let DEEP_SPACE_POI_TEMPLATES = DEFAULT_DEEP_SPACE_POI_TEMPLATES;
 export let STAR_CLASS_ROLL_TABLE = DEFAULT_STAR_CLASS_ROLL_TABLE;
 export let STAR_COUNT_THRESHOLDS_BY_PROFILE = DEFAULT_STAR_COUNT_THRESHOLDS_BY_PROFILE;
@@ -218,6 +239,7 @@ export function hydrateGenerationData(loadedData = {}) {
     DENSITY_PRESET_ORDER = loadedData.densityPresetOrder || DEFAULT_DENSITY_PRESET_ORDER;
     DENSITY_PRESET_LABELS = loadedData.densityPresetLabels || DEFAULT_DENSITY_PRESET_LABELS;
     GENERATION_PROFILES = loadedData.generationProfiles || DEFAULT_GENERATION_PROFILES;
+    JUMP_GATE_RULES = loadedData.jumpGateRules || DEFAULT_JUMP_GATE_RULES;
     DEEP_SPACE_POI_TEMPLATES = loadedData.deepSpacePoiTemplates || DEFAULT_DEEP_SPACE_POI_TEMPLATES;
     STAR_CLASS_ROLL_TABLE = loadedData.starClassRollTable || DEFAULT_STAR_CLASS_ROLL_TABLE;
     STAR_COUNT_THRESHOLDS_BY_PROFILE = loadedData.starCountThresholdsByProfile || DEFAULT_STAR_COUNT_THRESHOLDS_BY_PROFILE;

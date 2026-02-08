@@ -1,6 +1,13 @@
 const STAR_GRADIENT_CACHE = {};
 
-export function getDeepSpacePoiPalette(kind) {
+export function getDeepSpacePoiPalette(kind, poi = null) {
+    const isJumpGate = !!(poi && poi.poiCategory === 'jump_gate');
+    if (isJumpGate) {
+        if (poi.jumpGateState === 'inactive') {
+            return { fill: '#f59e0b', stroke: '#fde68a', glow: 'rgba(245,158,11,0.8)' };
+        }
+        return { fill: '#22d3ee', stroke: '#a5f3fc', glow: 'rgba(34,211,238,0.85)' };
+    }
     switch (String(kind || '').toLowerCase()) {
     case 'hazard':
         return { fill: '#fb7185', stroke: '#fecdd3', glow: 'rgba(251,113,133,0.75)' };

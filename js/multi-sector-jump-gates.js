@@ -1,5 +1,12 @@
 import { HOME_SECTOR_KEY, makeSectorKeyFromCoords, parseSectorKeyToCoords } from './sector-address.js';
 import { parseHexId, sortHexIds, xmur3, mulberry32 } from './utils.js';
+import { DEEP_SPACE_POI_TEMPLATES } from './generation-data.js';
+import {
+    isActiveJumpGatePoi,
+    isInactiveJumpGatePoi,
+    isJumpGatePoi,
+    JUMP_GATE_POI_CATEGORY
+} from './jump-gate-model.js';
 
 function parseKey(key) {
     return parseSectorKeyToCoords(key || HOME_SECTOR_KEY);
@@ -9,16 +16,19 @@ function makeJumpEndpointKey(sectorKey, hexId) {
     return `${sectorKey}|${hexId}`;
 }
 
-function isActiveJumpGatePoi(poi) {
-    if (!poi) return false;
-    if (poi.jumpGateState === 'active') return true;
-    return /^active jump-gate\b/i.test(String(poi.name || ''));
+function matchesEndpoint(endpoint, sectorKey, hexId) {
+    return !!(
+        endpoint
+        && endpoint.sectorKey === sectorKey
+        && endpoint.hexId === hexId
+    );
 }
 
-function isInactiveJumpGatePoi(poi) {
-    if (!poi) return false;
-    if (poi.jumpGateState === 'inactive') return true;
-    return /^inactive jump-gate\b/i.test(String(poi.name || ''));
+function getPairCounterpart(pair, sectorKey, hexId) {
+    if (!pair) return null;
+    if (matchesEndpoint(pair.a, sectorKey, hexId)) return pair.b || null;
+    if (matchesEndpoint(pair.b, sectorKey, hexId)) return pair.a || null;
+    return null;
 }
 
 function getDeterministicRandom(seedText) {
@@ -26,9 +36,10 @@ function getDeterministicRandom(seedText) {
     return mulberry32(seeded);
 }
 
-function getCanonicalJumpGateProfile(pairId, sourcePoi = null, targetPoi = null) {
+function getCanonicalJumpGateProfile(sourcePoi = null, targetPoi = null) {
     const defaultProfile = {
         kind: 'Navigation',
+        poiCategory: JUMP_GATE_POI_CATEGORY,
         summary: 'A synchronized jump-gate endpoint tied to a linked remote sector.',
         risk: 'Low',
         rewardHint: 'Enables near-instant transit to its paired gate.'
@@ -41,20 +52,54 @@ function getCanonicalJumpGateProfile(pairId, sourcePoi = null, targetPoi = null)
     const secondary = targetPoi || sourcePoi || {};
     return {
         kind: pickString(preferred.kind, pickString(secondary.kind, defaultProfile.kind)),
+        poiCategory: JUMP_GATE_POI_CATEGORY,
         summary: pickString(preferred.summary, pickString(secondary.summary, defaultProfile.summary)),
         risk: pickString(preferred.risk, pickString(secondary.risk, defaultProfile.risk)),
         rewardHint: pickString(preferred.rewardHint, pickString(secondary.rewardHint, defaultProfile.rewardHint))
     };
 }
 
+function getActiveJumpGateDefaults() {
+    const template = (DEEP_SPACE_POI_TEMPLATES || []).find((item) =>
+        item
+        && item.poiCategory === JUMP_GATE_POI_CATEGORY
+        && item.jumpGateState === 'active'
+    );
+    if (!template) {
+        return {
+            kind: 'Navigation',
+            summary: 'A synchronized jump-gate endpoint tied to a linked remote sector.',
+            risk: 'Low',
+            rewardHint: 'Enables near-instant transit to its paired gate.'
+        };
+    }
+    return {
+        kind: typeof template.kind === 'string' && template.kind.trim() ? template.kind.trim() : 'Navigation',
+        summary: typeof template.summary === 'string' && template.summary.trim()
+            ? template.summary.trim()
+            : 'A synchronized jump-gate endpoint tied to a linked remote sector.',
+        risk: typeof template.risk === 'string' && template.risk.trim() ? template.risk.trim() : 'Low',
+        rewardHint: typeof template.rewardHint === 'string' && template.rewardHint.trim()
+            ? template.rewardHint.trim()
+            : 'Enables near-instant transit to its paired gate.'
+    };
+}
+
+function normalizeActivatedJumpGateName(value) {
+    const text = String(value || '').trim();
+    if (!text) return '';
+    const withoutInactive = text
+        .replace(/\binactive\b/ig, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+    return withoutInactive;
+}
+
 function getPairedJumpGateNames(pairId, sourcePoi = null, targetPoi = null) {
     const serial = (xmur3(pairId)() % 900) + 100;
-    const fallbackA = `Active Jump-Gate ${serial}A`;
-    const fallbackB = `Active Jump-Gate ${serial}B`;
-    const normalize = (value) => {
-        const text = typeof value === 'string' ? value.trim() : '';
-        return /^active jump-gate\b/i.test(text) ? text : '';
-    };
+    const fallbackA = `Jump-Gate ${serial}A`;
+    const fallbackB = `Jump-Gate ${serial}B`;
+    const normalize = (value) => normalizeActivatedJumpGateName(value);
 
     let aName = normalize(sourcePoi && sourcePoi.name) || fallbackA;
     let bName = normalize(targetPoi && targetPoi.name) || fallbackB;
@@ -65,15 +110,93 @@ function getPairedJumpGateNames(pairId, sourcePoi = null, targetPoi = null) {
     return { aName, bName };
 }
 
-function buildSectorOffsetCandidates() {
+function chooseDirectionalVector(sourceHexId, width, height, rng) {
+    const parsed = parseHexId(sourceHexId);
+    if (!parsed) return { dx: 0, dy: 0 };
+    const distances = [
+        { edge: 'west', distance: parsed.col, dx: -1, dy: 0 },
+        { edge: 'east', distance: (width - 1) - parsed.col, dx: 1, dy: 0 },
+        { edge: 'north', distance: parsed.row, dx: 0, dy: -1 },
+        { edge: 'south', distance: (height - 1) - parsed.row, dx: 0, dy: 1 }
+    ].sort((a, b) => a.distance - b.distance);
+    const nearestDistance = distances[0].distance;
+    const nearest = distances.filter((item) => item.distance === nearestDistance);
+    return nearest[Math.floor(rng() * nearest.length)] || { dx: 0, dy: 0 };
+}
+
+function buildSectorOffsetCandidates(direction) {
     const offsets = [];
-    for (let dx = -2; dx <= 2; dx++) {
-        for (let dy = -2; dy <= 2; dy++) {
+    for (let dx = -4; dx <= 4; dx++) {
+        for (let dy = -4; dy <= 4; dy++) {
             if (dx === 0 && dy === 0) continue;
+            const distance = Math.max(Math.abs(dx), Math.abs(dy));
+            if (distance < 2) continue;
             offsets.push({ dx, dy });
         }
     }
+    offsets.sort((left, right) => {
+        const leftAlignment = (direction.dx === 0 || Math.sign(left.dx) === Math.sign(direction.dx) ? 1 : 0)
+            + (direction.dy === 0 || Math.sign(left.dy) === Math.sign(direction.dy) ? 1 : 0);
+        const rightAlignment = (direction.dx === 0 || Math.sign(right.dx) === Math.sign(direction.dx) ? 1 : 0)
+            + (direction.dy === 0 || Math.sign(right.dy) === Math.sign(direction.dy) ? 1 : 0);
+        if (leftAlignment !== rightAlignment) return rightAlignment - leftAlignment;
+        const leftDistance = Math.max(Math.abs(left.dx), Math.abs(left.dy));
+        const rightDistance = Math.max(Math.abs(right.dx), Math.abs(right.dy));
+        return leftDistance - rightDistance;
+    });
     return offsets;
+}
+
+function chooseDestinationHex(config, direction, rng, reserved, targetSectorKey) {
+    const width = parseInt(config && config.width, 10) || 8;
+    const height = parseInt(config && config.height, 10) || 10;
+    const cols = [];
+    const rows = [];
+
+    if (direction.dx > 0) {
+        cols.push(0, 1, 2);
+    } else if (direction.dx < 0) {
+        cols.push(width - 1, width - 2, width - 3);
+    } else {
+        cols.push(Math.floor(width / 2), Math.floor(width / 2) - 1, Math.floor(width / 2) + 1);
+    }
+
+    if (direction.dy > 0) {
+        rows.push(0, 1, 2);
+    } else if (direction.dy < 0) {
+        rows.push(height - 1, height - 2, height - 3);
+    } else {
+        rows.push(Math.floor(height / 2), Math.floor(height / 2) - 1, Math.floor(height / 2) + 1);
+    }
+
+    const validCols = cols.filter((value, index, array) => Number.isInteger(value) && value >= 0 && value < width && array.indexOf(value) === index);
+    const validRows = rows.filter((value, index, array) => Number.isInteger(value) && value >= 0 && value < height && array.indexOf(value) === index);
+    const candidates = [];
+    validCols.forEach((col) => {
+        validRows.forEach((row) => {
+            candidates.push(`${col}-${row}`);
+        });
+    });
+    for (let i = candidates.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+    }
+    for (let i = 0; i < candidates.length; i++) {
+        const hexId = candidates[i];
+        const endpointKey = makeJumpEndpointKey(targetSectorKey, hexId);
+        if (reserved.has(endpointKey)) continue;
+        return hexId;
+    }
+
+    for (let attempt = 0; attempt < 8; attempt++) {
+        const col = Math.floor(rng() * width);
+        const row = Math.floor(rng() * height);
+        const hexId = `${col}-${row}`;
+        const endpointKey = makeJumpEndpointKey(targetSectorKey, hexId);
+        if (reserved.has(endpointKey)) continue;
+        return hexId;
+    }
+    return null;
 }
 
 function pickFallbackJumpHex(record, preferredHexId, blocked = new Set()) {
@@ -125,23 +248,14 @@ export function createJumpGateService(state, ensureState) {
         const width = parseInt(config && config.width, 10) || 8;
         const height = parseInt(config && config.height, 10) || 10;
         const rng = getDeterministicRandom(`${state.layoutSeed || state.currentSeed || 'sector'}|${sourceSectorKey}|${sourceHexId}|${pairId}`);
-        const offsets = buildSectorOffsetCandidates();
-        for (let i = offsets.length - 1; i > 0; i--) {
-            const j = Math.floor(rng() * (i + 1));
-            [offsets[i], offsets[j]] = [offsets[j], offsets[i]];
-        }
+        const direction = chooseDirectionalVector(sourceHexId, width, height, rng);
+        const offsets = buildSectorOffsetCandidates(direction);
 
         const reserved = getReservedJumpEndpoints(pairId);
         for (let i = 0; i < offsets.length; i++) {
             const targetSectorKey = makeSectorKeyFromCoords(sourceSector.x + offsets[i].dx, sourceSector.y + offsets[i].dy);
-            for (let attempt = 0; attempt < 5; attempt++) {
-                const col = Math.floor(rng() * width);
-                const row = Math.floor(rng() * height);
-                const targetHexId = `${col}-${row}`;
-                const endpointKey = makeJumpEndpointKey(targetSectorKey, targetHexId);
-                if (reserved.has(endpointKey)) continue;
-                return { sectorKey: targetSectorKey, hexId: targetHexId };
-            }
+            const targetHexId = chooseDestinationHex(config, direction, rng, reserved, targetSectorKey);
+            if (targetHexId) return { sectorKey: targetSectorKey, hexId: targetHexId };
         }
         return null;
     }
@@ -156,19 +270,23 @@ export function createJumpGateService(state, ensureState) {
         if (!record || !record.deepSpacePois || !record.config) return;
         ensureJumpGateRegistry();
 
-        const activeHexIds = sortHexIds(Object.keys(record.deepSpacePois).filter((hexId) =>
-            isActiveJumpGatePoi(record.deepSpacePois[hexId])
+        const jumpGateHexIds = sortHexIds(Object.keys(record.deepSpacePois).filter((hexId) =>
+            isJumpGatePoi(record.deepSpacePois[hexId])
         ));
-        activeHexIds.forEach((hexId) => {
+        jumpGateHexIds.forEach((hexId) => {
             const poi = record.deepSpacePois[hexId];
             if (!poi) return;
-            poi.jumpGateState = 'active';
+            poi.poiCategory = JUMP_GATE_POI_CATEGORY;
+            const desiredState = isInactiveJumpGatePoi(poi) ? 'inactive' : 'active';
+            poi.jumpGateState = desiredState;
+            if (!poi.jumpGateMeta || typeof poi.jumpGateMeta !== 'object') poi.jumpGateMeta = null;
 
             let pairId = poi.jumpGatePairId || makeJumpGatePairId(sectorKey, hexId);
-            while (state.multiSector.jumpGateRegistry[pairId]
-                && !(state.multiSector.jumpGateRegistry[pairId].a
-                    && state.multiSector.jumpGateRegistry[pairId].a.sectorKey === sectorKey
-                    && state.multiSector.jumpGateRegistry[pairId].a.hexId === hexId)) {
+            while (
+                state.multiSector.jumpGateRegistry[pairId]
+                && !matchesEndpoint(state.multiSector.jumpGateRegistry[pairId].a, sectorKey, hexId)
+                && !matchesEndpoint(state.multiSector.jumpGateRegistry[pairId].b, sectorKey, hexId)
+            ) {
                 pairId = `${pairId}x`;
             }
 
@@ -182,24 +300,31 @@ export function createJumpGateService(state, ensureState) {
                 if (!destination) return;
                 state.multiSector.jumpGateRegistry[pairId] = {
                     a: { sectorKey, hexId },
-                    b: { sectorKey: destination.sectorKey, hexId: destination.hexId }
+                    b: { sectorKey: destination.sectorKey, hexId: destination.hexId },
+                    state: desiredState
                 };
             }
 
             const pair = state.multiSector.jumpGateRegistry[pairId];
+            pair.state = desiredState === 'active' ? 'active' : (pair.state || 'inactive');
+            if (!matchesEndpoint(pair.a, sectorKey, hexId) && !matchesEndpoint(pair.b, sectorKey, hexId)) {
+                pair.a = { sectorKey, hexId };
+            }
+            const counterpart = getPairCounterpart(pair, sectorKey, hexId);
+            if (!counterpart || !counterpart.sectorKey || !counterpart.hexId) return;
             poi.jumpGatePairId = pairId;
             poi.jumpGateLink = {
-                sectorKey: pair.b.sectorKey,
-                hexId: pair.b.hexId
+                sectorKey: counterpart.sectorKey,
+                hexId: counterpart.hexId
             };
         });
 
         Object.values(record.deepSpacePois).forEach((poi) => {
             if (!poi) return;
-            if (isInactiveJumpGatePoi(poi)) {
-                poi.jumpGateState = 'inactive';
-                delete poi.jumpGatePairId;
-                delete poi.jumpGateLink;
+            if (!isJumpGatePoi(poi)) {
+                poi.jumpGatePairId = null;
+                poi.jumpGateLink = null;
+                poi.jumpGateMeta = null;
             }
         });
     }
@@ -233,20 +358,24 @@ export function createJumpGateService(state, ensureState) {
                 ? sourceRecord.deepSpacePois[pair.a.hexId] || null
                 : null;
             const targetPoi = record.deepSpacePois[targetHexId] || null;
-            const profile = getCanonicalJumpGateProfile(pairId, sourcePoi, targetPoi);
+            const profile = getCanonicalJumpGateProfile(sourcePoi, targetPoi);
             const names = getPairedJumpGateNames(pairId, sourcePoi, targetPoi);
+            const linkedState = pair.state === 'active' ? 'active' : 'inactive';
 
             if (sourcePoi) {
                 sourceRecord.deepSpacePois[pair.a.hexId] = {
                     ...sourcePoi,
                     ...profile,
                     name: names.aName,
-                    jumpGateState: 'active',
+                    jumpGateState: linkedState,
                     jumpGatePairId: pairId,
                     jumpGateLink: {
                         sectorKey: pair.b.sectorKey,
                         hexId: pair.b.hexId
-                    }
+                    },
+                    jumpGateMeta: sourcePoi.jumpGateMeta && typeof sourcePoi.jumpGateMeta === 'object'
+                        ? sourcePoi.jumpGateMeta
+                        : null
                 };
             }
 
@@ -254,20 +383,75 @@ export function createJumpGateService(state, ensureState) {
                 ...(targetPoi || {}),
                 ...profile,
                 name: names.bName,
-                jumpGateState: 'active',
+                jumpGateState: linkedState,
                 jumpGatePairId: pairId,
                 jumpGateLink: {
                     sectorKey: pair.a.sectorKey,
                     hexId: pair.a.hexId
-                }
+                },
+                jumpGateMeta: targetPoi && targetPoi.jumpGateMeta && typeof targetPoi.jumpGateMeta === 'object'
+                    ? targetPoi.jumpGateMeta
+                    : null
             };
         });
+    }
+
+    function activateJumpGateAt(sectorKey, hexId) {
+        ensureJumpGateRegistry();
+        const record = state.multiSector.sectorsByKey && state.multiSector.sectorsByKey[sectorKey]
+            ? state.multiSector.sectorsByKey[sectorKey]
+            : null;
+        if (!record || !record.deepSpacePois || !record.deepSpacePois[hexId]) return false;
+        const poi = record.deepSpacePois[hexId];
+        if (!isJumpGatePoi(poi)) return false;
+        poi.poiCategory = JUMP_GATE_POI_CATEGORY;
+        poi.jumpGateState = 'active';
+        ensureJumpGateLinksForRecord(sectorKey, record);
+        const pairId = poi.jumpGatePairId;
+        const pair = pairId ? state.multiSector.jumpGateRegistry[pairId] : null;
+        if (pair) pair.state = 'active';
+        ensureInboundJumpGatesForRecord(sectorKey, record);
+        if (pair && pair.b && pair.b.sectorKey && state.multiSector.sectorsByKey[pair.b.sectorKey]) {
+            ensureInboundJumpGatesForRecord(pair.b.sectorKey, state.multiSector.sectorsByKey[pair.b.sectorKey]);
+        }
+
+        // Promotion from inactive -> active should also refresh gate intel/name on both endpoints.
+        if (pair && pair.a && pair.b) {
+            const defaults = getActiveJumpGateDefaults();
+            const aRecord = state.multiSector.sectorsByKey[pair.a.sectorKey];
+            const bRecord = state.multiSector.sectorsByKey[pair.b.sectorKey];
+            const aPoi = aRecord && aRecord.deepSpacePois ? aRecord.deepSpacePois[pair.a.hexId] : null;
+            const bPoi = bRecord && bRecord.deepSpacePois ? bRecord.deepSpacePois[pair.b.hexId] : null;
+            if (aPoi) {
+                aPoi.poiCategory = JUMP_GATE_POI_CATEGORY;
+                aPoi.jumpGateState = 'active';
+                aPoi.kind = defaults.kind;
+                aPoi.summary = defaults.summary;
+                aPoi.risk = defaults.risk;
+                aPoi.rewardHint = defaults.rewardHint;
+                aPoi.name = normalizeActivatedJumpGateName(aPoi.name) || aPoi.name;
+            }
+            if (bPoi) {
+                bPoi.poiCategory = JUMP_GATE_POI_CATEGORY;
+                bPoi.jumpGateState = 'active';
+                bPoi.kind = defaults.kind;
+                bPoi.summary = defaults.summary;
+                bPoi.risk = defaults.risk;
+                bPoi.rewardHint = defaults.rewardHint;
+                bPoi.name = normalizeActivatedJumpGateName(bPoi.name) || bPoi.name;
+            }
+            const names = getPairedJumpGateNames(pairId, aPoi, bPoi);
+            if (aPoi) aPoi.name = names.aName;
+            if (bPoi) bPoi.name = names.bName;
+        }
+        return true;
     }
 
     return {
         ensureJumpGateRegistry,
         ensureJumpGateLinksForRecord,
         ensureInboundJumpGatesForRecord,
-        isActiveJumpGatePoi
+        isActiveJumpGatePoi,
+        activateJumpGateAt
     };
 }
