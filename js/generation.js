@@ -29,6 +29,7 @@ import {
 } from './planetary-rules.js';
 import { autoSaveSectorState, buildSectorPayload } from './storage.js';
 import { readGenerationConfigFromUi } from './sector-config.js';
+import { getGlobalHexDisplayId } from './render-shared.js';
 import { ensureSystemStarFields } from './star-system.js';
 import { redrawGridAndReselect, redrawHexAndReselect, redrawHexAndSelectHex, refreshHexInfo, clearSelectionInfo } from './ui-sync.js';
 import { deepClone, isHexIdInBounds, parseHexId, romanize, shuffleArray, sortHexIds } from './utils.js';
@@ -83,7 +84,8 @@ const DEEP_SPACE_POI_TEMPLATES = [
         summary: 'A functioning gate nexus that can sling ships across major corridor distances.',
         risk: 'Low',
         rewardHint: 'Can open rapid transit options between distant regions.',
-        weight: 0.14
+        weight: 0.14,
+        jumpGateState: 'active'
     },
     {
         kind: 'Navigation',
@@ -91,7 +93,8 @@ const DEEP_SPACE_POI_TEMPLATES = [
         summary: 'A dormant gate structure with partial telemetry and unstable startup traces.',
         risk: 'Medium',
         rewardHint: 'Potential to restore long-range transit if reactivated.',
-        weight: 0.32
+        weight: 0.32,
+        jumpGateState: 'inactive'
     },
     {
         kind: 'Navigation',
@@ -362,6 +365,37 @@ function hexDistanceById(hexA, hexB) {
     );
 }
 
+function parseSectorKey(sectorKey) {
+    const [xRaw, yRaw] = String(sectorKey || '').split(',');
+    const x = parseInt(xRaw, 10);
+    const y = parseInt(yRaw, 10);
+    if (!Number.isInteger(x) || !Number.isInteger(y)) return { x: 0, y: 0 };
+    return { x, y };
+}
+
+function isActiveJumpGatePoi(poi) {
+    if (!poi) return false;
+    if (poi.jumpGateState === 'active') return true;
+    return /^active jump-gate\b/i.test(String(poi.name || ''));
+}
+
+function getActiveJumpGateSectorWeightMultiplier(sectorKey, knownSectorRecords = {}) {
+    if (!knownSectorRecords || typeof knownSectorRecords !== 'object') return 1;
+    const center = parseSectorKey(sectorKey);
+    let nearbyActiveCount = 0;
+    Object.entries(knownSectorRecords).forEach(([otherKey, record]) => {
+        if (!record || !record.deepSpacePois || otherKey === sectorKey) return;
+        const other = parseSectorKey(otherKey);
+        const dx = Math.abs(other.x - center.x);
+        const dy = Math.abs(other.y - center.y);
+        if (Math.max(dx, dy) > 2) return;
+        const activeInSector = Object.values(record.deepSpacePois).some(isActiveJumpGatePoi);
+        if (activeInSector) nearbyActiveCount++;
+    });
+    if (nearbyActiveCount <= 0) return 1;
+    return Math.max(0.22, 1 - (nearbyActiveCount * 0.24));
+}
+
 function getJumpGateEdgeWeightMultiplier(edgeDistance) {
     if (edgeDistance <= 1) return 1.8;
     if (edgeDistance <= 2) return 1.35;
@@ -372,17 +406,24 @@ function getJumpGateEdgeWeightMultiplier(edgeDistance) {
 function createDeepSpacePoi(options = {}) {
     const edgeDistance = Number.isFinite(options.edgeDistance) ? options.edgeDistance : Number.POSITIVE_INFINITY;
     const allowJumpGates = options.allowJumpGates !== false;
+    const activeJumpGateWeightMultiplier = Number.isFinite(options.activeJumpGateWeightMultiplier)
+        ? Math.max(0.01, options.activeJumpGateWeightMultiplier)
+        : 1;
     const weightedTemplates = DEEP_SPACE_POI_TEMPLATES.filter((template) =>
         allowJumpGates || !/jump-gate/i.test(String(template.name || ''))
     ).map((template) => {
         const baseWeight = Number.isFinite(template.weight) && template.weight > 0 ? template.weight : 1;
         const isJumpGate = /jump-gate/i.test(String(template.name || ''));
+        const isActiveJumpGate = template.jumpGateState === 'active';
         const edgeAdjustedWeight = isJumpGate
             ? baseWeight * getJumpGateEdgeWeightMultiplier(edgeDistance)
             : baseWeight;
+        const suppressionAdjustedWeight = isActiveJumpGate
+            ? edgeAdjustedWeight * activeJumpGateWeightMultiplier
+            : edgeAdjustedWeight;
         return {
             template,
-            weight: edgeAdjustedWeight
+            weight: suppressionAdjustedWeight
         };
     });
 
@@ -404,7 +445,8 @@ function createDeepSpacePoi(options = {}) {
         summary: template.summary,
         risk: template.risk,
         rewardHint: template.rewardHint,
-        isRefuelingStation: !!template.isRefuelingStation
+        isRefuelingStation: !!template.isRefuelingStation,
+        jumpGateState: template.jumpGateState || null
     };
 }
 
@@ -413,8 +455,11 @@ function isJumpGatePoi(poi) {
     return /jump-gate/i.test(String(poi.name || ''));
 }
 
-function generateDeepSpacePois(width, height, sectors) {
+function generateDeepSpacePois(width, height, sectors, options = {}) {
     const pois = {};
+    const activeJumpGateWeightMultiplier = Number.isFinite(options.activeJumpGateWeightMultiplier)
+        ? Math.max(0.01, options.activeJumpGateWeightMultiplier)
+        : 1;
     const jumpGateHexes = [];
     const maxJumpGatesPerSector = 2;
     const minJumpGateSeparation = 4;
@@ -431,14 +476,14 @@ function generateDeepSpacePois(width, height, sectors) {
             const spawnChance = baseChance + nearbyBoost + remoteBoost;
             if (rand() > spawnChance) continue;
             const edgeDistance = Math.min(c, r, (width - 1) - c, (height - 1) - r);
-            let poi = createDeepSpacePoi({ edgeDistance });
+            let poi = createDeepSpacePoi({ edgeDistance, activeJumpGateWeightMultiplier });
             if (isJumpGatePoi(poi)) {
                 const isAtGateCap = jumpGateHexes.length >= maxJumpGatesPerSector;
                 const isTooCloseToOtherGate = jumpGateHexes.some(otherHexId =>
                     hexDistanceById(otherHexId, hexId) < minJumpGateSeparation
                 );
                 if (isAtGateCap || isTooCloseToOtherGate) {
-                    poi = createDeepSpacePoi({ edgeDistance, allowJumpGates: false });
+                    poi = createDeepSpacePoi({ edgeDistance, allowJumpGates: false, activeJumpGateWeightMultiplier });
                 }
             }
             if (isJumpGatePoi(poi)) {
@@ -538,7 +583,7 @@ function selectClusteredSystemCoords(candidateCoords, systemsToGenerate) {
     return [...selected, ...spreadPicked];
 }
 
-function buildSectorFromConfig(config, fixedSystems = {}) {
+function buildSectorFromConfig(config, fixedSystems = {}, options = {}) {
     const normalized = normalizeGenerationConfig(config);
     const width = normalized.width;
     const height = normalized.height;
@@ -586,7 +631,11 @@ function buildSectorFromConfig(config, fixedSystems = {}) {
             sectorsByCoord: nextSectors
         });
     });
-    const deepSpacePois = generateDeepSpacePois(width, height, nextSectors);
+    const activeJumpGateWeightMultiplier = getActiveJumpGateSectorWeightMultiplier(
+        options.sectorKey || '0,0',
+        options.knownSectorRecords || {}
+    );
+    const deepSpacePois = generateDeepSpacePois(width, height, nextSectors, { activeJumpGateWeightMultiplier });
 
     return {
         config: normalized,
@@ -637,7 +686,10 @@ export function generateSector() {
     }));
     state.layoutSeed = seedUsed;
     state.rerollIteration = 0;
-    const built = buildSectorFromConfig(config, {});
+    const built = buildSectorFromConfig(config, {}, {
+        sectorKey: '0,0',
+        knownSectorRecords: {}
+    });
 
     state.sectors = built.sectors;
     state.deepSpacePois = built.deepSpacePois;
@@ -645,6 +697,7 @@ export function generateSector() {
     state.selectedHexId = null;
     state.multiSector = {
         currentKey: '0,0',
+        jumpGateRegistry: {},
         sectorsByKey: {
             '0,0': {
                 seed: seedUsed,
@@ -803,7 +856,7 @@ export function addSystemAtHex(hexId) {
     sanitizePinnedHexes(config.width, config.height);
     refreshSectorSnapshot(config, config.width, config.height, 'Add System');
     updateSectorStatus(config.width * config.height, Object.keys(state.sectors).length);
-    showStatusMessage(`Added system at ${hexId}.`, 'success');
+    showStatusMessage(`Added system at ${getGlobalHexDisplayId(hexId)}.`, 'success');
 }
 
 export function deleteSelectedSystem() {
@@ -825,7 +878,7 @@ export function deleteSelectedSystem() {
     sanitizePinnedHexes(config.width, config.height);
     refreshSectorSnapshot(config, config.width, config.height, 'Delete System');
     updateSectorStatus(config.width * config.height, Object.keys(state.sectors).length);
-    showStatusMessage(`Deleted system ${selectedHexId}.`, 'success');
+    showStatusMessage(`Deleted system ${getGlobalHexDisplayId(selectedHexId)}.`, 'success');
 }
 
 export function addPoiAtHex(hexId) {
@@ -837,7 +890,7 @@ export function addPoiAtHex(hexId) {
     }
     if (!state.deepSpacePois) state.deepSpacePois = {};
     if (state.deepSpacePois[hexId]) {
-        showStatusMessage(`POI already exists at ${hexId}.`, 'info');
+        showStatusMessage(`POI already exists at ${getGlobalHexDisplayId(hexId)}.`, 'info');
         return;
     }
 
@@ -845,7 +898,7 @@ export function addPoiAtHex(hexId) {
 
     redrawHexAndSelectHex(hexId);
     refreshSectorSnapshot(config, config.width, config.height, 'Add POI');
-    showStatusMessage(`Added POI at ${hexId}.`, 'success');
+    showStatusMessage(`Added POI at ${getGlobalHexDisplayId(hexId)}.`, 'success');
 }
 
 export function deletePoiAtHex(hexId) {
@@ -861,7 +914,7 @@ export function deletePoiAtHex(hexId) {
 
     redrawHexAndSelectHex(hexId);
     refreshSectorSnapshot(config, config.width, config.height, 'Delete POI');
-    showStatusMessage(`Deleted POI at ${hexId}.`, 'success');
+    showStatusMessage(`Deleted POI at ${getGlobalHexDisplayId(hexId)}.`, 'success');
 }
 
 export function renamePoiAtHex(hexId) {
@@ -880,7 +933,7 @@ export function renamePoiAtHex(hexId) {
 
     redrawHexAndSelectHex(hexId);
     refreshSectorSnapshot(config, config.width, config.height, 'Rename POI');
-    showStatusMessage(`Renamed POI at ${hexId}.`, 'success');
+    showStatusMessage(`Renamed POI at ${getGlobalHexDisplayId(hexId)}.`, 'success');
 }
 
 export function addBodyToSelectedSystem(kind) {
@@ -1039,7 +1092,7 @@ export function rerollSelectedSystem() {
         state.deepSpacePois[selectedHexId] = createDeepSpacePoi();
         redrawHexAndSelectHex(selectedHexId);
         refreshSectorSnapshot(config, config.width, config.height, 'Reroll POI');
-        showStatusMessage(`Rerolled POI at ${selectedHexId}.`, 'success');
+        showStatusMessage(`Rerolled POI at ${getGlobalHexDisplayId(selectedHexId)}.`, 'success');
         return;
     }
     if (!state.sectors[selectedHexId]) {
@@ -1065,7 +1118,7 @@ export function rerollSelectedSystem() {
     redrawHexAndReselect(selectedHexId);
     sanitizePinnedHexes(config.width, config.height);
     refreshSectorSnapshot(config, config.width, config.height, 'Reroll System');
-    showStatusMessage(`Rerolled system ${selectedHexId} with seed ${seedUsed}.`, 'success');
+    showStatusMessage(`Rerolled system ${getGlobalHexDisplayId(selectedHexId)} with seed ${seedUsed}.`, 'success');
 }
 
 export function togglePinSelectedSystem() {
@@ -1084,10 +1137,10 @@ export function togglePinSelectedSystem() {
     const pinned = new Set(state.pinnedHexIds || []);
     if (pinned.has(selectedHexId)) {
         pinned.delete(selectedHexId);
-        showStatusMessage(`Unpinned ${isSystem ? 'system' : 'POI'} ${selectedHexId}.`, 'info');
+        showStatusMessage(`Unpinned ${isSystem ? 'system' : 'POI'} ${getGlobalHexDisplayId(selectedHexId)}.`, 'info');
     } else {
         pinned.add(selectedHexId);
-        showStatusMessage(`Pinned ${isSystem ? 'system' : 'POI'} ${selectedHexId}.`, 'success');
+        showStatusMessage(`Pinned ${isSystem ? 'system' : 'POI'} ${getGlobalHexDisplayId(selectedHexId)}.`, 'success');
     }
 
     state.pinnedHexIds = Array.from(pinned);
@@ -1177,7 +1230,10 @@ export function createSectorRecord(options = {}) {
     const previousSeed = state.currentSeed;
     const previousRandom = state.seededRandomFn;
     setSeed(seed);
-    const built = buildSectorFromConfig(config, fixedSystems);
+    const built = buildSectorFromConfig(config, fixedSystems, {
+        sectorKey: options && options.sectorKey ? options.sectorKey : '0,0',
+        knownSectorRecords: options && options.knownSectorRecords ? options.knownSectorRecords : {}
+    });
     state.currentSeed = previousSeed;
     state.seededRandomFn = previousRandom;
 

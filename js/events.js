@@ -7,6 +7,7 @@ export const EVENTS = {
     REQUEST_ADD_POI_AT_HEX: 'requestAddPoiAtHex',
     REQUEST_DELETE_POI_AT_HEX: 'requestDeletePoiAtHex',
     REQUEST_RENAME_POI_AT_HEX: 'requestRenamePoiAtHex',
+    REQUEST_TRAVEL_JUMP_GATE: 'requestTravelJumpGate',
     REQUEST_DELETE_SELECTED_BODY: 'requestDeleteSelectedBody',
     REQUEST_REROLL_SELECTED_PLANET: 'requestRerollSelectedPlanet',
     EDIT_MODE_CHANGED: 'editModeChanged'

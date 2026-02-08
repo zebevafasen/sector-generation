@@ -2,6 +2,7 @@ import { state } from './config.js';
 import { showStatusMessage } from './core.js';
 import { EVENTS } from './events.js';
 import { refreshRouteOverlay } from './render.js';
+import { getGlobalHexDisplayId } from './render-shared.js';
 import { isHexCoordInBounds, parseHexId } from './utils.js';
 
 class MinPriorityQueue {
@@ -168,6 +169,11 @@ function isRefuelingPoiHex(hexId) {
     return kind.toLowerCase() === 'navigation' && /refueling station/i.test(name);
 }
 
+function formatHexForDisplay(hexId) {
+    if (!hexId) return '--';
+    return getGlobalHexDisplayId(hexId);
+}
+
 function computePath(startHexId, endHexId, width, height) {
     if (!startHexId || !endHexId) return [];
     if (startHexId === endHexId) return [startHexId];
@@ -238,8 +244,8 @@ function computePath(startHexId, endHexId, width, height) {
 
 function updateRouteLabels(refs) {
     const route = state.routePlanner || {};
-    if (refs.startLabel) refs.startLabel.innerText = route.startHexId || '--';
-    if (refs.endLabel) refs.endLabel.innerText = route.endHexId || '--';
+    if (refs.startLabel) refs.startLabel.innerText = formatHexForDisplay(route.startHexId);
+    if (refs.endLabel) refs.endLabel.innerText = formatHexForDisplay(route.endHexId);
     if (refs.hopsLabel) refs.hopsLabel.innerText = String(route.hops || 0);
     const start = parseHexId(route.startHexId);
     const end = parseHexId(route.endHexId);
@@ -247,7 +253,7 @@ function updateRouteLabels(refs) {
     if (refs.distanceLabel) refs.distanceLabel.innerText = String(distance);
     if (refs.pathLabel) {
         refs.pathLabel.innerText = Array.isArray(route.pathHexIds) && route.pathHexIds.length
-            ? route.pathHexIds.join(' -> ')
+            ? route.pathHexIds.map(formatHexForDisplay).join(' -> ')
             : '--';
     }
 }
@@ -265,7 +271,7 @@ function recalculateRoute(refs, options = {}) {
         route.hops = 0;
         updateRouteLabels(refs);
         if (route.startHexId && !route.endHexId) {
-            showStatusMessage(`Route start ${route.startHexId}. Select destination.`, 'info', { persist: true });
+            showStatusMessage(`Route start ${formatHexForDisplay(route.startHexId)}. Select destination.`, 'info', { persist: true });
         }
         if (shouldRedraw) redrawRoute();
         return;
@@ -275,9 +281,9 @@ function recalculateRoute(refs, options = {}) {
     route.hops = route.pathHexIds.length > 1 ? route.pathHexIds.length - 1 : 0;
     updateRouteLabels(refs);
     if (!route.pathHexIds.length) {
-        showStatusMessage(`No valid route ${route.startHexId} -> ${route.endHexId} (max 2 empty hexes before a system or refueling station).`, 'warn', { persist: true });
+        showStatusMessage(`No valid route ${formatHexForDisplay(route.startHexId)} -> ${formatHexForDisplay(route.endHexId)} (max 2 empty hexes before a system or refueling station).`, 'warn', { persist: true });
     } else {
-        showStatusMessage(`Route ${route.startHexId} -> ${route.endHexId}: ${route.hops} hops`, 'success', { persist: true });
+        showStatusMessage(`Route ${formatHexForDisplay(route.startHexId)} -> ${formatHexForDisplay(route.endHexId)}: ${route.hops} hops`, 'success', { persist: true });
     }
     if (shouldRedraw) redrawRoute();
 }
@@ -308,7 +314,7 @@ function handleShortcutSelect(hexId, refs) {
     if (!route.startHexId) {
         route.startHexId = hexId;
         recalculateRoute(refs);
-        showStatusMessage(`Route start ${hexId}. Select destination.`, 'info', { persist: true });
+        showStatusMessage(`Route start ${formatHexForDisplay(hexId)}. Select destination.`, 'info', { persist: true });
         return;
     }
 
@@ -316,13 +322,13 @@ function handleShortcutSelect(hexId, refs) {
         route.startHexId = hexId;
         route.endHexId = null;
         recalculateRoute(refs);
-        showStatusMessage(`Route start ${hexId}. Select destination.`, 'info', { persist: true });
+        showStatusMessage(`Route start ${formatHexForDisplay(hexId)}. Select destination.`, 'info', { persist: true });
         return;
     }
 
     route.endHexId = hexId;
     recalculateRoute(refs);
-    showStatusMessage(`Route ${route.startHexId} -> ${route.endHexId}: ${route.hops} hops`, 'success', { persist: true });
+    showStatusMessage(`Route ${formatHexForDisplay(route.startHexId)} -> ${formatHexForDisplay(route.endHexId)}: ${route.hops} hops`, 'success', { persist: true });
 }
 
 function clearRoute(refs) {

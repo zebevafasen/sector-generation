@@ -52,6 +52,24 @@ export function getGlobalHexDisplayId(localHexId) {
     return `${formatGlobalCoord(globalC)}${formatGlobalCoord(globalR)}`;
 }
 
+export function getGlobalHexDisplayIdForSector(sectorKey, localHexId) {
+    const [cRaw, rRaw] = String(localHexId || '').split('-');
+    const c = parseInt(cRaw, 10);
+    const r = parseInt(rRaw, 10);
+    if (!Number.isInteger(c) || !Number.isInteger(r)) return '--';
+
+    const { width, height } = getCurrentGridDimensions();
+    const [sxRaw, syRaw] = String(sectorKey || '').split(',');
+    const sectorX = parseInt(sxRaw, 10);
+    const sectorY = parseInt(syRaw, 10);
+    const normalizedSectorX = Number.isInteger(sectorX) ? sectorX : 0;
+    const normalizedSectorY = Number.isInteger(sectorY) ? sectorY : 0;
+
+    const globalC = c + (normalizedSectorX * width);
+    const globalR = r + (normalizedSectorY * height);
+    return `${formatGlobalCoord(globalC)}${formatGlobalCoord(globalR)}`;
+}
+
 export function renderRouteOverlay(viewport) {
     const route = state.routePlanner || {};
     const path = Array.isArray(route.pathHexIds) ? route.pathHexIds : [];

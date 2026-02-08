@@ -190,7 +190,7 @@ function buildGmBrief(payload) {
         const stars = getSystemStars(system);
         const starClassLabel = stars.map(star => star.class).join(' + ');
         lines.push(`Stars: ${starClassLabel || '--'} | Primary Age: ${system.starAge || '--'} | Total Pop: ${system.totalPop || 'None'}`);
-        lines.push(`Local Hex: ${hexId}`);
+        lines.push(`Hex: ${globalHexId}`);
         lines.push(`Bodies: ${planetCount} planets (${habitableCount} habitable), ${beltCount} belts/fields, ${stationCount} stations`);
         if (tags.size) lines.push(`Tags: ${Array.from(tags).sort().join(', ')}`);
         if (features.size) lines.push(`POI/Features: ${Array.from(features).sort().join(', ')}`);
@@ -555,10 +555,14 @@ export function applySectorPayload(payload) {
     }
     if (nextPayload.multiSector && typeof nextPayload.multiSector === 'object') {
         state.multiSector = nextPayload.multiSector;
+        if (!state.multiSector.jumpGateRegistry || typeof state.multiSector.jumpGateRegistry !== 'object') {
+            state.multiSector.jumpGateRegistry = {};
+        }
     } else {
         state.multiSector = {
             currentKey: '0,0',
-            sectorsByKey: {}
+            sectorsByKey: {},
+            jumpGateRegistry: {}
         };
     }
     autoSaveSectorState();
