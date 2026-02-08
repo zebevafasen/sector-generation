@@ -6,7 +6,7 @@ import { readGenerationConfigFromUi } from './sector-config.js';
 import { HOME_SECTOR_KEY, makeSectorKeyFromCoords, offsetSectorKey, parseSectorKeyToCoords } from './sector-address.js';
 import { getGlobalHexDisplayIdForSector } from './render-shared.js';
 import { applySectorPayload } from './storage.js';
-import { selectHex, updateViewTransform } from './render.js';
+import { findHexGroup, selectHex, updateViewTransform } from './render.js';
 import { deepClone, parseHexId, sortHexIds, xmur3, mulberry32 } from './utils.js';
 
 const DIRECTIONS = {
@@ -21,6 +21,7 @@ function getRefs() {
         currentLabel: document.getElementById('currentSectorLabel'),
         knownLabel: document.getElementById('knownSectorsLabel'),
         chartGateCorridorsBtn: document.getElementById('chartGateCorridorsBtn'),
+        expandedViewBtn: document.getElementById('toggleExpandedSectorViewBtn'),
         northBtn: document.getElementById('sectorNorthBtn'),
         southBtn: document.getElementById('sectorSouthBtn'),
         westBtn: document.getElementById('sectorWestBtn'),
@@ -269,7 +270,7 @@ function getCurrentConfig() {
 
 function ensureState() {
     if (!state.multiSector || typeof state.multiSector !== 'object') {
-        state.multiSector = { currentKey: HOME_SECTOR_KEY, sectorsByKey: {}, jumpGateRegistry: {}, chartGateCorridorsPending: false };
+        state.multiSector = { currentKey: HOME_SECTOR_KEY, sectorsByKey: {}, jumpGateRegistry: {}, chartGateCorridorsPending: false, expandedView: false };
     }
     if (!state.multiSector.currentKey) state.multiSector.currentKey = HOME_SECTOR_KEY;
     if (!state.multiSector.sectorsByKey || typeof state.multiSector.sectorsByKey !== 'object') {
@@ -280,6 +281,9 @@ function ensureState() {
     }
     if (typeof state.multiSector.chartGateCorridorsPending !== 'boolean') {
         state.multiSector.chartGateCorridorsPending = false;
+    }
+    if (typeof state.multiSector.expandedView !== 'boolean') {
+        state.multiSector.expandedView = false;
     }
 }
 
@@ -313,6 +317,7 @@ function applySectorRecord(key, record, options = {}) {
     state.multiSector.currentKey = key;
     const preferredSelectedHexId = options.preferredSelectedHexId || null;
     const preserveView = !!options.preserveView;
+    const showLoadedToast = options.showLoadedToast !== false;
     const previousView = preserveView ? deepClone(state.viewState) : null;
     const payload = {
         version: 1,
@@ -347,7 +352,7 @@ function applySectorRecord(key, record, options = {}) {
     };
     applySectorPayload(payload);
     if (preferredSelectedHexId) {
-        const group = document.querySelector(`.hex-group[data-id="${preferredSelectedHexId}"]`);
+        const group = findHexGroup(preferredSelectedHexId, key);
         if (group) {
             selectHex(preferredSelectedHexId, group);
         }
@@ -357,7 +362,7 @@ function applySectorRecord(key, record, options = {}) {
         updateViewTransform();
     }
     renderSectorLinksUi();
-    showStatusMessage(`Loaded sector ${key}.`, 'info');
+    if (showLoadedToast) showStatusMessage(`Loaded sector ${key}.`, 'info');
 }
 
 function buildEdgeContinuityFixedSystems(fromRecord, direction) {
@@ -550,6 +555,37 @@ function moveDirection(direction) {
     emitEvent(EVENTS.SECTOR_DATA_CHANGED, { label: `Switch Sector ${direction}` });
 }
 
+function toggleExpandedSectorView() {
+    ensureState();
+    saveCurrentSectorRecord();
+    state.multiSector.expandedView = !state.multiSector.expandedView;
+    const currentKey = state.multiSector.currentKey;
+    const currentRecord = state.multiSector.sectorsByKey[currentKey];
+    if (!currentRecord) return;
+    applySectorRecord(currentKey, currentRecord, {
+        preferredSelectedHexId: state.selectedHexId,
+        preserveView: true,
+        showLoadedToast: false
+    });
+    emitEvent(EVENTS.SECTOR_DATA_CHANGED, { label: 'Toggle Expanded View' });
+    showStatusMessage(
+        state.multiSector.expandedView ? 'Expanded sector view enabled.' : 'Expanded sector view disabled.',
+        'info'
+    );
+}
+
+function switchToSectorHex(sectorKey, hexId) {
+    ensureState();
+    saveCurrentSectorRecord();
+    const targetRecord = getOrCreateSectorRecordByKey(sectorKey);
+    if (!targetRecord) return;
+    applySectorRecord(sectorKey, targetRecord, {
+        preferredSelectedHexId: hexId || null,
+        preserveView: true
+    });
+    emitEvent(EVENTS.SECTOR_DATA_CHANGED, { label: 'Switch Sector Hex' });
+}
+
 function goHome() {
     ensureState();
     saveCurrentSectorRecord();
@@ -565,6 +601,14 @@ function renderSectorLinksUi() {
     ensureState();
     if (refs.currentLabel) refs.currentLabel.innerText = `Current: ${state.multiSector.currentKey}`;
     if (refs.knownLabel) refs.knownLabel.innerText = `Loaded: ${Object.keys(state.multiSector.sectorsByKey).length}`;
+    if (refs.expandedViewBtn) {
+        refs.expandedViewBtn.innerText = state.multiSector.expandedView ? 'Expanded View: On' : 'Expanded View: Off';
+        refs.expandedViewBtn.className = state.multiSector.expandedView
+            ? 'w-auto h-8 px-2 inline-flex items-center justify-center rounded-md bg-sky-800/90 border border-sky-500 text-sky-100 hover:text-white hover:border-sky-300 transition-colors text-[10px]'
+            : 'w-auto h-8 px-2 inline-flex items-center justify-center rounded-md bg-slate-900/90 border border-slate-700 text-slate-300 hover:text-white hover:border-sky-500 transition-colors text-[10px]';
+        refs.expandedViewBtn.title = state.multiSector.expandedView ? 'Disable expanded sector view' : 'Enable expanded sector view';
+        refs.expandedViewBtn.setAttribute('aria-label', refs.expandedViewBtn.title);
+    }
     if (refs.chartGateCorridorsBtn) {
         const missingCount = getMissingGateCorridorSectorKeys().length;
         if (missingCount > 0) state.multiSector.chartGateCorridorsPending = true;
@@ -624,7 +668,7 @@ export function travelSelectedJumpGate() {
 
 export function setupMultiSectorLinks() {
     const refs = getRefs();
-    if (!refs.northBtn || !refs.southBtn || !refs.westBtn || !refs.eastBtn || !refs.homeBtn) return;
+    if (!refs.northBtn || !refs.southBtn || !refs.westBtn || !refs.eastBtn || !refs.homeBtn || !refs.expandedViewBtn) return;
     ensureState();
     if (!state.multiSector.sectorsByKey[state.multiSector.currentKey]) {
         saveCurrentSectorRecord();
@@ -641,10 +685,17 @@ export function setupMultiSectorLinks() {
     refs.eastBtn?.addEventListener('click', () => moveDirection('east'));
     refs.homeBtn?.addEventListener('click', goHome);
     refs.chartGateCorridorsBtn?.addEventListener('click', chartMissingGateCorridors);
+    refs.expandedViewBtn?.addEventListener('click', toggleExpandedSectorView);
 
     window.addEventListener(EVENTS.SECTOR_DATA_CHANGED, () => {
         saveCurrentSectorRecord();
         renderSectorLinksUi();
+    });
+    window.addEventListener(EVENTS.REQUEST_SWITCH_SECTOR_HEX, (event) => {
+        const sectorKey = event && event.detail ? event.detail.sectorKey : null;
+        const hexId = event && event.detail ? event.detail.hexId : null;
+        if (!sectorKey || !hexId) return;
+        switchToSectorHex(sectorKey, hexId);
     });
 
     renderSectorLinksUi();

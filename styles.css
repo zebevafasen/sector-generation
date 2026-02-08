@@ -70,6 +70,18 @@ body {
     fill: #64748b;
 }
 
+.sector-label {
+    pointer-events: none;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    font-family: "JetBrains Mono", "Consolas", monospace;
+    fill: #94a3b8;
+}
+
+.sector-label-current {
+    fill: #7dd3fc;
+}
+
 .star-circle {
     pointer-events: none;
 }

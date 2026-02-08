@@ -1,5 +1,5 @@
 import { state } from './config.js';
-import { clearInfoPanel, drawGrid, redrawHex, selectHex, updateInfoPanel } from './render.js';
+import { clearInfoPanel, drawGrid, findHexGroup, redrawHex, selectHex, updateInfoPanel } from './render.js';
 
 export function clearSelectionInfo() {
     state.selectedHexId = null;
@@ -22,7 +22,7 @@ export function redrawGridAndReselect(width, height, options = {}) {
         return;
     }
 
-    const group = document.querySelector(`.hex-group[data-id="${selectedHexId}"]`);
+    const group = findHexGroup(selectedHexId);
     if (group) {
         selectHex(selectedHexId, group);
     } else {

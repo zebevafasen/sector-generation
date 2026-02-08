@@ -8,7 +8,7 @@ import { EVENTS, emitEvent } from './events.js';
 import { normalizeDensityPresetKey } from './generation-data.js';
 import { getGlobalHexDisplayId } from './render-shared.js';
 import { HOME_SECTOR_KEY } from './sector-address.js';
-import { clearInfoPanel, drawGrid, selectHex } from './render.js';
+import { clearInfoPanel, drawGrid, findHexGroup, selectHex } from './render.js';
 import { readGenerationConfigFromUi } from './sector-config.js';
 import { validateSectorPayload } from './sector-payload-validation.js';
 import { ensureSystemStarFields, getSystemStars } from './star-system.js';
@@ -543,7 +543,7 @@ export function applySectorPayload(payload) {
     clearInfoPanel();
     drawGrid(width, height);
     if (nextPayload.selectedHexId && (state.sectors[nextPayload.selectedHexId] || state.deepSpacePois[nextPayload.selectedHexId])) {
-        const group = document.querySelector(`.hex-group[data-id="${nextPayload.selectedHexId}"]`);
+        const group = findHexGroup(nextPayload.selectedHexId);
         if (group) selectHex(nextPayload.selectedHexId, group);
     }
 
@@ -559,11 +559,15 @@ export function applySectorPayload(payload) {
         if (!state.multiSector.jumpGateRegistry || typeof state.multiSector.jumpGateRegistry !== 'object') {
             state.multiSector.jumpGateRegistry = {};
         }
+        if (typeof state.multiSector.expandedView !== 'boolean') {
+            state.multiSector.expandedView = false;
+        }
     } else {
         state.multiSector = {
             currentKey: HOME_SECTOR_KEY,
             sectorsByKey: {},
-            jumpGateRegistry: {}
+            jumpGateRegistry: {},
+            expandedView: false
         };
     }
     autoSaveSectorState();

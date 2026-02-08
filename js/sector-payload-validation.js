@@ -68,7 +68,8 @@ function sanitizeMultiSector(value) {
     return {
         currentKey,
         sectorsByKey: value.sectorsByKey,
-        jumpGateRegistry: isPlainObject(value.jumpGateRegistry) ? value.jumpGateRegistry : {}
+        jumpGateRegistry: isPlainObject(value.jumpGateRegistry) ? value.jumpGateRegistry : {},
+        expandedView: !!value.expandedView
     };
 }
 
