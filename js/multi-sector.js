@@ -6,7 +6,7 @@ import { readGenerationConfigFromUi } from './sector-config.js';
 import { HOME_SECTOR_KEY, offsetSectorKey, parseSectorKeyToCoords } from './sector-address.js';
 import { getGlobalHexDisplayIdForSector } from './render-shared.js';
 import { applySectorPayload } from './storage.js';
-import { centerViewOnSector, findHexGroup, selectHex, updateViewTransform } from './render.js';
+import { centerViewOnSector, findHexGroup, redrawHex, selectHex, updateViewTransform } from './render.js';
 import { deepClone } from './utils.js';
 import { createJumpGateService } from './multi-sector-jump-gates.js';
 import { createCorridorService } from './multi-sector-corridors.js';
@@ -375,6 +375,13 @@ export function activateSelectedJumpGate() {
     const currentRecord = state.multiSector.sectorsByKey[sectorKey];
     if (currentRecord) {
         state.deepSpacePois = deepClone(currentRecord.deepSpacePois || {});
+    }
+    const refreshedGroup = redrawHex(hexId);
+    if (refreshedGroup) {
+        selectHex(hexId, refreshedGroup);
+    } else {
+        const group = findHexGroup(hexId, sectorKey);
+        if (group) selectHex(hexId, group);
     }
     emitEvent(EVENTS.SECTOR_DATA_CHANGED, { label: 'Activate Jump Gate' });
     showStatusMessage('Jump-gate activated and linked endpoint synchronized.', 'success');
