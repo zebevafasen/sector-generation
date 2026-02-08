@@ -21,24 +21,42 @@ function weightedPickCompatible(items, randomFn, selectedTags) {
     return weightedPick(pool, randomFn, new Set(selectedTags));
 }
 
-const TAG_INCOMPATIBILITIES = {
-    'Ecumenopolis': new Set(['Abandoned Colony', 'Frontier Outpost', 'Colony World', 'Prison Planet']),
-    'Abandoned Colony': new Set(['Ecumenopolis', 'Core Trade Hub', 'Agri World', 'Cultural Center', 'Research Enclave']),
-    'Prison Planet': new Set(['Ecumenopolis', 'Cultural Center', 'Agri World']),
-    'Forge World': new Set(['Agri World', 'Garden World', 'Xeno Preserve']),
-    'Garden World': new Set(['Seismic Instability', 'Forge World', 'Frequent Storms']),
-    'Corporate Enclave': new Set(['Abandoned Colony', 'Prison Planet']),
-    'Xeno Preserve': new Set(['Industrial Powerhouse', 'Forge World', 'Ecumenopolis', 'Active Battlefield']),
-    'Regional Hegemon': new Set(['Rising Hegemon']),
-    'Rising Hegemon': new Set(['Regional Hegemon']),
-    'Terraformed': new Set(['Terraform Failure']),
-    'Terraform Failure': new Set(['Terraformed', 'Garden World']),
-    'Pilgrimage Site': new Set(['Active Battlefield', 'Civil War']),
-    'Pleasure World': new Set(['Rampant Slavery', 'Prison Planet']),
-    'Rampant Slavery': new Set(['Pleasure World', 'Xeno Preserve', 'Pilgrimage Site']),
-    'Civil War': new Set(['Quarantined World']),
-    'Quarantined World': new Set(['Civil War'])
+const DEFAULT_TAG_INCOMPATIBILITIES = {
+    Ecumenopolis: ['Abandoned Colony', 'Frontier Outpost', 'Colony World', 'Prison Planet'],
+    'Abandoned Colony': ['Ecumenopolis', 'Core Trade Hub', 'Agri World', 'Cultural Center', 'Research Enclave'],
+    'Prison Planet': ['Ecumenopolis', 'Cultural Center', 'Agri World'],
+    'Forge World': ['Agri World', 'Garden World', 'Xeno Preserve'],
+    'Garden World': ['Seismic Instability', 'Forge World', 'Frequent Storms'],
+    'Corporate Enclave': ['Abandoned Colony', 'Prison Planet'],
+    'Xeno Preserve': ['Industrial Powerhouse', 'Forge World', 'Ecumenopolis', 'Active Battlefield'],
+    'Regional Hegemon': ['Rising Hegemon'],
+    'Rising Hegemon': ['Regional Hegemon'],
+    Terraformed: ['Terraform Failure'],
+    'Terraform Failure': ['Terraformed', 'Garden World'],
+    'Pilgrimage Site': ['Active Battlefield', 'Civil War'],
+    'Pleasure World': ['Rampant Slavery', 'Prison Planet'],
+    'Rampant Slavery': ['Pleasure World', 'Xeno Preserve', 'Pilgrimage Site'],
+    'Civil War': ['Quarantined World'],
+    'Quarantined World': ['Civil War']
 };
+
+function toTagIncompatibilitySets(source) {
+    const entries = Object.entries(source || {});
+    const output = {};
+    entries.forEach(([tag, blocked]) => {
+        output[tag] = new Set(Array.isArray(blocked) ? blocked : []);
+    });
+    return output;
+}
+
+let TAG_INCOMPATIBILITIES = toTagIncompatibilitySets(DEFAULT_TAG_INCOMPATIBILITIES);
+
+export function hydratePlanetTagData(loadedData = {}) {
+    const incoming = loadedData.tagIncompatibilities;
+    TAG_INCOMPATIBILITIES = toTagIncompatibilitySets(
+        incoming && typeof incoming === 'object' ? incoming : DEFAULT_TAG_INCOMPATIBILITIES
+    );
+}
 
 function isTagCompatible(candidate, selectedTags) {
     for (const selected of selectedTags) {
