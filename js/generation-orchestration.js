@@ -76,6 +76,33 @@ function chooseClosestToCenterHexId(coordHexIds, width, height) {
     return scored.length ? scored[0].hexId : null;
 }
 
+function chooseCenterBiasedHexId(coordHexIds, width, height, randomFn, biasStrength = 1) {
+    if (!coordHexIds.length) return null;
+    const centerX = (Math.max(1, width) - 1) / 2;
+    const centerY = (Math.max(1, height) - 1) / 2;
+    const maxDistance = Math.max(1, Math.hypot(centerX, centerY));
+    const exponent = Math.max(0.25, Number(biasStrength) || 1);
+    const weighted = coordHexIds
+        .map((hexId) => {
+            const parsed = parseHexCoordinate(hexId);
+            if (!parsed) return { hexId, weight: 0.0001 };
+            const distance = Math.hypot(parsed.col - centerX, parsed.row - centerY);
+            const centrality = Math.max(0, 1 - (distance / maxDistance));
+            const weight = Math.pow(centrality + 0.05, exponent);
+            return { hexId, weight: Math.max(0.0001, weight) };
+        })
+        .sort((a, b) => compareHexIds(a.hexId, b.hexId));
+    const totalWeight = weighted.reduce((sum, item) => sum + item.weight, 0);
+    if (totalWeight <= 0) return chooseClosestToCenterHexId(coordHexIds, width, height);
+    const roll = (typeof randomFn === 'function' ? randomFn() : Math.random()) * totalWeight;
+    let cursor = 0;
+    for (let i = 0; i < weighted.length; i++) {
+        cursor += weighted[i].weight;
+        if (roll <= cursor) return weighted[i].hexId;
+    }
+    return weighted[weighted.length - 1].hexId;
+}
+
 function sortCoordsByAnchorDistance(coords, anchorHexId) {
     if (!anchorHexId) return coords;
     return [...coords].sort((a, b) => {
@@ -86,7 +113,7 @@ function sortCoordsByAnchorDistance(coords, anchorHexId) {
     });
 }
 
-function chooseCoreGenerationOriginHexId(candidateCoords, fixedHexIds, options = {}, width, height) {
+function chooseCoreGenerationOriginHexId(candidateCoords, fixedHexIds, options = {}, width, height, randomFn, settings = {}) {
     const preferredHexId = options.preferredCoreSystemHexId || null;
     if (options.preferredCoreSystemManual && preferredHexId && (candidateCoords.includes(preferredHexId) || fixedHexIds.has(preferredHexId))) {
         return preferredHexId;
@@ -94,7 +121,15 @@ function chooseCoreGenerationOriginHexId(candidateCoords, fixedHexIds, options =
     if (preferredHexId && (candidateCoords.includes(preferredHexId) || fixedHexIds.has(preferredHexId))) {
         return preferredHexId;
     }
-    if (candidateCoords.length) return chooseClosestToCenterHexId(candidateCoords, width, height);
+    if (candidateCoords.length) {
+        return chooseCenterBiasedHexId(
+            candidateCoords,
+            width,
+            height,
+            randomFn,
+            Number(settings.centerBiasStrength) || 1
+        );
+    }
     if (fixedHexIds.size) return chooseClosestToCenterHexId([...fixedHexIds], width, height);
     return null;
 }
@@ -158,7 +193,6 @@ export function buildSectorFromConfigAction(config, fixedSystems = {}, options =
     const sectorKey = options.sectorKey || homeSectorKey;
     const isHomeSector = sectorKey === homeSectorKey;
     const rollout = resolveGenerationRolloutFlags(normalized, { isHomeSector });
-    const coreGenerationOriginHexId = chooseCoreGenerationOriginHexId(candidateCoords, fixedHexIds, options, width, height);
     const layoutSeed = options.layoutSeed || state.layoutSeed || state.currentSeed || '';
     let generationContext = null;
     if (rollout.crossSectorContextEnabled) {
@@ -188,6 +222,17 @@ export function buildSectorFromConfigAction(config, fixedSystems = {}, options =
     );
 
     const systemsToGenerate = Math.max(0, systemCount - validFixedEntries.length);
+    const coreGenerationOriginHexId = systemsToGenerate > 0
+        ? chooseCoreGenerationOriginHexId(
+            candidateCoords,
+            fixedHexIds,
+            options,
+            width,
+            height,
+            rand,
+            normalized
+        )
+        : null;
     let generatedCoords = [];
     if (normalized.starDistribution === 'clusters') {
         if (rollout.clusterV2Enabled) {
