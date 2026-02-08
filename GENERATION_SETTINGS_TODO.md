@@ -95,9 +95,12 @@ This document breaks the procedural generation redesign into phased, step-by-ste
 - Removed: direct orchestration coupling to raw `clusterV2Enabled` / `crossSectorContextEnabled` toggles (now funneled through rollout resolver).
 
 ### Phase 11 - Completed
-- Added: this per-phase changelog and completed status tracking in `GENERATION_SETTINGS_TODO.md`.
-- Changed: TODO now reflects implemented settings, compatibility work, and test coverage.
-- Removed: no functional removals in this phase.
+- Added: settings reference doc for `generationSettings` and rollout stages in `docs/generation-settings-reference.md`.
+- Added: designer tuning workflow guide in `docs/generation-tuning-guide.md`.
+- Added: seed determinism validation checklist in `docs/seed-determinism-checklist.md`.
+- Added: edge-case tracker and follow-up backlog in `docs/generation-edge-cases.md`.
+- Changed: `docs/regression-checklist.md` now explicitly gates generation changes through the seed determinism checklist.
+- Removed: outdated generic Phase 11 changelog text that did not reflect concrete deliverables.
 
 ## Phase 0: Baseline, Constraints, and Safety Rails
 1. Freeze baseline behavior and capture deterministic snapshots for known seeds.
