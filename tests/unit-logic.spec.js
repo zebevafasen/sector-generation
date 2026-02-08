@@ -119,6 +119,9 @@ test.describe('pure logic modules', () => {
         },
         deepSpacePois: {
           '0-1': { name: 'Relay Beacon 101', kind: 'Navigation', summary: 'safe lane marker', risk: 'Low', rewardHint: 'route aid' },
+          '1-1': { name: 'Active Jump-Gate 123', kind: 'Navigation', summary: 'legacy named gate', risk: 'Low', rewardHint: 'legacy naming only' },
+          '1-2': { name: 'Stateful Active', kind: 'Navigation', jumpGateState: 'active' },
+          '2-2': { name: 'Stateful Inactive', kind: 'Navigation', jumpGateState: 'inactive' },
           '0-0': { name: 'Should Drop', kind: 'Hazard' },
           '99-99': { name: 'Also Drop', kind: 'Mystery' }
         },
@@ -136,7 +139,11 @@ test.describe('pure logic modules', () => {
         validPinnedHexIds: valid.ok ? valid.payload.pinnedHexIds : [],
         validManualRange: valid.ok ? valid.payload.manualRange : null,
         secondPlanetType: valid.ok ? valid.payload.sectors['0-0'].planets[1].type : null,
-        validPois: valid.ok ? Object.keys(valid.payload.deepSpacePois || {}) : []
+        validPois: valid.ok ? Object.keys(valid.payload.deepSpacePois || {}) : [],
+        namedGateCategory: valid.ok ? valid.payload.deepSpacePois['1-1'].poiCategory : null,
+        namedGateState: valid.ok ? valid.payload.deepSpacePois['1-1'].jumpGateState : null,
+        activeStateGateCategory: valid.ok ? valid.payload.deepSpacePois['1-2'].poiCategory : null,
+        inactiveStateGateCategory: valid.ok ? valid.payload.deepSpacePois['2-2'].poiCategory : null
       };
     });
 
@@ -148,6 +155,10 @@ test.describe('pure logic modules', () => {
     expect(result.validPinnedHexIds).toEqual(['0-0']);
     expect(result.validManualRange).toEqual({ min: 2, max: 12 });
     expect(result.secondPlanetType).toBe('Barren');
-    expect(result.validPois).toEqual(['0-1']);
+    expect(result.validPois).toEqual(['0-1', '1-1', '1-2', '2-2']);
+    expect(result.namedGateCategory).toBeNull();
+    expect(result.namedGateState).toBeNull();
+    expect(result.activeStateGateCategory).toBe('jump_gate');
+    expect(result.inactiveStateGateCategory).toBe('jump_gate');
   });
 });

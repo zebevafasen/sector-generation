@@ -1,15 +1,15 @@
 import { DEEP_SPACE_POI_TEMPLATES } from './generation-data.js';
 import { HOME_SECTOR_KEY, parseSectorKeyToCoords } from './sector-address.js';
 import { countNeighborSystems, hexDistanceById } from './generation-spatial.js';
+import {
+    isActiveJumpGatePoi,
+    isJumpGatePoi as isJumpGatePoiModel,
+    JUMP_GATE_POI_CATEGORY,
+    normalizePoiCategory
+} from './jump-gate-model.js';
 
 function parseSectorKey(sectorKey) {
     return parseSectorKeyToCoords(sectorKey || HOME_SECTOR_KEY);
-}
-
-function isActiveJumpGatePoi(poi) {
-    if (!poi) return false;
-    if (poi.jumpGateState === 'active') return true;
-    return /^active jump-gate\b/i.test(String(poi.name || ''));
 }
 
 export function getActiveJumpGateSectorWeightMultiplier(sectorKey, knownSectorRecords = {}) {
@@ -36,6 +36,12 @@ function getJumpGateEdgeWeightMultiplier(edgeDistance) {
     return 0.28;
 }
 
+function isJumpGateTemplate(template) {
+    if (!template || typeof template !== 'object') return false;
+    if (normalizePoiCategory(template.poiCategory) === JUMP_GATE_POI_CATEGORY) return true;
+    return template.jumpGateState === 'active' || template.jumpGateState === 'inactive';
+}
+
 export function createDeepSpacePoi(options = {}) {
     const randomFn = options.randomFn || Math.random;
     const edgeDistance = Number.isFinite(options.edgeDistance) ? options.edgeDistance : Number.POSITIVE_INFINITY;
@@ -44,10 +50,10 @@ export function createDeepSpacePoi(options = {}) {
         ? Math.max(0.01, options.activeJumpGateWeightMultiplier)
         : 1;
     const weightedTemplates = DEEP_SPACE_POI_TEMPLATES.filter((template) =>
-        allowJumpGates || !/jump-gate/i.test(String(template.name || ''))
+        allowJumpGates || !isJumpGateTemplate(template)
     ).map((template) => {
         const baseWeight = Number.isFinite(template.weight) && template.weight > 0 ? template.weight : 1;
-        const isJumpGate = /jump-gate/i.test(String(template.name || ''));
+        const isJumpGate = isJumpGateTemplate(template);
         const isActiveJumpGate = template.jumpGateState === 'active';
         const edgeAdjustedWeight = isJumpGate
             ? baseWeight * getJumpGateEdgeWeightMultiplier(edgeDistance)
@@ -75,18 +81,25 @@ export function createDeepSpacePoi(options = {}) {
     const serial = Math.floor(randomFn() * 900) + 100;
     return {
         kind: template.kind,
+        poiCategory: isJumpGateTemplate(template)
+            ? JUMP_GATE_POI_CATEGORY
+            : normalizePoiCategory(template.poiCategory),
         name: `${template.name} ${serial}`,
         summary: template.summary,
         risk: template.risk,
         rewardHint: template.rewardHint,
         isRefuelingStation: !!template.isRefuelingStation,
-        jumpGateState: template.jumpGateState || null
+        jumpGateState: template.jumpGateState || null,
+        jumpGatePairId: null,
+        jumpGateLink: null,
+        jumpGateMeta: template.jumpGateMeta && typeof template.jumpGateMeta === 'object'
+            ? JSON.parse(JSON.stringify(template.jumpGateMeta))
+            : null
     };
 }
 
 export function isJumpGatePoi(poi) {
-    if (!poi) return false;
-    return /jump-gate/i.test(String(poi.name || ''));
+    return isJumpGatePoiModel(poi);
 }
 
 export function generateDeepSpacePois(width, height, sectors, options = {}) {

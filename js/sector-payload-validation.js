@@ -1,4 +1,5 @@
 import { normalizeDensityPresetKey } from './generation-data.js';
+import { JUMP_GATE_POI_CATEGORY, normalizeJumpGateState, normalizePoiCategory } from './jump-gate-model.js';
 import { HOME_SECTOR_KEY, isSectorKey } from './sector-address.js';
 import { isHexCoordInBounds, parseHexId } from './utils.js';
 
@@ -103,16 +104,34 @@ function sanitizeDeepSpacePois(rawPois, width, height, sectors) {
             : 'No additional intel.';
         const isRefuelingStation = !!poi.isRefuelingStation
             || (kind.toLowerCase() === 'navigation' && /refueling station/i.test(name));
-        const jumpGateState = poi.jumpGateState === 'active' || poi.jumpGateState === 'inactive'
-            ? poi.jumpGateState
-            : (name.toLowerCase().includes('inactive jump-gate') ? 'inactive' : (name.toLowerCase().includes('active jump-gate') ? 'active' : null));
-        const jumpGatePairId = typeof poi.jumpGatePairId === 'string' && poi.jumpGatePairId.trim() ? poi.jumpGatePairId.trim() : null;
-        const jumpGateLink = isPlainObject(poi.jumpGateLink)
+        const parsedJumpGateState = normalizeJumpGateState(poi.jumpGateState);
+        const parsedCategory = normalizePoiCategory(poi.poiCategory);
+        const isJumpGateCategory = parsedCategory === JUMP_GATE_POI_CATEGORY || parsedJumpGateState !== null;
+        const jumpGateState = isJumpGateCategory ? (parsedJumpGateState || 'inactive') : null;
+        const jumpGatePairId = isJumpGateCategory && typeof poi.jumpGatePairId === 'string' && poi.jumpGatePairId.trim()
+            ? poi.jumpGatePairId.trim()
+            : null;
+        const jumpGateLink = isJumpGateCategory && isPlainObject(poi.jumpGateLink)
             && typeof poi.jumpGateLink.sectorKey === 'string'
             && typeof poi.jumpGateLink.hexId === 'string'
             ? { sectorKey: poi.jumpGateLink.sectorKey, hexId: poi.jumpGateLink.hexId }
             : null;
-        deepSpacePois[hexId] = { name, kind, summary, risk, rewardHint, isRefuelingStation, jumpGateState, jumpGatePairId, jumpGateLink };
+        const jumpGateMeta = isJumpGateCategory && isPlainObject(poi.jumpGateMeta)
+            ? JSON.parse(JSON.stringify(poi.jumpGateMeta))
+            : null;
+        deepSpacePois[hexId] = {
+            name,
+            kind,
+            poiCategory: isJumpGateCategory ? JUMP_GATE_POI_CATEGORY : parsedCategory,
+            summary,
+            risk,
+            rewardHint,
+            isRefuelingStation,
+            jumpGateState,
+            jumpGatePairId,
+            jumpGateLink,
+            jumpGateMeta
+        };
     });
 
     return { deepSpacePois, dropped };

@@ -323,6 +323,7 @@ test('linked jump-gates share details but keep distinct names', async ({ page })
     sourceRecord.deepSpacePois = {
       [sourceHexId]: {
         kind: 'Navigation',
+        poiCategory: 'jump_gate',
         name: 'Active Jump-Gate SourceName',
         summary: 'Source Summary',
         risk: 'Severe',
@@ -340,6 +341,7 @@ test('linked jump-gates share details but keep distinct names', async ({ page })
       deepSpacePois: {
         [targetHexId]: {
           kind: 'Navigation',
+          poiCategory: 'jump_gate',
           name: 'Active Jump-Gate TargetName',
           summary: 'Target Summary',
           risk: 'Low',

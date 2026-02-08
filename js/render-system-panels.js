@@ -1,5 +1,6 @@
 import { state } from './config.js';
 import { EVENTS, emitEvent } from './events.js';
+import { isActiveJumpGatePoi, isJumpGatePoi } from './jump-gate-model.js';
 import { resetBodyDetailsPanel } from './render-body-details.js';
 import { getGlobalHexDisplayIdForSector } from './render-shared.js';
 import { ensureSystemStarFields, getPrimaryStar, getSystemStars } from './star-system.js';
@@ -24,7 +25,29 @@ function escapeHtml(value) {
         .replace(/'/g, '&#39;');
 }
 
-function getPoiTypeStyle(kind) {
+function formatPoiTypeLabel(deepSpacePoi) {
+    if (!deepSpacePoi || typeof deepSpacePoi !== 'object') return 'Unknown';
+    const category = String(deepSpacePoi.poiCategory || '').trim();
+    if (category) {
+        return category
+            .split(/[_-\s]+/g)
+            .filter(Boolean)
+            .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+            .join('-');
+    }
+    return String(deepSpacePoi.kind || 'Unknown');
+}
+
+function getPoiTypeStyle(kind, poi = null) {
+    if (isJumpGatePoi(poi)) {
+        const isActive = poi.jumpGateState === 'active';
+        return {
+            badge: isActive
+                ? 'text-xs px-2 py-0.5 rounded-full bg-cyan-900/40 text-cyan-200 border border-cyan-700'
+                : 'text-xs px-2 py-0.5 rounded-full bg-amber-900/35 text-amber-200 border border-amber-700',
+            typeValue: isActive ? 'text-cyan-200' : 'text-amber-200'
+        };
+    }
     switch (String(kind || '').toLowerCase()) {
     case 'hazard':
         return {
@@ -52,12 +75,6 @@ function getPoiTypeStyle(kind) {
             typeValue: 'text-slate-200'
         };
     }
-}
-
-function isActiveJumpGatePoi(poi) {
-    if (!poi) return false;
-    if (poi.jumpGateState === 'active') return true;
-    return /^active jump-gate\b/i.test(String(poi.name || ''));
 }
 
 export function configureSystemHeaderAndStar({ refs, system, id, preselectedBodyIndex, notifySectorDataChanged, updateInfoPanel, redrawAndReselect }) {
@@ -102,7 +119,8 @@ export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
     refs.systemDetails.classList.add('hidden');
     refs.emptyDetails.classList.remove('hidden');
     if (deepSpacePoi) {
-        const poiStyle = getPoiTypeStyle(deepSpacePoi.kind);
+        const poiStyle = getPoiTypeStyle(deepSpacePoi.kind, deepSpacePoi);
+        const poiTypeLabel = formatPoiTypeLabel(deepSpacePoi);
         const jumpLinkLabel = (deepSpacePoi.jumpGateLink && deepSpacePoi.jumpGateLink.sectorKey)
             ? getGlobalHexDisplayIdForSector(deepSpacePoi.jumpGateLink.sectorKey, deepSpacePoi.jumpGateLink.hexId || '')
             : 'Unresolved';
@@ -116,7 +134,7 @@ export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
                 <div class="grid grid-cols-2 gap-2 text-[11px]">
                     <div class="rounded border border-slate-700 bg-slate-900/35 px-2 py-1">
                         <span class="text-slate-500 uppercase">Type</span>
-                        <div class="${poiStyle.typeValue}">${escapeHtml(deepSpacePoi.kind || 'Unknown')}</div>
+                        <div class="${poiStyle.typeValue}">${escapeHtml(poiTypeLabel)}</div>
                     </div>
                     <div class="rounded border border-slate-700 bg-slate-900/35 px-2 py-1">
                         <span class="text-slate-500 uppercase">Risk</span>

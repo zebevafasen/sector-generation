@@ -149,6 +149,7 @@ const DEFAULT_DEEP_SPACE_POI_TEMPLATES = [
     },
     {
         kind: 'Navigation',
+        poiCategory: 'jump_gate',
         name: 'Active Jump-Gate',
         summary: 'A functioning gate nexus that can sling ships across major corridor distances.',
         risk: 'Low',
@@ -158,6 +159,7 @@ const DEFAULT_DEEP_SPACE_POI_TEMPLATES = [
     },
     {
         kind: 'Navigation',
+        poiCategory: 'jump_gate',
         name: 'Inactive Jump-Gate',
         summary: 'A dormant gate structure with partial telemetry and unstable startup traces.',
         risk: 'Medium',

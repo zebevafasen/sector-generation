@@ -23,6 +23,7 @@ import {
     getStarMarkerRadius,
     getStarOffsets
 } from './render-markers.js';
+import { isJumpGatePoi } from './jump-gate-model.js';
 import { updateSectorNavigationAnchors as updateSectorNavigationAnchorsInternal } from './render-navigation.js';
 import {
     handleHexClickAction,
@@ -164,15 +165,39 @@ function createHexGroup(svg, col, row, sectorKey, sectorRecord = null) {
         }
     }
     if (deepSpacePoi) {
-        const palette = getDeepSpacePoiPalette(deepSpacePoi.kind);
-        const marker = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-        marker.setAttribute('points', `${x},${y - 6} ${x + 5},${y} ${x},${y + 6} ${x - 5},${y}`);
-        marker.setAttribute('fill', palette.fill);
-        marker.setAttribute('stroke', palette.stroke);
-        marker.setAttribute('stroke-width', '1');
-        marker.setAttribute('class', 'deep-space-poi-marker');
-        marker.style.filter = `drop-shadow(0 0 4px ${palette.glow})`;
-        g.appendChild(marker);
+        const palette = getDeepSpacePoiPalette(deepSpacePoi.kind, deepSpacePoi);
+        if (isJumpGatePoi(deepSpacePoi)) {
+            const outer = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            outer.setAttribute('cx', x);
+            outer.setAttribute('cy', y);
+            outer.setAttribute('r', '6');
+            outer.setAttribute('fill', 'none');
+            outer.setAttribute('stroke', palette.stroke);
+            outer.setAttribute('stroke-width', '1.2');
+            outer.setAttribute('class', 'deep-space-poi-marker jump-gate-poi-marker');
+            outer.style.filter = `drop-shadow(0 0 5px ${palette.glow})`;
+            g.appendChild(outer);
+
+            const core = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            core.setAttribute('cx', x);
+            core.setAttribute('cy', y);
+            core.setAttribute('r', '2.2');
+            core.setAttribute('fill', palette.fill);
+            core.setAttribute('stroke', palette.stroke);
+            core.setAttribute('stroke-width', '0.8');
+            core.setAttribute('class', 'deep-space-poi-marker jump-gate-poi-marker-core');
+            core.style.filter = `drop-shadow(0 0 5px ${palette.glow})`;
+            g.appendChild(core);
+        } else {
+            const marker = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            marker.setAttribute('points', `${x},${y - 6} ${x + 5},${y} ${x},${y + 6} ${x - 5},${y}`);
+            marker.setAttribute('fill', palette.fill);
+            marker.setAttribute('stroke', palette.stroke);
+            marker.setAttribute('stroke-width', '1');
+            marker.setAttribute('class', 'deep-space-poi-marker');
+            marker.style.filter = `drop-shadow(0 0 4px ${palette.glow})`;
+            g.appendChild(marker);
+        }
     }
 
     return g;
