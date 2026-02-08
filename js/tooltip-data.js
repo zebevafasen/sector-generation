@@ -102,6 +102,20 @@ export function hydrateTooltipData(loadedData = {}) {
     PLANET_TAG_TOOLTIPS = loadedData.planetTagTooltips || DEFAULT_PLANET_TAG_TOOLTIPS;
 }
 
+function denormalizeLookupKey(value) {
+    return String(value || '')
+        .split('-')
+        .filter(Boolean)
+        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ');
+}
+
+export function getKnownPlanetTags() {
+    return Object.keys(PLANET_TAG_TOOLTIPS)
+        .filter(key => key && !key.includes('/'))
+        .map(denormalizeLookupKey);
+}
+
 export function resolveFieldTooltip(field, value) {
     const fieldKey = normalizeLookupKey(field);
     const valueKey = normalizeLookupKey(value);
