@@ -178,32 +178,16 @@ export function toggleEditMode() {
 
 function buildGenerationActionDeps() {
     return {
-        state,
-        rand,
-        showStatusMessage,
-        reportSystemInvariantIssues,
-        getGenerationConfigSnapshot,
-        isHexIdInBounds,
-        getGlobalHexDisplayId,
+        ...buildGenerationSharedDeps(),
         redrawHexAndReselect,
         redrawHexAndSelectHex,
         refreshHexInfo,
         clearSelectionInfo,
-        refreshSectorSnapshot,
-        updateSectorStatus,
-        sanitizePinnedHexes,
-        generateSystemData,
-        createDeepSpacePoi,
-        isPlanetaryBody,
-        pickRandomPlanetType,
-        generatePlanetEnvironment,
-        generatePlanetSize,
-        romanize,
-        reconcilePlanetaryBodies
+        romanize
     };
 }
 
-function buildGenerationRerollDeps() {
+function buildGenerationSharedDeps() {
     return {
         state,
         rand,
@@ -212,28 +196,34 @@ function buildGenerationRerollDeps() {
         getGenerationConfigSnapshot,
         isHexIdInBounds,
         getGlobalHexDisplayId,
-        redrawHexAndReselect,
-        redrawHexAndSelectHex,
-        redrawGridAndReselect,
-        refreshHexInfo,
         refreshSectorSnapshot,
         updateSectorStatus,
         sanitizePinnedHexes,
         generateSystemData,
         createDeepSpacePoi,
-        generateDeepSpacePois,
         isPlanetaryBody,
-        pickPlanetTypeForStarClass,
         pickRandomPlanetType,
-        isHabitableCandidateType,
         generatePlanetEnvironment,
         generatePlanetSize,
+        reconcilePlanetaryBodies
+    };
+}
+
+function buildGenerationRerollDeps() {
+    return {
+        ...buildGenerationSharedDeps(),
+        redrawHexAndReselect,
+        redrawHexAndSelectHex,
+        redrawGridAndReselect,
+        refreshHexInfo,
+        generateDeepSpacePois,
+        pickPlanetTypeForStarClass,
+        isHabitableCandidateType,
         deepClone,
         sortHexIds,
         setRandomStream,
         setAndUseNewSeed,
-        composeContentSeed,
-        reconcilePlanetaryBodies
+        composeContentSeed
     };
 }
 
