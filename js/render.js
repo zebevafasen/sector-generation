@@ -6,7 +6,7 @@ import { refreshSystemPlanetTags } from './planet-tags.js';
 import { ensureSystemStarFields, getSystemStars } from './star-system.js';
 import { countSystemBodies } from './body-classification.js';
 import { formatLocalHexDisplayId, getCurrentGridDimensions, getGlobalHexDisplayId, renderRouteOverlay } from './render-shared.js';
-import { parseSectorKeyToCoords } from './sector-address.js';
+import { makeSectorKeyFromCoords, parseSectorKeyToCoords } from './sector-address.js';
 import { resetBodyDetailsPanel } from './render-body-details.js';
 import { renderSystemBodyLists } from './render-system-bodies.js';
 import { configureSystemHeaderAndStar, renderEmptyHexInfo } from './render-system-panels.js';
@@ -22,7 +22,7 @@ import {
 } from './info-panel-ui.js';
 
 const STAR_GRADIENT_CACHE = {};
-const SECTOR_GAP_PX = 56;
+const SECTOR_GAP_PX = 32;
 
 function getCurrentSectorKey() {
     return state.multiSector && state.multiSector.currentKey ? state.multiSector.currentKey : '';
@@ -479,10 +479,15 @@ function updateSectorNavigationAnchors(cols, rows) {
     const southBtn = document.getElementById('sectorSouthBtn');
     const westBtn = document.getElementById('sectorWestBtn');
     const eastBtn = document.getElementById('sectorEastBtn');
+    const expandedEdgeContainer = document.getElementById('expandedSectorEdgeNavContainer');
     const mapContainer = document.getElementById('mapContainer');
-    if (!northBtn || !southBtn || !westBtn || !eastBtn || !mapContainer) return;
+    if (!northBtn || !southBtn || !westBtn || !eastBtn || !expandedEdgeContainer || !mapContainer) return;
 
     if (!isExpandedSectorViewEnabled()) {
+        expandedEdgeContainer.innerHTML = '';
+        [northBtn, southBtn, westBtn, eastBtn].forEach((button) => {
+            button.classList.remove('hidden');
+        });
         [northBtn, southBtn, westBtn, eastBtn].forEach((button) => {
             button.style.left = '';
             button.style.right = '';
@@ -492,39 +497,86 @@ function updateSectorNavigationAnchors(cols, rows) {
         return;
     }
 
+    [northBtn, southBtn, westBtn, eastBtn].forEach((button) => {
+        button.classList.add('hidden');
+    });
+
     const entries = getLoadedSectorEntries();
+    expandedEdgeContainer.innerHTML = '';
+    if (!entries.length) return;
+    const loadedSet = new Set(entries.map((entry) => entry.sectorKey));
     const extent = getSectorExtent(entries, cols, rows);
+    const single = getSingleSectorDimensions(cols, rows);
     const rect = mapContainer.getBoundingClientRect();
-    const scaledLeft = state.viewState.x;
-    const scaledTop = state.viewState.y;
-    const scaledWidth = extent.worldWidth * state.viewState.scale;
-    const scaledHeight = extent.worldHeight * state.viewState.scale;
-    const leftPx = Math.max(12, Math.min(rect.width - 12, scaledLeft));
-    const rightPx = Math.max(12, Math.min(rect.width - 12, scaledLeft + scaledWidth));
-    const topPx = Math.max(12, Math.min(rect.height - 12, scaledTop));
-    const bottomPx = Math.max(12, Math.min(rect.height - 12, scaledTop + scaledHeight));
-    const centerX = Math.max(12, Math.min(rect.width - 12, leftPx + ((rightPx - leftPx) / 2)));
-    const centerY = Math.max(12, Math.min(rect.height - 12, topPx + ((bottomPx - topPx) / 2)));
+    const scale = Number.isFinite(state.viewState.scale) && state.viewState.scale > 0 ? state.viewState.scale : 1;
+    const directionMeta = [
+        { key: 'north', dx: 0, dy: -1 },
+        { key: 'south', dx: 0, dy: 1 },
+        { key: 'west', dx: -1, dy: 0 },
+        { key: 'east', dx: 1, dy: 0 }
+    ];
 
-    northBtn.style.left = `${centerX}px`;
-    northBtn.style.top = `${Math.max(12, topPx - 22)}px`;
-    northBtn.style.bottom = '';
-    northBtn.style.right = '';
+    entries.forEach((entry) => {
+        const sectorLeftWorld = (entry.coord.x - extent.minX) * extent.stepX;
+        const sectorTopWorld = (entry.coord.y - extent.minY) * extent.stepY;
+        const leftPx = state.viewState.x + (sectorLeftWorld * scale);
+        const topPx = state.viewState.y + (sectorTopWorld * scale);
+        const rightPx = leftPx + (single.width * scale);
+        const bottomPx = topPx + (single.height * scale);
+        const centerX = leftPx + ((rightPx - leftPx) / 2);
+        const centerY = topPx + ((bottomPx - topPx) / 2);
 
-    southBtn.style.left = `${centerX}px`;
-    southBtn.style.top = `${Math.min(rect.height - 12, bottomPx + 22)}px`;
-    southBtn.style.bottom = '';
-    southBtn.style.right = '';
+        directionMeta.forEach((direction) => {
+            const adjacentKey = makeSectorKeyFromCoords(entry.coord.x + direction.dx, entry.coord.y + direction.dy);
+            if (loadedSet.has(adjacentKey)) return;
 
-    westBtn.style.left = `${Math.max(12, leftPx - 22)}px`;
-    westBtn.style.top = `${centerY}px`;
-    westBtn.style.right = '';
-    westBtn.style.bottom = '';
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'expanded-sector-edge-btn';
+            button.title = `Generate/load ${direction.key} of ${entry.sectorKey}`;
+            button.setAttribute('aria-label', button.title);
+            button.textContent = '+';
+            button.style.position = 'absolute';
 
-    eastBtn.style.left = `${Math.min(rect.width - 12, rightPx + 22)}px`;
-    eastBtn.style.top = `${centerY}px`;
-    eastBtn.style.right = '';
-    eastBtn.style.bottom = '';
+            if (direction.key === 'north') {
+                button.style.left = `${centerX}px`;
+                button.style.top = `${topPx - 16}px`;
+                button.style.transform = 'translate(-50%, -50%)';
+            } else if (direction.key === 'south') {
+                button.style.left = `${centerX}px`;
+                button.style.top = `${bottomPx + 16}px`;
+                button.style.transform = 'translate(-50%, -50%)';
+            } else if (direction.key === 'west') {
+                button.style.left = `${leftPx - 16}px`;
+                button.style.top = `${centerY}px`;
+                button.style.transform = 'translate(-50%, -50%)';
+            } else {
+                button.style.left = `${rightPx + 16}px`;
+                button.style.top = `${centerY}px`;
+                button.style.transform = 'translate(-50%, -50%)';
+            }
+
+            const anchorX = parseFloat(button.style.left);
+            const anchorY = parseFloat(button.style.top);
+            if (
+                !Number.isFinite(anchorX) || !Number.isFinite(anchorY)
+                || anchorX < 0 || anchorX > rect.width
+                || anchorY < 0 || anchorY > rect.height
+            ) {
+                return;
+            }
+
+            button.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                emitEvent(EVENTS.REQUEST_MOVE_SECTOR_EDGE, {
+                    sourceSectorKey: entry.sectorKey,
+                    direction: direction.key
+                });
+            });
+            expandedEdgeContainer.appendChild(button);
+        });
+    });
 }
 
 export function setupPanZoom() {

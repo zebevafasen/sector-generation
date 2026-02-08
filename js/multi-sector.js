@@ -555,6 +555,31 @@ function moveDirection(direction) {
     emitEvent(EVENTS.SECTOR_DATA_CHANGED, { label: `Switch Sector ${direction}` });
 }
 
+function getOrCreateSectorRecordFromSource(sourceKey, targetKey, direction) {
+    ensureState();
+    const existing = state.multiSector.sectorsByKey[targetKey];
+    if (existing) return existing;
+
+    const sourceRecord = state.multiSector.sectorsByKey[sourceKey];
+    if (!sourceRecord) return null;
+
+    const continuityFixed = direction ? buildEdgeContinuityFixedSystems(sourceRecord, direction) : {};
+    const homeSeed = state.multiSector.sectorsByKey[HOME_SECTOR_KEY]?.seed || '';
+    const baseSeed = homeSeed || sourceRecord.seed || 'sector';
+    const seed = `${baseSeed} / ${targetKey}`;
+    const record = createSectorRecord({
+        config: sourceRecord.config,
+        seed,
+        fixedSystems: continuityFixed,
+        sectorKey: targetKey,
+        knownSectorRecords: state.multiSector.sectorsByKey
+    });
+    state.multiSector.sectorsByKey[targetKey] = record;
+    ensureJumpGateLinksForRecord(targetKey, record);
+    ensureInboundJumpGatesForRecord(targetKey, record);
+    return record;
+}
+
 function toggleExpandedSectorView() {
     ensureState();
     saveCurrentSectorRecord();
@@ -570,6 +595,7 @@ function toggleExpandedSectorView() {
             preserveView: false,
             showLoadedToast: false
         });
+        state.viewState.scale = Math.max(0.2, Math.min(5, state.viewState.scale * 0.85));
         centerViewOnSector(currentKey);
     } else {
         const targetKey = currentKey;
@@ -599,6 +625,21 @@ function switchToSectorHex(sectorKey, hexId) {
         preserveView: true
     });
     emitEvent(EVENTS.SECTOR_DATA_CHANGED, { label: 'Switch Sector Hex' });
+}
+
+function moveFromSectorEdge(sourceSectorKey, direction) {
+    ensureState();
+    saveCurrentSectorRecord();
+    const delta = DIRECTIONS[direction];
+    if (!delta) return;
+    const targetKey = offsetSectorKey(sourceSectorKey, delta.dx, delta.dy);
+    const targetRecord = getOrCreateSectorRecordFromSource(sourceSectorKey, targetKey, direction);
+    if (!targetRecord) return;
+    applySectorRecord(targetKey, targetRecord, {
+        preferredSelectedHexId: state.selectedHexId,
+        preserveView: true
+    });
+    emitEvent(EVENTS.SECTOR_DATA_CHANGED, { label: `Switch Sector ${direction}` });
 }
 
 function goHome() {
@@ -711,6 +752,12 @@ export function setupMultiSectorLinks() {
         const hexId = event && event.detail ? event.detail.hexId : null;
         if (!sectorKey || !hexId) return;
         switchToSectorHex(sectorKey, hexId);
+    });
+    window.addEventListener(EVENTS.REQUEST_MOVE_SECTOR_EDGE, (event) => {
+        const sourceSectorKey = event && event.detail ? event.detail.sourceSectorKey : null;
+        const direction = event && event.detail ? event.detail.direction : null;
+        if (!sourceSectorKey || !direction) return;
+        moveFromSectorEdge(sourceSectorKey, direction);
     });
 
     renderSectorLinksUi();

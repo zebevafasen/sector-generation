@@ -9,6 +9,7 @@ export const EVENTS = {
     REQUEST_RENAME_POI_AT_HEX: 'requestRenamePoiAtHex',
     REQUEST_TRAVEL_JUMP_GATE: 'requestTravelJumpGate',
     REQUEST_SWITCH_SECTOR_HEX: 'requestSwitchSectorHex',
+    REQUEST_MOVE_SECTOR_EDGE: 'requestMoveSectorEdge',
     REQUEST_DELETE_SELECTED_BODY: 'requestDeleteSelectedBody',
     REQUEST_REROLL_SELECTED_PLANET: 'requestRerollSelectedPlanet',
     EDIT_MODE_CHANGED: 'editModeChanged'
