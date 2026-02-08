@@ -60,7 +60,9 @@ This document breaks the procedural generation redesign into phased, step-by-ste
 
 ### Phase 6 - Completed
 - Added: boundary continuity bias input from generation context into Cluster V2 scoring.
-- Changed: edge-pressure blending now influences candidate placement probabilistically.
+- Changed: edge-pressure blending now influences candidate placement probabilistically with seam-smoothing heuristics.
+- Changed: high incoming pressure encourages near-edge continuation; low pressure discourages abrupt edge overfill.
+- Changed: missing-neighbor paths still fall back to local-only behavior (`getEdgePressure` -> 0), preserving graceful degradation.
 - Removed: no functional removals in this phase.
 
 ### Phase 7 - Completed

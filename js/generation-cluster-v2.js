@@ -31,6 +31,12 @@ function getDirectionForHex(hexId, width, height) {
     return 'east';
 }
 
+function getEdgeDistance(hexId, width, height) {
+    const parsed = parseHexId(hexId);
+    if (!parsed) return Number.POSITIVE_INFINITY;
+    return Math.min(parsed.row, Math.max(0, height - 1 - parsed.row), parsed.col, Math.max(0, width - 1 - parsed.col));
+}
+
 function sortByCoordThenScore(items) {
     return [...items].sort((a, b) => {
         if (b.score !== a.score) return b.score - a.score;
@@ -109,7 +115,8 @@ function computeCandidateScore(item, anchors, selectedHexIds, randomFn, options)
         sectorKey,
         boundaryContinuityStrength,
         localNeighborCap,
-        capRelaxation
+        capRelaxation,
+        stageEdgeOccupancy
     } = options;
     const centerAffinity = computeCenterAffinity(item, width, height);
     const anchorAffinity = computeAnchorAffinity(item, anchors, growthDecay);
@@ -124,7 +131,23 @@ function computeCandidateScore(item, anchors, selectedHexIds, randomFn, options)
         ? generationContext.getEdgePressure(sectorKey, direction)
         : 0;
     const boundaryBias = clamp(edgePressure * Math.max(0, boundaryContinuityStrength), 0, 1.5);
+    const edgeDistance = getEdgeDistance(item.hexId, width, height);
+    const isNearEdge = Number.isFinite(edgeDistance) && edgeDistance <= 1;
     const edgePenalty = isEdgeHex(item.hexId, width, height) ? Math.max(0, edgeBalance * 0.4) : 0;
+    const continuityStrength = Math.max(0, boundaryContinuityStrength);
+    let seamSmoothingBias = 0;
+    if (direction && isNearEdge) {
+        const selectedEdgeRatio = stageEdgeOccupancy && Number.isFinite(stageEdgeOccupancy[direction])
+            ? stageEdgeOccupancy[direction]
+            : 0;
+        if (edgePressure >= 0.2) {
+            const continuationNeed = Math.max(0, edgePressure - selectedEdgeRatio);
+            seamSmoothingBias += continuationNeed * (0.9 + continuityStrength);
+        } else {
+            const overfill = Math.max(0, selectedEdgeRatio - edgePressure);
+            seamSmoothingBias -= overfill * (0.45 + (edgeBalance * 0.5));
+        }
+    }
     const homeCenterMultiplier = isHomeSector ? 1.2 : 0.85;
     const variance = (randomFn() - 0.5) * 0.12;
 
@@ -132,6 +155,7 @@ function computeCandidateScore(item, anchors, selectedHexIds, randomFn, options)
         (anchorAffinity * 2.6)
         + (centerAffinity * centerBiasStrength * homeCenterMultiplier)
         + boundaryBias
+        + seamSmoothingBias
         - overpackPenalty
         - edgePenalty
         + variance
@@ -156,7 +180,20 @@ function stageBGrowSelection(parsedCandidates, systemsToGenerate, anchors, rando
     const selectedSet = new Set();
     const localNeighborCap = Math.max(1, Number(options.settings.clusterLocalNeighborCap) || 5);
     let capRelaxation = 0;
+    const edgeCounts = { north: 0, south: 0, west: 0, east: 0 };
+    const edgeTotals = {
+        north: parsedCandidates.filter((item) => getDirectionForHex(item.hexId, options.width, options.height) === 'north' && getEdgeDistance(item.hexId, options.width, options.height) <= 1).length,
+        south: parsedCandidates.filter((item) => getDirectionForHex(item.hexId, options.width, options.height) === 'south' && getEdgeDistance(item.hexId, options.width, options.height) <= 1).length,
+        west: parsedCandidates.filter((item) => getDirectionForHex(item.hexId, options.width, options.height) === 'west' && getEdgeDistance(item.hexId, options.width, options.height) <= 1).length,
+        east: parsedCandidates.filter((item) => getDirectionForHex(item.hexId, options.width, options.height) === 'east' && getEdgeDistance(item.hexId, options.width, options.height) <= 1).length
+    };
     while (selectedHexIds.length < systemsToGenerate) {
+        const stageEdgeOccupancy = {
+            north: edgeCounts.north / Math.max(1, edgeTotals.north),
+            south: edgeCounts.south / Math.max(1, edgeTotals.south),
+            west: edgeCounts.west / Math.max(1, edgeTotals.west),
+            east: edgeCounts.east / Math.max(1, edgeTotals.east)
+        };
         const scored = parsedCandidates
             .filter((item) => !selectedSet.has(item.hexId))
             .map((item) => ({
@@ -172,7 +209,8 @@ function stageBGrowSelection(parsedCandidates, systemsToGenerate, anchors, rando
                     sectorKey: options.sectorKey || '',
                     boundaryContinuityStrength: Math.max(0, Number(options.settings.boundaryContinuityStrength) || 0),
                     localNeighborCap,
-                    capRelaxation
+                    capRelaxation,
+                    stageEdgeOccupancy
                 })
             }))
             .filter((item) => Number.isFinite(item.score));
@@ -186,6 +224,10 @@ function stageBGrowSelection(parsedCandidates, systemsToGenerate, anchors, rando
         }
         selectedHexIds.push(next.hexId);
         selectedSet.add(next.hexId);
+        const direction = getDirectionForHex(next.hexId, options.width, options.height);
+        if (direction && getEdgeDistance(next.hexId, options.width, options.height) <= 1 && Number.isFinite(edgeCounts[direction])) {
+            edgeCounts[direction] += 1;
+        }
     }
     return selectedHexIds;
 }

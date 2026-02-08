@@ -707,6 +707,67 @@ test.describe('pure logic modules', () => {
     expect(result.maxLocalNeighbors).toBeLessThanOrEqual(5);
   });
 
+  test('cluster v2 blends boundary pressure to smooth seams without mirroring', async ({ page }) => {
+    await page.goto('/sector_generator.html');
+
+    const result = await page.evaluate(async () => {
+      const utils = await import('/js/utils.js');
+      const clusterV2 = await import('/js/generation-cluster-v2.js');
+
+      const allCoords = [];
+      for (let c = 0; c < 8; c++) {
+        for (let r = 0; r < 8; r++) {
+          allCoords.push(`${c}-${r}`);
+        }
+      }
+      const baseSettings = {
+        centerBiasStrength: 1.35,
+        boundaryContinuityStrength: 0.7,
+        clusterAnchorJitter: 1.25,
+        clusterGrowthDecay: 0.82,
+        clusterLocalNeighborCap: 4,
+        clusterSecondaryAnchorThreshold: 11,
+        clusterEdgeBalance: 0.26,
+        clusterCenterVoidProtection: 0.35
+      };
+      const highPressureContext = {
+        getEdgePressure: (_sectorKey, direction) => (direction === 'east' ? 0.95 : 0),
+        getCoreBias: () => 0
+      };
+      const lowPressureContext = {
+        getEdgePressure: () => 0,
+        getCoreBias: () => 0
+      };
+
+      const run = (seed, generationContext) => {
+        const rand = utils.mulberry32(utils.xmur3(seed)());
+        return clusterV2.selectClusteredSystemCoordsV2(allCoords, 24, rand, {
+          width: 8,
+          height: 8,
+          sectorKey: 'NNNN',
+          isHomeSector: false,
+          settings: baseSettings,
+          generationContext
+        });
+      };
+      const withPressure = run('boundary-smoothing-seed', highPressureContext);
+      const withoutPressure = run('boundary-smoothing-seed', lowPressureContext);
+      const eastBandCount = (hexes) => hexes.filter((hexId) => {
+        const [cRaw] = String(hexId).split('-');
+        const c = Number(cRaw);
+        return Number.isFinite(c) && c >= 6;
+      }).length;
+      return {
+        withPressureEast: eastBandCount(withPressure),
+        withoutPressureEast: eastBandCount(withoutPressure),
+        exactMirror: JSON.stringify(withPressure) === JSON.stringify(withoutPressure)
+      };
+    });
+
+    expect(result.withPressureEast).toBeGreaterThanOrEqual(result.withoutPressureEast);
+    expect(result.exactMirror).toBeFalsy();
+  });
+
   test('core scoring applies tag weights with caps and stays deterministic', async ({ page }) => {
     await page.goto('/sector_generator.html');
 
