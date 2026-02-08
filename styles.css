@@ -70,16 +70,22 @@ body {
     fill: #64748b;
 }
 
-.sector-label {
-    pointer-events: none;
-    font-size: 10px;
-    letter-spacing: 0.12em;
-    font-family: "JetBrains Mono", "Consolas", monospace;
-    fill: #94a3b8;
+.sector-frame {
+    opacity: 0;
+    stroke: #38bdf8;
+    stroke-width: 2px;
+    transition: opacity 0.15s ease;
 }
 
-.sector-label-current {
-    fill: #7dd3fc;
+.sector-frame-hover {
+    opacity: 1;
+}
+
+.sector-frame-selected {
+    opacity: 1;
+    stroke: #fbbf24;
+    stroke-width: 3px;
+    filter: drop-shadow(0 0 4px #fbbf24);
 }
 
 .expanded-sector-edge-btn {

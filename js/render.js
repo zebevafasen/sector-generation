@@ -429,6 +429,18 @@ export function drawGrid(cols, rows, options = {}) {
         layer.setAttribute('class', `sector-layer${isSelectedSector ? ' current-sector-layer' : ''}`);
         layer.setAttribute('data-sector-key', entry.sectorKey);
         if (isExpanded) {
+            const frame = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            frame.setAttribute('x', '-3');
+            frame.setAttribute('y', '-3');
+            frame.setAttribute('width', String(single.width + 6));
+            frame.setAttribute('height', String(single.height + 6));
+            frame.setAttribute('rx', '8');
+            frame.setAttribute('ry', '8');
+            frame.setAttribute('fill', 'none');
+            frame.setAttribute('pointer-events', 'none');
+            frame.setAttribute('class', `sector-frame${isSelectedSector ? ' sector-frame-selected' : ''}`);
+            layer.appendChild(frame);
+
             const hitbox = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
             hitbox.setAttribute('x', '0');
             hitbox.setAttribute('y', '0');
@@ -447,36 +459,19 @@ export function drawGrid(cols, rows, options = {}) {
                 state.multiSector.selectedSectorKey = entry.sectorKey;
                 drawGrid(cols, rows, { resetView: false });
             });
+            if (!isSelectedSector) {
+                layer.addEventListener('mouseenter', () => {
+                    frame.classList.add('sector-frame-hover');
+                });
+                layer.addEventListener('mouseleave', () => {
+                    frame.classList.remove('sector-frame-hover');
+                });
+            }
         }
 
         const offsetX = (entry.coord.x - extent.minX) * extent.stepX;
         const offsetY = (entry.coord.y - extent.minY) * extent.stepY;
         layer.setAttribute('transform', `translate(${offsetX}, ${offsetY})`);
-
-        if (isExpanded) {
-            if (isSelectedSector) {
-                const frame = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                frame.setAttribute('x', '-3');
-                frame.setAttribute('y', '-3');
-                frame.setAttribute('width', String(single.width + 6));
-                frame.setAttribute('height', String(single.height + 6));
-                frame.setAttribute('rx', '8');
-                frame.setAttribute('ry', '8');
-                frame.setAttribute('fill', 'none');
-                frame.setAttribute('stroke', '#cbd5e1');
-                frame.setAttribute('stroke-width', '1.8');
-                layer.appendChild(frame);
-            }
-
-            const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            label.setAttribute('x', String(single.width / 2));
-            label.setAttribute('y', '14');
-            label.setAttribute('text-anchor', 'middle');
-            label.setAttribute('class', 'sector-label');
-            if (isSelectedSector) label.classList.add('sector-label-current');
-            label.textContent = entry.sectorKey;
-            layer.appendChild(label);
-        }
 
         for (let c = 0; c < cols; c++) {
             for (let r = 0; r < rows; r++) {
