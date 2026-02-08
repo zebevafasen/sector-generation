@@ -5,7 +5,8 @@ import { refreshSystemPlanetPopulation } from './planet-population.js';
 import { refreshSystemPlanetTags } from './planet-tags.js';
 import { ensureSystemStarFields, getSystemStars } from './star-system.js';
 import { countSystemBodies } from './body-classification.js';
-import { formatLocalHexDisplayId, getGlobalHexDisplayId, renderRouteOverlay } from './render-shared.js';
+import { formatLocalHexDisplayId, getCurrentGridDimensions, getGlobalHexDisplayId, renderRouteOverlay } from './render-shared.js';
+import { makeSectorKeyFromCoords, parseSectorKeyToCoords } from './sector-address.js';
 import { resetBodyDetailsPanel } from './render-body-details.js';
 import { renderSystemBodyLists } from './render-system-bodies.js';
 import { configureSystemHeaderAndStar, renderEmptyHexInfo } from './render-system-panels.js';
@@ -21,6 +22,142 @@ import {
 } from './info-panel-ui.js';
 
 const STAR_GRADIENT_CACHE = {};
+const SECTOR_GAP_PX = 20;
+
+function getCurrentSectorKey() {
+    return state.multiSector && state.multiSector.currentKey ? state.multiSector.currentKey : '';
+}
+
+function getSelectedSectorKey() {
+    if (!(state.multiSector && typeof state.multiSector === 'object')) return null;
+    const key = state.multiSector.selectedSectorKey;
+    return typeof key === 'string' && key.trim() ? key : null;
+}
+
+function isExpandedSectorViewEnabled() {
+    return !!(state.multiSector && state.multiSector.expandedView);
+}
+
+function getHexGroupSelector(hexId, sectorKey = getCurrentSectorKey()) {
+    if (!hexId) return '';
+    const normalizedSectorKey = String(sectorKey || '').trim().toUpperCase();
+    return `.hex-group[data-id="${hexId}"][data-sector-key="${normalizedSectorKey}"]`;
+}
+
+export function findHexGroup(hexId, sectorKey = getCurrentSectorKey()) {
+    const selector = getHexGroupSelector(hexId, sectorKey);
+    if (!selector) return null;
+    return document.querySelector(selector);
+}
+
+function getSingleSectorDimensions(cols, rows) {
+    return {
+        width: cols * HEX_WIDTH + (HEX_WIDTH * 0.5),
+        height: rows * (HEX_HEIGHT * 0.75) + (HEX_HEIGHT * 0.25)
+    };
+}
+
+function getLoadedSectorEntries() {
+    const loaded = state.multiSector && state.multiSector.sectorsByKey && typeof state.multiSector.sectorsByKey === 'object'
+        ? state.multiSector.sectorsByKey
+        : {};
+    return Object.entries(loaded)
+        .map(([sectorKey, record]) => ({
+            sectorKey: String(sectorKey || '').trim().toUpperCase(),
+            record,
+            coord: parseSectorKeyToCoords(sectorKey)
+        }))
+        .filter((entry) => entry.record && entry.coord && Number.isInteger(entry.coord.x) && Number.isInteger(entry.coord.y));
+}
+
+function getSectorExtent(sectorEntries, cols, rows) {
+    const single = getSingleSectorDimensions(cols, rows);
+    if (!sectorEntries.length) {
+        return {
+            minX: 0,
+            maxX: 0,
+            minY: 0,
+            maxY: 0,
+            stepX: single.width + SECTOR_GAP_PX,
+            stepY: single.height + SECTOR_GAP_PX,
+            worldWidth: single.width,
+            worldHeight: single.height
+        };
+    }
+
+    const minX = Math.min(...sectorEntries.map((entry) => entry.coord.x));
+    const maxX = Math.max(...sectorEntries.map((entry) => entry.coord.x));
+    const minY = Math.min(...sectorEntries.map((entry) => entry.coord.y));
+    const maxY = Math.max(...sectorEntries.map((entry) => entry.coord.y));
+    const stepX = single.width + SECTOR_GAP_PX;
+    const stepY = single.height + SECTOR_GAP_PX;
+    return {
+        minX,
+        maxX,
+        minY,
+        maxY,
+        stepX,
+        stepY,
+        worldWidth: ((maxX - minX) * stepX) + single.width,
+        worldHeight: ((maxY - minY) * stepY) + single.height
+    };
+}
+
+function getSectorWorldCenter(entry, extent, singleDimensions) {
+    return {
+        x: ((entry.coord.x - extent.minX) * extent.stepX) + (singleDimensions.width / 2),
+        y: ((entry.coord.y - extent.minY) * extent.stepY) + (singleDimensions.height / 2)
+    };
+}
+
+export function getClosestSectorKeyToViewportCenter() {
+    const entries = getLoadedSectorEntries();
+    if (!entries.length) return getCurrentSectorKey();
+
+    const mapContainer = document.getElementById('mapContainer');
+    if (!mapContainer) return getCurrentSectorKey();
+
+    const { width, height } = getCurrentGridDimensions();
+    const single = getSingleSectorDimensions(width, height);
+    const extent = getSectorExtent(entries, width, height);
+    const scale = Number.isFinite(state.viewState.scale) && state.viewState.scale > 0 ? state.viewState.scale : 1;
+    const centerWorldX = ((mapContainer.clientWidth / 2) - state.viewState.x) / scale;
+    const centerWorldY = ((mapContainer.clientHeight / 2) - state.viewState.y) / scale;
+
+    let bestSectorKey = entries[0].sectorKey;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    entries.forEach((entry) => {
+        const center = getSectorWorldCenter(entry, extent, single);
+        const dx = center.x - centerWorldX;
+        const dy = center.y - centerWorldY;
+        const distance = (dx * dx) + (dy * dy);
+        if (distance < bestDistance) {
+            bestDistance = distance;
+            bestSectorKey = entry.sectorKey;
+        }
+    });
+    return bestSectorKey;
+}
+
+export function centerViewOnSector(sectorKey) {
+    const entries = getLoadedSectorEntries();
+    if (!entries.length) return;
+
+    const mapContainer = document.getElementById('mapContainer');
+    if (!mapContainer) return;
+
+    const normalizedSectorKey = String(sectorKey || '').trim().toUpperCase();
+    const target = entries.find((entry) => entry.sectorKey === normalizedSectorKey) || entries[0];
+    const { width, height } = getCurrentGridDimensions();
+    const single = getSingleSectorDimensions(width, height);
+    const extent = getSectorExtent(entries, width, height);
+    const center = getSectorWorldCenter(target, extent, single);
+    const scale = Number.isFinite(state.viewState.scale) && state.viewState.scale > 0 ? state.viewState.scale : 1;
+
+    state.viewState.x = (mapContainer.clientWidth / 2) - (center.x * scale);
+    state.viewState.y = (mapContainer.clientHeight / 2) - (center.y * scale);
+    updateViewTransform();
+}
 
 function getDeepSpacePoiPalette(kind) {
     switch (String(kind || '').toLowerCase()) {
@@ -63,7 +200,7 @@ function notifySectorDataChanged(label = 'Edit Sector') {
 
 function redrawAndReselect(hexId, preselectedBodyIndex = null) {
     redrawHex(hexId);
-    const selectedGroup = document.querySelector(`.hex-group[data-id="${hexId}"]`);
+    const selectedGroup = findHexGroup(hexId);
     if (!selectedGroup) return;
     selectHex(hexId, selectedGroup);
     if (Number.isInteger(preselectedBodyIndex) && preselectedBodyIndex >= 0) {
@@ -71,21 +208,26 @@ function redrawAndReselect(hexId, preselectedBodyIndex = null) {
     }
 }
 
-function createHexGroup(svg, col, row) {
+function createHexGroup(svg, col, row, sectorKey, sectorRecord = null) {
     const hexId = `${col}-${row}`;
-    const system = state.sectors[hexId];
-    const deepSpacePoi = !system && state.deepSpacePois ? state.deepSpacePois[hexId] : null;
+    const normalizedSectorKey = String(sectorKey || getCurrentSectorKey()).trim().toUpperCase();
+    const scopedSectors = sectorRecord && sectorRecord.sectors ? sectorRecord.sectors : state.sectors;
+    const scopedPois = sectorRecord && sectorRecord.deepSpacePois ? sectorRecord.deepSpacePois : state.deepSpacePois;
+    const scopedPinned = sectorRecord && Array.isArray(sectorRecord.pinnedHexIds) ? sectorRecord.pinnedHexIds : state.pinnedHexIds;
+    const system = scopedSectors && scopedSectors[hexId] ? scopedSectors[hexId] : null;
+    const deepSpacePoi = !system && scopedPois ? scopedPois[hexId] : null;
     const xOffset = (row % 2 === 1) ? (HEX_WIDTH / 2) : 0;
     const x = (col * HEX_WIDTH) + xOffset + (HEX_WIDTH / 2);
     const y = (row * (HEX_HEIGHT * 0.75)) + (HEX_HEIGHT / 2);
 
     const hasPinTarget = !!system || !!deepSpacePoi;
-    const isPinned = !!(hasPinTarget && state.pinnedHexIds && state.pinnedHexIds.includes(hexId));
+    const isPinned = !!(hasPinTarget && scopedPinned && scopedPinned.includes(hexId));
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     g.setAttribute('class', 'hex-group');
     if (system) g.classList.add('route-eligible');
     g.setAttribute('data-id', hexId);
-    g.onclick = (e) => handleHexClick(e, hexId, g);
+    g.setAttribute('data-sector-key', normalizedSectorKey);
+    g.onclick = (e) => handleHexClick(e, hexId, g, normalizedSectorKey);
 
     const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
     poly.setAttribute('points', calculateHexPoints(x, y, HEX_SIZE - 2));
@@ -169,10 +311,13 @@ export function redrawHex(hexId) {
     const row = parseInt(rowRaw, 10);
     if (!Number.isInteger(col) || !Number.isInteger(row)) return null;
 
-    const nextGroup = createHexGroup(svg, col, row);
-    const existing = viewport.querySelector(`.hex-group[data-id="${hexId}"]`);
+    const currentSectorKey = getCurrentSectorKey();
+    const nextGroup = createHexGroup(svg, col, row, currentSectorKey);
+    const existing = viewport.querySelector(getHexGroupSelector(hexId, currentSectorKey));
     if (!existing) return null;
-    viewport.replaceChild(nextGroup, existing);
+    const parent = existing.parentNode;
+    if (!parent) return null;
+    parent.replaceChild(nextGroup, existing);
 
     if (state.selectedHexId === hexId) {
         const poly = nextGroup.querySelector('polygon.hex');
@@ -223,9 +368,33 @@ export function ensureStarGradient(svg, starClass) {
 export function drawGrid(cols, rows, options = {}) {
     const svg = document.getElementById('hexGrid');
     const resetView = options.resetView !== false;
-
-    const realWidth = cols * HEX_WIDTH + (HEX_WIDTH * 0.5);
-    const realHeight = rows * (HEX_HEIGHT * 0.75) + (HEX_HEIGHT * 0.25);
+    const isExpanded = isExpandedSectorViewEnabled();
+    const single = getSingleSectorDimensions(cols, rows);
+    const sectorEntries = isExpanded
+        ? getLoadedSectorEntries()
+        : [{
+            sectorKey: getCurrentSectorKey(),
+            record: {
+                sectors: state.sectors,
+                deepSpacePois: state.deepSpacePois,
+                pinnedHexIds: state.pinnedHexIds
+            },
+            coord: parseSectorKeyToCoords(getCurrentSectorKey())
+        }];
+    if (isExpanded && !sectorEntries.length) {
+        sectorEntries.push({
+            sectorKey: getCurrentSectorKey(),
+            record: {
+                sectors: state.sectors,
+                deepSpacePois: state.deepSpacePois,
+                pinnedHexIds: state.pinnedHexIds
+            },
+            coord: parseSectorKeyToCoords(getCurrentSectorKey())
+        });
+    }
+    const extent = getSectorExtent(sectorEntries, cols, rows);
+    const realWidth = extent.worldWidth;
+    const realHeight = extent.worldHeight;
 
     let viewport = document.getElementById('mapViewport');
     if (!viewport) {
@@ -251,14 +420,72 @@ export function drawGrid(cols, rows, options = {}) {
     }
     updateViewTransform();
 
-    for (let c = 0; c < cols; c++) {
-        for (let r = 0; r < rows; r++) {
-            const g = createHexGroup(svg, c, r);
-            viewport.appendChild(g);
-        }
-    }
+    const currentKey = getCurrentSectorKey();
+    const selectedKey = getSelectedSectorKey();
+    let currentSectorLayer = null;
+    sectorEntries.forEach((entry) => {
+        const isSelectedSector = !!selectedKey && entry.sectorKey === selectedKey;
+        const layer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        layer.setAttribute('class', `sector-layer${isSelectedSector ? ' current-sector-layer' : ''}`);
+        layer.setAttribute('data-sector-key', entry.sectorKey);
+        if (isExpanded) {
+            const frame = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            frame.setAttribute('x', '-3');
+            frame.setAttribute('y', '-3');
+            frame.setAttribute('width', String(single.width + 6));
+            frame.setAttribute('height', String(single.height + 6));
+            frame.setAttribute('rx', '8');
+            frame.setAttribute('ry', '8');
+            frame.setAttribute('fill', 'none');
+            frame.setAttribute('pointer-events', 'none');
+            frame.setAttribute('class', `sector-frame${isSelectedSector ? ' sector-frame-selected' : ''}`);
+            layer.appendChild(frame);
 
-    renderRouteOverlay(viewport);
+            const hitbox = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            hitbox.setAttribute('x', '0');
+            hitbox.setAttribute('y', '0');
+            hitbox.setAttribute('width', String(single.width));
+            hitbox.setAttribute('height', String(single.height));
+            hitbox.setAttribute('fill', 'transparent');
+            hitbox.setAttribute('pointer-events', 'all');
+            layer.appendChild(hitbox);
+
+            layer.addEventListener('click', (event) => {
+                const target = event.target instanceof Element ? event.target : null;
+                if (target && target.closest('.hex-group')) return;
+                event.stopPropagation();
+                if (!state.multiSector) return;
+                if (state.multiSector.selectedSectorKey === entry.sectorKey) return;
+                state.multiSector.selectedSectorKey = entry.sectorKey;
+                drawGrid(cols, rows, { resetView: false });
+            });
+            if (!isSelectedSector) {
+                layer.addEventListener('mouseenter', () => {
+                    frame.classList.add('sector-frame-hover');
+                });
+                layer.addEventListener('mouseleave', () => {
+                    frame.classList.remove('sector-frame-hover');
+                });
+            }
+        }
+
+        const offsetX = (entry.coord.x - extent.minX) * extent.stepX;
+        const offsetY = (entry.coord.y - extent.minY) * extent.stepY;
+        layer.setAttribute('transform', `translate(${offsetX}, ${offsetY})`);
+
+        for (let c = 0; c < cols; c++) {
+            for (let r = 0; r < rows; r++) {
+                const g = createHexGroup(svg, c, r, entry.sectorKey, entry.record);
+                layer.appendChild(g);
+            }
+        }
+
+        viewport.appendChild(layer);
+        if (entry.sectorKey === currentKey) currentSectorLayer = layer;
+    });
+
+    renderRouteOverlay(currentSectorLayer || viewport);
+    updateSectorNavigationAnchors(cols, rows);
 }
 
 export function calculateHexPoints(cx, cy, size) {
@@ -269,6 +496,144 @@ export function calculateHexPoints(cx, cy, size) {
         points.push(`${cx + size * Math.cos(angleRad)},${cy + size * Math.sin(angleRad)}`);
     }
     return points.join(' ');
+}
+
+function updateSectorNavigationAnchors(cols, rows) {
+    const northBtn = document.getElementById('sectorNorthBtn');
+    const southBtn = document.getElementById('sectorSouthBtn');
+    const westBtn = document.getElementById('sectorWestBtn');
+    const eastBtn = document.getElementById('sectorEastBtn');
+    const expandedEdgeContainer = document.getElementById('expandedSectorEdgeNavContainer');
+    const mapContainer = document.getElementById('mapContainer');
+    if (!northBtn || !southBtn || !westBtn || !eastBtn || !expandedEdgeContainer || !mapContainer) return;
+
+    if (!isExpandedSectorViewEnabled()) {
+        expandedEdgeContainer.innerHTML = '';
+        const rect = mapContainer.getBoundingClientRect();
+        const scale = Number.isFinite(state.viewState.scale) && state.viewState.scale > 0 ? state.viewState.scale : 1;
+        const single = getSingleSectorDimensions(cols, rows);
+        const leftPx = state.viewState.x;
+        const topPx = state.viewState.y;
+        const rightPx = leftPx + (single.width * scale);
+        const bottomPx = topPx + (single.height * scale);
+        const centerX = leftPx + ((rightPx - leftPx) / 2);
+        const centerY = topPx + ((bottomPx - topPx) / 2);
+        const current = parseSectorKeyToCoords(getCurrentSectorKey());
+        const loaded = state.multiSector && state.multiSector.sectorsByKey && typeof state.multiSector.sectorsByKey === 'object'
+            ? state.multiSector.sectorsByKey
+            : {};
+        const directionMeta = [
+            { button: northBtn, key: 'north', dx: 0, dy: -1, rotateDeg: -90, x: centerX, y: topPx - 16 },
+            { button: southBtn, key: 'south', dx: 0, dy: 1, rotateDeg: 90, x: centerX, y: bottomPx + 16 },
+            { button: westBtn, key: 'west', dx: -1, dy: 0, rotateDeg: 180, x: leftPx - 16, y: centerY },
+            { button: eastBtn, key: 'east', dx: 1, dy: 0, rotateDeg: 0, x: rightPx + 16, y: centerY }
+        ];
+
+        directionMeta.forEach((item) => {
+            const targetKey = makeSectorKeyFromCoords(current.x + item.dx, current.y + item.dy);
+            const exists = !!loaded[targetKey];
+            const inView = item.x >= 0 && item.x <= rect.width && item.y >= 0 && item.y <= rect.height;
+            if (!inView) {
+                item.button.classList.add('hidden');
+                return;
+            }
+
+            item.button.classList.remove('hidden');
+            item.button.style.left = `${item.x}px`;
+            item.button.style.top = `${item.y}px`;
+            item.button.style.right = '';
+            item.button.style.bottom = '';
+            const symbol = exists ? '>' : '+';
+            item.button.style.transform = exists
+                ? `translate(-50%, -50%) rotate(${item.rotateDeg}deg)`
+                : 'translate(-50%, -50%)';
+            item.button.innerText = symbol;
+            item.button.title = exists ? `Move ${item.key}` : `Expand ${item.key}`;
+            item.button.setAttribute('aria-label', exists ? `Move ${item.key}` : `Expand ${item.key}`);
+        });
+        return;
+    }
+
+    [northBtn, southBtn, westBtn, eastBtn].forEach((button) => {
+        button.classList.add('hidden');
+    });
+
+    const entries = getLoadedSectorEntries();
+    expandedEdgeContainer.innerHTML = '';
+    if (!entries.length) return;
+    const loadedSet = new Set(entries.map((entry) => entry.sectorKey));
+    const extent = getSectorExtent(entries, cols, rows);
+    const single = getSingleSectorDimensions(cols, rows);
+    const rect = mapContainer.getBoundingClientRect();
+    const scale = Number.isFinite(state.viewState.scale) && state.viewState.scale > 0 ? state.viewState.scale : 1;
+    const directionMeta = [
+        { key: 'north', dx: 0, dy: -1, rotateDeg: -90 },
+        { key: 'south', dx: 0, dy: 1, rotateDeg: 90 },
+        { key: 'west', dx: -1, dy: 0, rotateDeg: 180 },
+        { key: 'east', dx: 1, dy: 0, rotateDeg: 0 }
+    ];
+
+    entries.forEach((entry) => {
+        const sectorLeftWorld = (entry.coord.x - extent.minX) * extent.stepX;
+        const sectorTopWorld = (entry.coord.y - extent.minY) * extent.stepY;
+        const leftPx = state.viewState.x + (sectorLeftWorld * scale);
+        const topPx = state.viewState.y + (sectorTopWorld * scale);
+        const rightPx = leftPx + (single.width * scale);
+        const bottomPx = topPx + (single.height * scale);
+        const centerX = leftPx + ((rightPx - leftPx) / 2);
+        const centerY = topPx + ((bottomPx - topPx) / 2);
+
+        directionMeta.forEach((direction) => {
+            const adjacentKey = makeSectorKeyFromCoords(entry.coord.x + direction.dx, entry.coord.y + direction.dy);
+            if (loadedSet.has(adjacentKey)) return;
+
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'expanded-sector-edge-btn';
+            button.title = `Generate/load ${direction.key} of ${entry.sectorKey}`;
+            button.setAttribute('aria-label', button.title);
+            button.textContent = '+';
+            button.style.position = 'absolute';
+
+            if (direction.key === 'north') {
+                button.style.left = `${centerX}px`;
+                button.style.top = `${topPx - 16}px`;
+                button.style.transform = `translate(-50%, -50%) rotate(${direction.rotateDeg}deg)`;
+            } else if (direction.key === 'south') {
+                button.style.left = `${centerX}px`;
+                button.style.top = `${bottomPx + 16}px`;
+                button.style.transform = `translate(-50%, -50%) rotate(${direction.rotateDeg}deg)`;
+            } else if (direction.key === 'west') {
+                button.style.left = `${leftPx - 16}px`;
+                button.style.top = `${centerY}px`;
+                button.style.transform = `translate(-50%, -50%) rotate(${direction.rotateDeg}deg)`;
+            } else {
+                button.style.left = `${rightPx + 16}px`;
+                button.style.top = `${centerY}px`;
+                button.style.transform = `translate(-50%, -50%) rotate(${direction.rotateDeg}deg)`;
+            }
+
+            const anchorX = parseFloat(button.style.left);
+            const anchorY = parseFloat(button.style.top);
+            if (
+                !Number.isFinite(anchorX) || !Number.isFinite(anchorY)
+                || anchorX < 0 || anchorX > rect.width
+                || anchorY < 0 || anchorY > rect.height
+            ) {
+                return;
+            }
+
+            button.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                emitEvent(EVENTS.REQUEST_MOVE_SECTOR_EDGE, {
+                    sourceSectorKey: entry.sectorKey,
+                    direction: direction.key
+                });
+            });
+            expandedEdgeContainer.appendChild(button);
+        });
+    });
 }
 
 export function setupPanZoom() {
@@ -330,6 +695,20 @@ export function setupPanZoom() {
     window.addEventListener('blur', () => {
         setShiftShortcutCursor(false);
     });
+    container.addEventListener('click', (e) => {
+        if (state.viewState.dragDistance > 5) return;
+        const isHexClick = e.target instanceof Element && !!e.target.closest('.hex-group');
+        if (isHexClick) return;
+        document.querySelectorAll('.hex.selected').forEach(el => el.classList.remove('selected'));
+        state.selectedHexId = null;
+        state.selectedBodyIndex = null;
+        clearInfoPanel();
+        if (isExpandedSectorViewEnabled() && state.multiSector) {
+            state.multiSector.selectedSectorKey = null;
+            const { width, height } = getCurrentGridDimensions();
+            drawGrid(width, height, { resetView: false });
+        }
+    });
 }
 
 export function updateViewTransform() {
@@ -337,17 +716,28 @@ export function updateViewTransform() {
     if (viewport) {
         viewport.setAttribute('transform', `translate(${state.viewState.x}, ${state.viewState.y}) scale(${state.viewState.scale})`);
     }
+    const snapshot = state.sectorConfigSnapshot || (state.lastSectorSnapshot && state.lastSectorSnapshot.sectorConfigSnapshot) || {};
+    const width = parseInt(snapshot.width, 10) || 8;
+    const height = parseInt(snapshot.height, 10) || 10;
+    updateSectorNavigationAnchors(width, height);
 }
 
 export function refreshRouteOverlay() {
     const viewport = document.getElementById('mapViewport');
     if (!viewport) return;
     viewport.querySelectorAll('.route-overlay').forEach((node) => node.remove());
-    renderRouteOverlay(viewport);
+    const currentLayer = viewport.querySelector(`.sector-layer[data-sector-key="${getCurrentSectorKey()}"]`);
+    renderRouteOverlay(currentLayer || viewport);
 }
 
-export function handleHexClick(e, id, groupElement) {
+export function handleHexClick(e, id, groupElement, sectorKey = getCurrentSectorKey()) {
     if (state.viewState.dragDistance > 5) return;
+    const normalizedSectorKey = String(sectorKey || '').trim().toUpperCase();
+    const currentSectorKey = getCurrentSectorKey();
+    if (isExpandedSectorViewEnabled() && normalizedSectorKey && normalizedSectorKey !== currentSectorKey) {
+        emitEvent(EVENTS.REQUEST_SWITCH_SECTOR_HEX, { sectorKey: normalizedSectorKey, hexId: id });
+        return;
+    }
     if (e.shiftKey) {
         e.preventDefault();
         emitEvent(EVENTS.ROUTE_SHORTCUT_HEX, { hexId: id });
@@ -365,6 +755,8 @@ export function selectHex(id, groupElement) {
     poly.classList.add('selected');
     state.selectedHexId = id;
     state.selectedBodyIndex = null;
+    const sectorKey = groupElement && groupElement.getAttribute ? groupElement.getAttribute('data-sector-key') : null;
+    if (sectorKey && state.multiSector) state.multiSector.selectedSectorKey = sectorKey;
     updateInfoPanel(id);
     emitEvent(EVENTS.HEX_SELECTED, { hexId: id });
 }

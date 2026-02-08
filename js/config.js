@@ -133,8 +133,10 @@ export const state = {
     pinnedHexIds: [],
     multiSector: {
         currentKey: HOME_SECTOR_KEY,
+        selectedSectorKey: HOME_SECTOR_KEY,
         sectorsByKey: {},
-        jumpGateRegistry: {}
+        jumpGateRegistry: {},
+        expandedView: false
     },
     statusMessageTimer: null,
     starTooltipPinned: false,

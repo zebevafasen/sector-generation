@@ -191,6 +191,7 @@
             </div>
             <div class="relative px-2 pointer-events-auto flex items-center gap-2">
                 <button id="sectorHomeBtn" class="w-8 h-8 inline-flex items-center justify-center rounded-md bg-slate-900/90 border border-slate-700 text-slate-300 hover:text-white hover:border-amber-500 transition-colors" aria-label="Go home sector" title="Go home sector">&#8962;</button>
+                <button id="toggleExpandedSectorViewBtn" class="w-auto h-8 px-2 inline-flex items-center justify-center rounded-md bg-slate-900/90 border border-slate-700 text-slate-300 hover:text-white hover:border-sky-500 transition-colors text-[10px]" aria-label="Enable expanded sector view" title="Enable expanded sector view">Expanded View: Off</button>
                 <div class="group relative">
                     <button id="controlsInfoBtn" class="w-8 h-8 inline-flex items-center justify-center rounded-md bg-slate-900/90 border border-slate-700 text-slate-300 hover:text-white hover:border-sky-500 transition-colors" aria-label="Show controls" title="Show controls">i</button>
                     <div class="hidden group-hover:block group-focus-within:block absolute right-0 top-9 w-72 bg-slate-900/95 border border-slate-700 rounded-lg shadow-2xl p-2 space-y-2">
@@ -208,6 +209,7 @@
             <svg id="hexGrid" class="w-full h-full drop-shadow-2xl"></svg>
         </div>
         <div class="absolute inset-0 z-20 pointer-events-none">
+            <div id="expandedSectorEdgeNavContainer" class="absolute inset-0 pointer-events-none"></div>
             <button id="sectorNorthBtn" class="pointer-events-auto absolute top-20 left-1/2 -translate-x-1/2 w-8 h-8 rounded-md bg-slate-900/90 border border-slate-700 text-slate-300 hover:text-white hover:border-sky-500 transition-colors inline-flex items-center justify-center" aria-label="Move north" title="Move north">
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 14L12 8L18 14" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>

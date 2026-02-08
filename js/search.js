@@ -1,7 +1,7 @@
 import { state } from './config.js';
 import { showStatusMessage } from './core.js';
 import { EVENTS } from './events.js';
-import { selectHex } from './render.js';
+import { findHexGroup, selectHex } from './render.js';
 import { getGlobalHexDisplayId } from './render-shared.js';
 import { countSystemBodies, isPlanetaryBody } from './body-classification.js';
 import { escapeHtml } from './info-panel-ui.js';
@@ -166,7 +166,7 @@ export function setupSearchPanel() {
         if (!button) return;
         const hexId = button.getAttribute('data-search-hex-id');
         if (!hexId) return;
-        const group = document.querySelector(`.hex-group[data-id="${hexId}"]`);
+        const group = findHexGroup(hexId);
         if (!group) {
             showStatusMessage(`Unable to focus ${getGlobalHexDisplayId(hexId)}.`, 'warn');
             return;

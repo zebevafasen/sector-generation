@@ -694,7 +694,9 @@ export function generateSector() {
     state.selectedHexId = null;
     state.multiSector = {
         currentKey: HOME_SECTOR_KEY,
+        selectedSectorKey: HOME_SECTOR_KEY,
         jumpGateRegistry: {},
+        expandedView: false,
         sectorsByKey: {
             [HOME_SECTOR_KEY]: {
                 seed: seedUsed,
@@ -1142,7 +1144,8 @@ export function togglePinSelectedSystem() {
 
     state.pinnedHexIds = Array.from(pinned);
 
-    const group = document.querySelector(`.hex-group[data-id="${selectedHexId}"]`);
+    const activeSectorKey = state.multiSector && state.multiSector.currentKey ? state.multiSector.currentKey : '';
+    const group = document.querySelector(`.hex-group[data-id="${selectedHexId}"][data-sector-key="${activeSectorKey}"]`);
     const poly = group ? group.querySelector('polygon.hex') : null;
     if (poly) {
         poly.classList.toggle('pinned', state.pinnedHexIds.includes(selectedHexId));

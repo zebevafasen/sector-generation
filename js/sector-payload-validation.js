@@ -65,10 +65,15 @@ function sanitizeMultiSector(value) {
     const currentKey = typeof value.currentKey === 'string' && isSectorKey(value.currentKey)
         ? value.currentKey.trim().toUpperCase()
         : HOME_SECTOR_KEY;
+    const selectedSectorKey = typeof value.selectedSectorKey === 'string' && isSectorKey(value.selectedSectorKey)
+        ? value.selectedSectorKey.trim().toUpperCase()
+        : currentKey;
     return {
         currentKey,
+        selectedSectorKey,
         sectorsByKey: value.sectorsByKey,
-        jumpGateRegistry: isPlainObject(value.jumpGateRegistry) ? value.jumpGateRegistry : {}
+        jumpGateRegistry: isPlainObject(value.jumpGateRegistry) ? value.jumpGateRegistry : {},
+        expandedView: !!value.expandedView
     };
 }
 

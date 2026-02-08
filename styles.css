@@ -70,6 +70,47 @@ body {
     fill: #64748b;
 }
 
+.sector-frame {
+    opacity: 0;
+    stroke: #38bdf8;
+    stroke-width: 2px;
+    transition: opacity 0.15s ease;
+}
+
+.sector-frame-hover {
+    opacity: 1;
+}
+
+.sector-frame-selected {
+    opacity: 1;
+    stroke: #fbbf24;
+    stroke-width: 3px;
+    filter: drop-shadow(0 0 4px #fbbf24);
+}
+
+.expanded-sector-edge-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 7px;
+    border: 1px solid rgba(100, 116, 139, 0.8);
+    background: rgba(15, 23, 42, 0.9);
+    color: #cbd5e1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "JetBrains Mono", "Consolas", monospace;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    pointer-events: auto;
+}
+
+.expanded-sector-edge-btn:hover {
+    border-color: #7dd3fc;
+    color: #e2e8f0;
+}
+
 .star-circle {
     pointer-events: none;
 }
