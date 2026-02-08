@@ -9,7 +9,7 @@ function ensureFeaturesArray(body) {
     return body.features;
 }
 
-const TYPE_FACTORS = {
+const DEFAULT_TYPE_FACTORS = {
     terrestrial: 1.0,
     oceanic: 0.95,
     desert: 0.62,
@@ -19,7 +19,7 @@ const TYPE_FACTORS = {
     'gas giant': 0.02
 };
 
-const SIZE_FACTORS = {
+const DEFAULT_SIZE_FACTORS = {
     tiny: 0.45,
     small: 0.70,
     medium: 1.0,
@@ -28,7 +28,7 @@ const SIZE_FACTORS = {
     massive: 2.20
 };
 
-const ATMOSPHERE_FACTORS = {
+const DEFAULT_ATMOSPHERE_FACTORS = {
     breathable: 1.55,
     humid: 1.22,
     dense: 1.0,
@@ -41,7 +41,7 @@ const ATMOSPHERE_FACTORS = {
     crushing: 0.03
 };
 
-const TEMPERATURE_FACTORS = {
+const DEFAULT_TEMPERATURE_FACTORS = {
     temperate: 1.48,
     warm: 1.16,
     cold: 0.92,
@@ -51,6 +51,18 @@ const TEMPERATURE_FACTORS = {
     scorching: 0.18,
     burning: 0.10
 };
+
+let TYPE_FACTORS = DEFAULT_TYPE_FACTORS;
+let SIZE_FACTORS = DEFAULT_SIZE_FACTORS;
+let ATMOSPHERE_FACTORS = DEFAULT_ATMOSPHERE_FACTORS;
+let TEMPERATURE_FACTORS = DEFAULT_TEMPERATURE_FACTORS;
+
+export function hydratePlanetPopulationData(loadedData = {}) {
+    TYPE_FACTORS = loadedData.typeFactors || DEFAULT_TYPE_FACTORS;
+    SIZE_FACTORS = loadedData.sizeFactors || DEFAULT_SIZE_FACTORS;
+    ATMOSPHERE_FACTORS = loadedData.atmosphereFactors || DEFAULT_ATMOSPHERE_FACTORS;
+    TEMPERATURE_FACTORS = loadedData.temperatureFactors || DEFAULT_TEMPERATURE_FACTORS;
+}
 
 function clamp(value, min, max) {
     return Math.min(Math.max(value, min), max);

@@ -1,6 +1,7 @@
 import { hydrateConfigData } from './config.js';
 import { hydrateGenerationData } from './generation-data.js';
 import { hydratePlanetEnvironmentData } from './planet-environment.js';
+import { hydratePlanetPopulationData } from './planet-population.js';
 import { hydrateTooltipData } from './tooltip-data.js';
 
 function buildDataUrl(fileName) {
@@ -46,21 +47,31 @@ function validatePlanetEnvironmentData(data) {
     }
 }
 
+function validatePlanetPopulationData(data) {
+    if (!data || typeof data !== 'object') throw new Error('planet-population-data.json must be an object');
+    if (!data.typeFactors || typeof data.typeFactors !== 'object') {
+        throw new Error('planet-population-data.json typeFactors must be an object');
+    }
+}
+
 export async function loadAppData() {
-    const [configData, generationData, tooltipData, planetEnvironmentData] = await Promise.all([
+    const [configData, generationData, tooltipData, planetEnvironmentData, planetPopulationData] = await Promise.all([
         loadJson('config-data.json'),
         loadJson('generation-data.json'),
         loadJson('tooltip-data.json'),
-        loadJson('planet-environment-data.json')
+        loadJson('planet-environment-data.json'),
+        loadJson('planet-population-data.json')
     ]);
 
     validateConfigData(configData);
     validateGenerationData(generationData);
     validateTooltipData(tooltipData);
     validatePlanetEnvironmentData(planetEnvironmentData);
+    validatePlanetPopulationData(planetPopulationData);
 
     hydrateConfigData(configData);
     hydrateGenerationData(generationData);
     hydrateTooltipData(tooltipData);
     hydratePlanetEnvironmentData(planetEnvironmentData);
+    hydratePlanetPopulationData(planetPopulationData);
 }

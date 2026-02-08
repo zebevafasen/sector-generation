@@ -1,0 +1,41 @@
+{
+  "typeFactors": {
+    "terrestrial": 1.0,
+    "oceanic": 0.95,
+    "desert": 0.62,
+    "arctic": 0.48,
+    "barren": 0.1,
+    "volcanic": 0.04,
+    "gas giant": 0.02
+  },
+  "sizeFactors": {
+    "tiny": 0.45,
+    "small": 0.7,
+    "medium": 1.0,
+    "large": 1.4,
+    "huge": 1.85,
+    "massive": 2.2
+  },
+  "atmosphereFactors": {
+    "breathable": 1.55,
+    "humid": 1.22,
+    "dense": 1.0,
+    "thin": 0.66,
+    "dry": 0.74,
+    "trace": 0.22,
+    "none": 0.06,
+    "toxic": 0.2,
+    "corrosive": 0.09,
+    "crushing": 0.03
+  },
+  "temperatureFactors": {
+    "temperate": 1.48,
+    "warm": 1.16,
+    "cold": 0.92,
+    "hot": 0.58,
+    "freezing": 0.34,
+    "frozen": 0.24,
+    "scorching": 0.18,
+    "burning": 0.1
+  }
+}
