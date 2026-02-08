@@ -433,10 +433,10 @@ export function drawGrid(cols, rows, options = {}) {
             frame.setAttribute('height', String(single.height + 6));
             frame.setAttribute('rx', '8');
             frame.setAttribute('ry', '8');
-            frame.setAttribute('fill', entry.sectorKey === currentKey ? 'rgba(15,23,42,0.3)' : 'rgba(15,23,42,0.22)');
-            frame.setAttribute('stroke', '#334155');
-            frame.setAttribute('stroke-width', '1.2');
-            frame.setAttribute('stroke-dasharray', '6 4');
+            frame.setAttribute('fill', entry.sectorKey === currentKey ? 'rgba(15,23,42,0.34)' : 'rgba(15,23,42,0.2)');
+            frame.setAttribute('stroke', entry.sectorKey === currentKey ? '#cbd5e1' : '#64748b');
+            frame.setAttribute('stroke-width', entry.sectorKey === currentKey ? '2.1' : '1.15');
+            frame.setAttribute('stroke-dasharray', entry.sectorKey === currentKey ? 'none' : '6 4');
             layer.appendChild(frame);
 
             const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');

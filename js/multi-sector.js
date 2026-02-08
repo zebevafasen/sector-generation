@@ -6,7 +6,7 @@ import { readGenerationConfigFromUi } from './sector-config.js';
 import { HOME_SECTOR_KEY, makeSectorKeyFromCoords, offsetSectorKey, parseSectorKeyToCoords } from './sector-address.js';
 import { getGlobalHexDisplayIdForSector } from './render-shared.js';
 import { applySectorPayload } from './storage.js';
-import { centerViewOnSector, findHexGroup, getClosestSectorKeyToViewportCenter, selectHex, updateViewTransform } from './render.js';
+import { centerViewOnSector, findHexGroup, selectHex, updateViewTransform } from './render.js';
 import { deepClone, parseHexId, sortHexIds, xmur3, mulberry32 } from './utils.js';
 
 const DIRECTIONS = {
@@ -572,13 +572,12 @@ function toggleExpandedSectorView() {
         });
         centerViewOnSector(currentKey);
     } else {
-        const nearestKey = getClosestSectorKeyToViewportCenter();
-        const targetKey = nearestKey || currentKey;
+        const targetKey = currentKey;
         const targetRecord = getOrCreateSectorRecordByKey(targetKey);
         if (!targetRecord) return;
         state.multiSector.expandedView = false;
         applySectorRecord(targetKey, targetRecord, {
-            preferredSelectedHexId: null,
+            preferredSelectedHexId: state.selectedHexId,
             preserveView: false,
             showLoadedToast: false
         });
