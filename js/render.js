@@ -110,35 +110,6 @@ function getSectorWorldCenter(entry, extent, singleDimensions) {
     };
 }
 
-export function getClosestSectorKeyToViewportCenter() {
-    const entries = getLoadedSectorEntries();
-    if (!entries.length) return getCurrentSectorKey();
-
-    const mapContainer = document.getElementById('mapContainer');
-    if (!mapContainer) return getCurrentSectorKey();
-
-    const { width, height } = getCurrentGridDimensions();
-    const single = getSingleSectorDimensions(width, height);
-    const extent = getSectorExtent(entries, width, height);
-    const scale = Number.isFinite(state.viewState.scale) && state.viewState.scale > 0 ? state.viewState.scale : 1;
-    const centerWorldX = ((mapContainer.clientWidth / 2) - state.viewState.x) / scale;
-    const centerWorldY = ((mapContainer.clientHeight / 2) - state.viewState.y) / scale;
-
-    let bestSectorKey = entries[0].sectorKey;
-    let bestDistance = Number.POSITIVE_INFINITY;
-    entries.forEach((entry) => {
-        const center = getSectorWorldCenter(entry, extent, single);
-        const dx = center.x - centerWorldX;
-        const dy = center.y - centerWorldY;
-        const distance = (dx * dx) + (dy * dy);
-        if (distance < bestDistance) {
-            bestDistance = distance;
-            bestSectorKey = entry.sectorKey;
-        }
-    });
-    return bestSectorKey;
-}
-
 export function centerViewOnSector(sectorKey) {
     const entries = getLoadedSectorEntries();
     if (!entries.length) return;
