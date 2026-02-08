@@ -10,6 +10,9 @@ import { getKnownPlanetTags } from './tooltip-data.js';
 
 function getSearchRefs() {
     return {
+        panelHeader: document.getElementById('searchPanelHeader'),
+        panelContent: document.getElementById('searchPanelContent'),
+        toggleBtn: document.getElementById('searchToggleBtn'),
         nameInput: document.getElementById('searchNameInput'),
         scopeSelect: document.getElementById('searchScopeSelect'),
         sortSelect: document.getElementById('searchSortSelect'),
@@ -266,6 +269,46 @@ function sortMatches(entries, filters) {
     return entries.sort(relevanceSort);
 }
 
+function hasActiveSearchCriteria(filters) {
+    return Boolean(
+        (filters.queryTokens && filters.queryTokens.length)
+        || filters.scope === 'systems'
+        || filters.scope === 'pois'
+        || filters.starClass
+        || filters.tag
+        || filters.planetType
+        || filters.inhabitedOnly
+        || filters.coreOnly
+        || filters.pinnedOnly
+        || filters.multiStarOnly
+        || filters.minPop != null
+        || filters.maxPop != null
+        || filters.minPlanets != null
+        || filters.maxPlanets != null
+    );
+}
+
+function applySearchMapDimming(filters, matches) {
+    const groups = document.querySelectorAll('.hex-group');
+    if (!groups.length) return;
+
+    const active = hasActiveSearchCriteria(filters);
+    if (!active) {
+        groups.forEach((group) => group.classList.remove('search-dimmed'));
+        return;
+    }
+
+    const currentSectorKey = String(state.multiSector?.currentKey || 'NNNN').trim().toUpperCase();
+    const matchedHexIds = new Set(matches.map((match) => String(match.hexId || '')));
+    groups.forEach((group) => {
+        const groupHexId = String(group.getAttribute('data-id') || '');
+        const groupSectorKey = String(group.getAttribute('data-sector-key') || '').trim().toUpperCase();
+        const isCurrentSector = !state.multiSector?.expandedView || groupSectorKey === currentSectorKey;
+        const isMatch = isCurrentSector && matchedHexIds.has(groupHexId);
+        group.classList.toggle('search-dimmed', !isMatch);
+    });
+}
+
 function findMatches(filters) {
     const entries = buildSearchEntries();
     const systemOnlyFilterActive = isSystemOnlyFilterActive(filters);
@@ -376,6 +419,7 @@ function runSearch(refs) {
     if (!validateFilters(filters)) return [];
     const matches = findMatches(filters);
     renderResults(refs, matches, filters);
+    applySearchMapDimming(filters, matches);
     return matches;
 }
 
@@ -413,6 +457,17 @@ function populateSearchOptions(refs) {
     ].join('');
 }
 
+function openSearchPanelAndFocusInput(refs) {
+    if (!refs || !refs.nameInput) return;
+    if (refs.panelContent && refs.toggleBtn && refs.panelContent.classList.contains('hidden')) {
+        refs.toggleBtn.click();
+    }
+    requestAnimationFrame(() => {
+        refs.nameInput.focus();
+        refs.nameInput.select();
+    });
+}
+
 export function setupSearchPanel() {
     const refs = getSearchRefs();
     if (!refs.resultsList) return;
@@ -424,6 +479,16 @@ export function setupSearchPanel() {
         lastMatches = runSearch(refs);
     });
     refs.clearBtn?.addEventListener('click', () => clearFilters(refs));
+    refs.panelHeader?.addEventListener('click', (event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        if (target && target.closest('#searchToggleBtn')) return;
+        openSearchPanelAndFocusInput(refs);
+    });
+    refs.panelHeader?.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        openSearchPanelAndFocusInput(refs);
+    });
     refs.nameInput?.addEventListener('keydown', (event) => {
         if (event.key !== 'Enter') return;
         event.preventDefault();
