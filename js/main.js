@@ -7,6 +7,7 @@ import {
     syncManualDensityLimits
 } from './controls.js';
 import { randomizeSeed } from './core.js';
+import { loadAppData } from './data-loader.js';
 import { EVENTS } from './events.js';
 import { state } from './config.js';
 import { addBodyToSelectedSystem, addPoiAtHex, addSystemAtHex, deletePoiAtHex, deleteSelectedBody, deleteSelectedSystem, generateSector, renamePoiAtHex, rerollSelectedPlanet, rerollSelectedSystem, rerollUnpinnedSystems, setEditMode, toggleEditMode, togglePinSelectedSystem } from './generation.js';
@@ -331,13 +332,16 @@ function initializeSectorData() {
     captureHistorySnapshot('Initial State');
 }
 
-function initApp() {
+async function initApp() {
+    await loadAppData();
     initializeModules();
     initializeUiState();
     initializeSectorData();
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-    initApp();
+    initApp().catch((error) => {
+        console.error('Failed to initialize app data', error);
+    });
 });
 

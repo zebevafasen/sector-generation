@@ -1,4 +1,4 @@
-export const STAR_CLASS_PLANET_WEIGHTS = {
+const DEFAULT_STAR_CLASS_PLANET_WEIGHTS = {
     O: { 'Gas Giant': 0.28, Terrestrial: 0.07, Oceanic: 0.02, Volcanic: 0.24, Desert: 0.17, Barren: 0.20, Arctic: 0.02 },
     B: { 'Gas Giant': 0.26, Terrestrial: 0.09, Oceanic: 0.03, Volcanic: 0.20, Desert: 0.17, Barren: 0.20, Arctic: 0.05 },
     A: { 'Gas Giant': 0.24, Terrestrial: 0.15, Oceanic: 0.08, Volcanic: 0.16, Desert: 0.16, Barren: 0.13, Arctic: 0.08 },
@@ -11,23 +11,23 @@ export const STAR_CLASS_PLANET_WEIGHTS = {
     default: { 'Gas Giant': 0.18, Terrestrial: 0.22, Oceanic: 0.14, Volcanic: 0.11, Desert: 0.15, Barren: 0.12, Arctic: 0.08 }
 };
 
-export const HABITABLE_PLANET_TYPES = new Set(['Terrestrial', 'Oceanic', 'Desert', 'Arctic']);
+const DEFAULT_HABITABLE_PLANET_TYPES = ['Terrestrial', 'Oceanic', 'Desert', 'Arctic'];
 
-export const BASE_HABITABILITY_TYPE_WEIGHT = {
+const DEFAULT_BASE_HABITABILITY_TYPE_WEIGHT = {
     Terrestrial: 2.2,
     Oceanic: 1.0,
     Desert: 0.8,
     Arctic: 0.75
 };
 
-export const ADJACENT_DUPLICATE_NAME_CHANCE = 0.35;
+const DEFAULT_ADJACENT_DUPLICATE_NAME_CHANCE = 0.35;
 
-export const HABITABLE_WORLD_SUFFIXES = [
+const DEFAULT_HABITABLE_WORLD_SUFFIXES = [
     'Haven', 'Eden', 'Sanctuary', 'Harbor', 'Bastion', 'Refuge',
     'Prospect', 'Utopia', 'Arcadia', 'New Dawn', 'Greenfall', 'Crossing'
 ];
 
-export const DENSITY_PRESET_BASE_RATIOS = {
+const DEFAULT_DENSITY_PRESET_BASE_RATIOS = {
     void: 0.05,
     sparse: 0.15,
     busy: 0.33,
@@ -35,7 +35,7 @@ export const DENSITY_PRESET_BASE_RATIOS = {
     core: 0.70
 };
 
-export const DENSITY_PRESET_RATIOS_BY_PROFILE = {
+const DEFAULT_DENSITY_PRESET_RATIOS_BY_PROFILE = {
     high_adventure: {
         void: 0.05,
         sparse: 0.15,
@@ -62,28 +62,7 @@ export const DENSITY_PRESET_RATIOS_BY_PROFILE = {
     }
 };
 
-export function normalizeDensityPresetKey(value) {
-    const raw = String(value || '').trim().toLowerCase();
-    if (raw in DENSITY_PRESET_BASE_RATIOS || raw === 'standard') return raw;
-
-    const numeric = Number.parseFloat(raw);
-    if (!Number.isFinite(numeric)) return 'standard';
-    if (Math.abs(numeric - 0.05) < 0.001) return 'void';
-    if (Math.abs(numeric - 0.15) < 0.001) return 'sparse';
-    if (Math.abs(numeric - 0.20) < 0.001) return 'standard';
-    if (Math.abs(numeric - 0.33) < 0.001) return 'busy';
-    if (Math.abs(numeric - 0.50) < 0.001) return 'dense';
-    if (Math.abs(numeric - 0.70) < 0.001) return 'core';
-    return 'standard';
-}
-
-export function getDensityRatioForPreset(presetKey, profileKey) {
-    const normalizedPreset = normalizeDensityPresetKey(presetKey);
-    const profileRatios = DENSITY_PRESET_RATIOS_BY_PROFILE[profileKey] || DENSITY_PRESET_RATIOS_BY_PROFILE.high_adventure;
-    return profileRatios[normalizedPreset] || DENSITY_PRESET_BASE_RATIOS[normalizedPreset] || DENSITY_PRESET_RATIOS_BY_PROFILE.high_adventure.standard;
-}
-
-export const GENERATION_PROFILES = {
+const DEFAULT_GENERATION_PROFILES = {
     cinematic: {
         inhabitedChance: 0.45,
         planetPoiChance: 0.2,
@@ -112,3 +91,44 @@ export const GENERATION_PROFILES = {
         habitabilityTypeMultipliers: { Terrestrial: 1.05, Oceanic: 1.1, Desert: 1.0, Arctic: 0.95 }
     }
 };
+
+export let STAR_CLASS_PLANET_WEIGHTS = DEFAULT_STAR_CLASS_PLANET_WEIGHTS;
+export let HABITABLE_PLANET_TYPES = new Set(DEFAULT_HABITABLE_PLANET_TYPES);
+export let BASE_HABITABILITY_TYPE_WEIGHT = DEFAULT_BASE_HABITABILITY_TYPE_WEIGHT;
+export let ADJACENT_DUPLICATE_NAME_CHANCE = DEFAULT_ADJACENT_DUPLICATE_NAME_CHANCE;
+export let HABITABLE_WORLD_SUFFIXES = DEFAULT_HABITABLE_WORLD_SUFFIXES;
+export let DENSITY_PRESET_BASE_RATIOS = DEFAULT_DENSITY_PRESET_BASE_RATIOS;
+export let DENSITY_PRESET_RATIOS_BY_PROFILE = DEFAULT_DENSITY_PRESET_RATIOS_BY_PROFILE;
+export let GENERATION_PROFILES = DEFAULT_GENERATION_PROFILES;
+
+export function hydrateGenerationData(loadedData = {}) {
+    STAR_CLASS_PLANET_WEIGHTS = loadedData.starClassPlanetWeights || DEFAULT_STAR_CLASS_PLANET_WEIGHTS;
+    HABITABLE_PLANET_TYPES = new Set(loadedData.habitablePlanetTypes || DEFAULT_HABITABLE_PLANET_TYPES);
+    BASE_HABITABILITY_TYPE_WEIGHT = loadedData.baseHabitabilityTypeWeight || DEFAULT_BASE_HABITABILITY_TYPE_WEIGHT;
+    ADJACENT_DUPLICATE_NAME_CHANCE = loadedData.adjacentDuplicateNameChance ?? DEFAULT_ADJACENT_DUPLICATE_NAME_CHANCE;
+    HABITABLE_WORLD_SUFFIXES = loadedData.habitableWorldSuffixes || DEFAULT_HABITABLE_WORLD_SUFFIXES;
+    DENSITY_PRESET_BASE_RATIOS = loadedData.densityPresetBaseRatios || DEFAULT_DENSITY_PRESET_BASE_RATIOS;
+    DENSITY_PRESET_RATIOS_BY_PROFILE = loadedData.densityPresetRatiosByProfile || DEFAULT_DENSITY_PRESET_RATIOS_BY_PROFILE;
+    GENERATION_PROFILES = loadedData.generationProfiles || DEFAULT_GENERATION_PROFILES;
+}
+
+export function normalizeDensityPresetKey(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    if (raw in DENSITY_PRESET_BASE_RATIOS || raw === 'standard') return raw;
+
+    const numeric = Number.parseFloat(raw);
+    if (!Number.isFinite(numeric)) return 'standard';
+    if (Math.abs(numeric - 0.05) < 0.001) return 'void';
+    if (Math.abs(numeric - 0.15) < 0.001) return 'sparse';
+    if (Math.abs(numeric - 0.20) < 0.001) return 'standard';
+    if (Math.abs(numeric - 0.33) < 0.001) return 'busy';
+    if (Math.abs(numeric - 0.50) < 0.001) return 'dense';
+    if (Math.abs(numeric - 0.70) < 0.001) return 'core';
+    return 'standard';
+}
+
+export function getDensityRatioForPreset(presetKey, profileKey) {
+    const normalizedPreset = normalizeDensityPresetKey(presetKey);
+    const profileRatios = DENSITY_PRESET_RATIOS_BY_PROFILE[profileKey] || DENSITY_PRESET_RATIOS_BY_PROFILE.high_adventure;
+    return profileRatios[normalizedPreset] || DENSITY_PRESET_BASE_RATIOS[normalizedPreset] || DENSITY_PRESET_RATIOS_BY_PROFILE.high_adventure.standard;
+}
