@@ -193,7 +193,7 @@ export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
         refs.typeLabel.className = poiStyle.badge;
     } else {
         refs.emptyDetails.innerText = 'Deep space scans indicate no major stellar masses in this sector.';
-        refs.typeLabel.innerText = 'Empty Void';
+        refs.typeLabel.innerText = 'Deep Space';
         refs.typeLabel.className = 'text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-600';
     }
 
