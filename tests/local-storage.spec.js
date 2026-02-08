@@ -183,3 +183,14 @@ test('manual core system set in edit mode persists across save/load', async ({ p
   await expect(page.locator('#selectedSystemCoreState')).toContainText('Core: Yes');
   await expect(page.locator(`#mapViewport .hex-group[data-id="${coreHexId}"] .core-system-marker`)).toHaveCount(1);
 });
+
+test('reload preserves faction overlay menu option', async ({ page }) => {
+  await page.goto('/sector_generator.html');
+  await page.locator('#generateSectorBtn').click();
+
+  await page.locator('#factionOverlayModeSelect').selectOption('contested');
+  await expect(page.locator('#factionOverlayModeSelect')).toHaveValue('contested');
+
+  await page.reload();
+  await expect(page.locator('#factionOverlayModeSelect')).toHaveValue('contested');
+});

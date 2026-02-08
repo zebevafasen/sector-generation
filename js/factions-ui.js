@@ -5,6 +5,37 @@ import { advanceFactionTurn, createFactionStateForSector } from './factions.js';
 import { getMainRefs } from './main-refs.js';
 import { findHexGroup, selectHex, drawGrid } from './render.js';
 
+const FACTION_UI_STORAGE_KEY = 'hex-star-sector-gen:faction-ui';
+
+function readFactionUiPrefs() {
+    if (!(typeof window !== 'undefined' && window.localStorage)) return {};
+    try {
+        const raw = window.localStorage.getItem(FACTION_UI_STORAGE_KEY);
+        if (!raw) return {};
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+        return {};
+    }
+}
+
+function writeFactionUiPrefs(patch) {
+    if (!(typeof window !== 'undefined' && window.localStorage)) return;
+    const next = {
+        ...readFactionUiPrefs(),
+        ...patch
+    };
+    try {
+        window.localStorage.setItem(FACTION_UI_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+        // no-op
+    }
+}
+
+function normalizeOverlayMode(value) {
+    return value === 'off' || value === 'contested' ? value : 'ownership';
+}
+
 function getCurrentDimensions() {
     const snapshot = state.sectorConfigSnapshot || state.lastSectorSnapshot?.sectorConfigSnapshot || {};
     const width = Math.max(1, Number(snapshot.width) || 8);
@@ -84,11 +115,14 @@ function updateFactionUi() {
 
 export function setupFactionsUi() {
     const refs = getMainRefs();
+    const uiPrefs = readFactionUiPrefs();
+    state.factionOverlayMode = normalizeOverlayMode(uiPrefs.overlayMode || state.factionOverlayMode);
     ensureCurrentFactionState();
     updateFactionUi();
 
     refs.factionOverlayModeSelect?.addEventListener('change', () => {
-        state.factionOverlayMode = refs.factionOverlayModeSelect.value || 'ownership';
+        state.factionOverlayMode = normalizeOverlayMode(refs.factionOverlayModeSelect.value);
+        writeFactionUiPrefs({ overlayMode: state.factionOverlayMode });
         refreshMapSelection();
         emitEvent(EVENTS.SECTOR_DATA_CHANGED, { label: 'Faction Overlay Mode' });
         emitEvent(EVENTS.FACTION_STATE_CHANGED, { label: 'Faction Overlay Mode' });
