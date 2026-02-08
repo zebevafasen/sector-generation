@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = process.cwd();
-const TARGET_DIRS = ['js', 'names/system_names'];
+const TARGET_DIRS = ['js', 'tests', 'names/system_names'];
 
 function listJsFiles(dirPath) {
     const entries = fs.readdirSync(dirPath, { withFileTypes: true });

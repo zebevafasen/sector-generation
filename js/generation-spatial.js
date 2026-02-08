@@ -7,36 +7,6 @@ function oddqToCube(col, row) {
     return { x, y, z };
 }
 
-function cubeToOddq(cube) {
-    const col = cube.x;
-    const row = cube.z + ((cube.x - (cube.x & 1)) / 2);
-    return { col, row };
-}
-
-function getNeighborHexIds(col, row) {
-    const base = oddqToCube(col, row);
-    const directions = [
-        { x: 1, y: -1, z: 0 },
-        { x: 1, y: 0, z: -1 },
-        { x: 0, y: 1, z: -1 },
-        { x: -1, y: 1, z: 0 },
-        { x: -1, y: 0, z: 1 },
-        { x: 0, y: -1, z: 1 }
-    ];
-    return directions.map((dir) => cubeToOddq({
-        x: base.x + dir.x,
-        y: base.y + dir.y,
-        z: base.z + dir.z
-    }));
-}
-
-export function countNeighborSystems(hexId, sectors) {
-    const parsed = parseHexId(hexId);
-    if (!parsed) return 0;
-    return getNeighborHexIds(parsed.col, parsed.row)
-        .reduce((count, next) => count + (sectors[`${next.col}-${next.row}`] ? 1 : 0), 0);
-}
-
 function cubeDistance(a, b) {
     return Math.max(
         Math.abs(a.x - b.x),
