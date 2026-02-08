@@ -9,7 +9,7 @@ import {
 import { randomizeSeed } from './core.js';
 import { loadAppData } from './data-loader.js';
 import { EVENTS } from './events.js';
-import { state } from './config.js';
+import { PLANET_TYPES, STAR_CLASS_INFO, state } from './config.js';
 import { addBodyToSelectedSystem, addPoiAtHex, addSystemAtHex, deletePoiAtHex, deleteSelectedBody, deleteSelectedSystem, generateSector, renamePoiAtHex, rerollSelectedPlanet, rerollSelectedSystem, rerollUnpinnedSystems, setEditMode, toggleEditMode, togglePinSelectedSystem } from './generation.js';
 import { captureHistorySnapshot, setupHistory } from './history.js';
 import { setupMultiSectorLinks, travelSelectedJumpGate } from './multi-sector.js';
@@ -313,7 +313,38 @@ function initializeModules() {
     setupRoutePlanner();
 }
 
+function buildStarClassOptionLabel(starClass) {
+    return /^[OBAFGKM]$/.test(starClass) ? `Class ${starClass}` : starClass;
+}
+
+function populateDataDrivenOptions() {
+    const starClasses = Object.keys(STAR_CLASS_INFO || {});
+
+    const editStarClassSelect = document.getElementById('editStarClassSelect');
+    if (editStarClassSelect) {
+        editStarClassSelect.innerHTML = starClasses
+            .map((starClass) => `<option value="${starClass}">${starClass}</option>`)
+            .join('');
+    }
+
+    const searchStarClassSelect = document.getElementById('searchStarClassSelect');
+    if (searchStarClassSelect) {
+        searchStarClassSelect.innerHTML = [
+            '<option value="">Any Class</option>',
+            ...starClasses.map((starClass) => `<option value="${starClass}">${buildStarClassOptionLabel(starClass)}</option>`)
+        ].join('');
+    }
+
+    const editPlanetTypeSelect = document.getElementById('editPlanetTypeSelect');
+    if (editPlanetTypeSelect) {
+        editPlanetTypeSelect.innerHTML = PLANET_TYPES
+            .map((planetType) => `<option value="${planetType}">${planetType}</option>`)
+            .join('');
+    }
+}
+
 function initializeUiState() {
+    populateDataDrivenOptions();
     const importInput = document.getElementById('importFileInput');
     if (importInput) importInput.addEventListener('change', handleImportFile);
     setSizeMode('preset');

@@ -1,4 +1,4 @@
-import { STAR_VISUALS, state } from './config.js';
+import { STAR_CLASS_INFO, STAR_VISUALS, state } from './config.js';
 import { formatStarAgeValue, generateStarAge, getStarClassInfo } from './core.js';
 import { EVENTS, emitEvent } from './events.js';
 import { reportSystemInvariantIssues } from './invariants.js';
@@ -23,6 +23,15 @@ function escapeHtml(value) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+}
+
+function renderStarClassSelectOptions(selectedClass) {
+    const options = [];
+    Object.keys(STAR_CLASS_INFO || {}).forEach((starClass) => {
+        const isSelected = starClass === selectedClass ? ' selected' : '';
+        options.push(`<option value="${escapeHtml(starClass)}"${isSelected}>${escapeHtml(starClass)}</option>`);
+    });
+    return options.join('');
 }
 
 function bindCompanionStarListHandlers(refs) {
@@ -268,15 +277,7 @@ export function configureSystemHeaderAndStar({ refs, system, id, preselectedBody
                             <div class="${state.editMode ? 'mt-2' : 'hidden mt-2'}">
                                 <label class="block text-[10px] text-slate-500 mb-1">Star Type</label>
                                 <select class="companion-star-class-select w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 focus:border-sky-500 focus:outline-none" data-star-index="${starIndex}">
-                                    <option value="O" ${star.class === 'O' ? 'selected' : ''}>O</option>
-                                    <option value="B" ${star.class === 'B' ? 'selected' : ''}>B</option>
-                                    <option value="A" ${star.class === 'A' ? 'selected' : ''}>A</option>
-                                    <option value="F" ${star.class === 'F' ? 'selected' : ''}>F</option>
-                                    <option value="G" ${star.class === 'G' ? 'selected' : ''}>G</option>
-                                    <option value="K" ${star.class === 'K' ? 'selected' : ''}>K</option>
-                                    <option value="M" ${star.class === 'M' ? 'selected' : ''}>M</option>
-                                    <option value="Neutron" ${star.class === 'Neutron' ? 'selected' : ''}>Neutron</option>
-                                    <option value="Black Hole" ${star.class === 'Black Hole' ? 'selected' : ''}>Black Hole</option>
+                                    ${renderStarClassSelectOptions(star.class)}
                                 </select>
                             </div>
                         </div>
