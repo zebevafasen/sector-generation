@@ -140,6 +140,14 @@ test('reload restores autosaved zoom level', async ({ page }) => {
 });
 
 test('manual core system set in edit mode persists across save/load', async ({ page }) => {
+  const clickHex = async (hexId) => {
+    await page.evaluate((targetHexId) => {
+      const node = document.querySelector(`#mapViewport .hex-group[data-id="${targetHexId}"]`);
+      if (!node) throw new Error(`Hex ${targetHexId} not found`);
+      node.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    }, hexId);
+  };
+
   await page.goto('/sector_generator.html');
   await page.locator('#generateSectorBtn').click();
 
@@ -148,10 +156,19 @@ test('manual core system set in edit mode persists across save/load', async ({ p
   }).first().getAttribute('data-id');
   expect(coreHexId).toBeTruthy();
 
-  await page.locator(`#mapViewport .hex-group[data-id="${coreHexId}"]`).click();
+  await clickHex(coreHexId);
   await page.locator('#editModeToggleBtn').click();
   await expect(page.locator('#editModeToggleBtn')).toContainText('EDIT MODE: ON');
-  await page.locator('#setCoreSystemBtn').click();
+  const ensureCoreSelected = async () => {
+    const readState = async () => page.locator('#selectedSystemCoreState').innerText();
+    let stateText = await readState();
+    if (/Core:\s*Yes/i.test(stateText)) return;
+    await page.locator('#setCoreSystemBtn').click();
+    stateText = await readState();
+    if (/Core:\s*Yes/i.test(stateText)) return;
+    await page.locator('#setCoreSystemBtn').click();
+  };
+  await ensureCoreSelected();
   await expect(page.locator('#selectedSystemCoreState')).toContainText('Core: Yes');
   await expect(page.locator(`#mapViewport .hex-group[data-id="${coreHexId}"] .core-system-marker`)).toHaveCount(1);
 
@@ -161,7 +178,7 @@ test('manual core system set in edit mode persists across save/load', async ({ p
   await page.locator('#generateSectorBtn').click();
   await page.locator('#loadSectorLocalBtn').click();
 
-  await page.locator(`#mapViewport .hex-group[data-id="${coreHexId}"]`).click();
+  await clickHex(coreHexId);
   await expect(page.locator('#selectedSystemCoreState')).toContainText('Core: Yes');
   await expect(page.locator(`#mapViewport .hex-group[data-id="${coreHexId}"] .core-system-marker`)).toHaveCount(1);
 });

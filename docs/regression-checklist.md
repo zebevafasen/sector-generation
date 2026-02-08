@@ -39,3 +39,6 @@ Run this checklist after each refactor phase.
 - Pin at least one system.
 - Click `Reroll Unpinned`.
 - Verify pinned system remains while unpinned systems reroll.
+
+## Determinism Gate
+- Run `docs/seed-determinism-checklist.md` after any generation setting changes.

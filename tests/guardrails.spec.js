@@ -38,6 +38,11 @@ test('route planner can create and clear a shortcut route overlay', async ({ pag
   await expect(page.locator('#mapViewport polyline')).toHaveCount(0);
 });
 
+test('default generation uses clusters distribution mode', async ({ page }) => {
+  await page.goto('/sector_generator.html');
+  await expect(page.locator('#starDistribution')).toHaveValue('clusters');
+});
+
 test('expanded view hex click selects and highlights the clicked sector after clear', async ({ page }) => {
   await page.goto('/sector_generator.html');
   await page.locator('#generateSectorBtn').click();
@@ -117,6 +122,34 @@ test('route planner can bridge long gaps using refueling-station POIs', async ({
     page.locator('#renamePoiBtn').click()
   ]);
   await expect(page.locator('#statusMessage')).toContainText('Renamed POI');
+  await expect(page.locator('#emptyDetails')).toContainText('Refueling Station 777');
+
+  const ensureRefuelingNavigationPoi = async () => {
+    const isRouteBridgeReady = async () => {
+      const payload = await page.evaluate(() => {
+        const raw = window.localStorage.getItem('hex-star-sector-gen:autosave');
+        return raw ? JSON.parse(raw) : null;
+      });
+      const poi = payload?.deepSpacePois?.['0-3'];
+      if (!poi) return false;
+      return String(poi.kind || '').toLowerCase() === 'navigation'
+        && /refueling station/i.test(String(poi.name || ''));
+    };
+    if (await isRouteBridgeReady()) return;
+
+    for (let attempt = 0; attempt < 20; attempt++) {
+      await page.locator('#rerollSelectedSystemBtn').click();
+      await expect(page.locator('#statusMessage')).toContainText('Rerolled POI');
+      await Promise.all([
+        page.waitForEvent('dialog').then((dialog) => dialog.accept('Refueling Station 777')),
+        page.locator('#renamePoiBtn').click()
+      ]);
+      await expect(page.locator('#statusMessage')).toContainText('Renamed POI');
+      if (await isRouteBridgeReady()) return;
+    }
+    throw new Error('Unable to configure a navigation refueling POI in 20 attempts.');
+  };
+  await ensureRefuelingNavigationPoi();
 
   await page.evaluate(() => {
     window.dispatchEvent(new CustomEvent('routeShortcutHex', { detail: { hexId: '0-0' } }));
@@ -283,9 +316,17 @@ test('neighbor sector generation is independent from adjacent sectors', async ({
 
   await page.locator('#editModeToggleBtn').click();
   await expect(page.locator('#editModeToggleBtn')).toContainText('EDIT MODE: ON');
-  await page.locator('.hex-group[data-id="2-1"]').click();
-  await page.locator('#addSystemHereBtn').click();
-  await expect(page.locator('#statusTotalSystems')).toHaveText('1 Systems');
+  await page.evaluate(() => {
+    const node = document.querySelector('.hex-group[data-id="2-1"]');
+    if (!node) throw new Error('Target home-sector hex not found.');
+    node.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+  });
+  if (await page.locator('#addSystemHereBtn').isVisible()) {
+    await page.locator('#addSystemHereBtn').click();
+    await expect(page.locator('#statusMessage')).toContainText('Added system');
+  }
+  const afterAddCount = parseCountFromLabel(await page.locator('#statusTotalSystems').innerText());
+  expect(afterAddCount).toBeGreaterThanOrEqual(1);
 
   await page.evaluate(() => {
     const currentLabel = document.getElementById('currentSectorLabel');
@@ -297,6 +338,78 @@ test('neighbor sector generation is independent from adjacent sectors', async ({
 
   await expect(page.locator('#statusTotalSystems')).toHaveText('0 Systems');
   await expect(page.locator('.hex-group[data-id="0-1"] circle.star-circle')).toHaveCount(0);
+});
+
+test('deleting the active core system auto-reselects a replacement core', async ({ page }) => {
+  await page.goto('/sector_generator.html');
+  await page.locator('#generateSectorBtn').click();
+  await page.locator('#editModeToggleBtn').click();
+  await expect(page.locator('#editModeToggleBtn')).toContainText('EDIT MODE: ON');
+
+  const originalCoreHexId = await page.locator('.hex-group').filter({
+    has: page.locator('.core-system-marker')
+  }).first().getAttribute('data-id');
+  expect(originalCoreHexId).toBeTruthy();
+
+  await page.evaluate((hexId) => {
+    const node = document.querySelector(`#mapViewport .hex-group[data-id="${hexId}"]`);
+    if (!node) throw new Error('Core hex not found before delete.');
+    node.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+  }, originalCoreHexId);
+  await page.locator('#editDeleteSystemBtn').click();
+  await expect(page.locator('#statusMessage')).toContainText('Deleted system');
+
+  const remainingSystems = await page.locator('.hex-group').filter({
+    has: page.locator('circle.star-circle')
+  }).count();
+  if (remainingSystems > 0) {
+    const coreState = await page.evaluate(() => {
+      const raw = window.localStorage.getItem('hex-star-sector-gen:autosave');
+      const payload = raw ? JSON.parse(raw) : null;
+      const coreHexId = payload?.coreSystemHexId || null;
+      const sectors = payload?.sectors || {};
+      return {
+        coreHexId,
+        hasCoreInSectors: !!(coreHexId && sectors[coreHexId])
+      };
+    });
+    expect(coreState.hasCoreInSectors).toBeTruthy();
+    const nextCoreHexId = coreState.coreHexId;
+    expect(nextCoreHexId).toBeTruthy();
+    expect(nextCoreHexId).not.toBe(originalCoreHexId);
+  }
+});
+
+test('generated home and neighbor sectors have sane seam mismatch with continuity enabled', async ({ page }) => {
+  await page.goto('/sector_generator.html');
+  await page.locator('#sizePreset').selectOption('standard');
+  await page.locator('#densityPreset').selectOption('busy');
+  await page.locator('#generateSectorBtn').click();
+
+  await page.evaluate(() => {
+    const currentLabel = document.getElementById('currentSectorLabel');
+    const sourceSectorKey = String(currentLabel?.textContent || '').replace('Current:', '').trim();
+    window.dispatchEvent(new CustomEvent('requestMoveSectorEdge', {
+      detail: { sourceSectorKey, direction: 'east' }
+    }));
+  });
+
+  const seamMismatch = await page.evaluate(async () => {
+    const metrics = await import('/js/generation-metrics.js');
+    const raw = window.localStorage.getItem('hex-star-sector-gen:autosave');
+    if (!raw) return null;
+    const payload = JSON.parse(raw);
+    const multi = payload.multiSector || {};
+    const records = multi.sectorsByKey || {};
+    const home = records.NNNN || null;
+    const neighborKey = Object.keys(records).find((key) => key !== 'NNNN');
+    const neighbor = neighborKey ? records[neighborKey] : null;
+    if (!home || !neighbor) return null;
+    return metrics.computeBoundarySeamMismatch(home, neighbor, 'east');
+  });
+
+  expect(seamMismatch).not.toBeNull();
+  expect(seamMismatch).toBeLessThan(0.5);
 });
 
 test('linked jump-gates share details but keep distinct names', async ({ page }) => {

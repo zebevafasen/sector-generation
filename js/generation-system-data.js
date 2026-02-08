@@ -112,6 +112,17 @@ export function generateSystemDataAction(config = null, context = null, deps) {
     ensureSystemStarFields(generatedSystem);
     refreshSystemPlanetPopulation(generatedSystem, { forceRecalculate: true, randomFn: rand });
     refreshSystemPlanetTags(generatedSystem, { forceRecalculate: true, randomFn: rand });
+    const derivedTagSet = new Set();
+    generatedSystem.planets.forEach((body) => {
+        if (!Array.isArray(body && body.tags)) return;
+        body.tags.forEach((tag) => {
+            const normalized = String(tag || '').trim();
+            if (!normalized) return;
+            derivedTagSet.add(normalized);
+        });
+    });
+    generatedSystem.tags = Array.from(derivedTagSet).slice(0, 8);
+    generatedSystem.starTags = Array.isArray(generatedSystem.starTags) ? generatedSystem.starTags : [];
     reportSystemInvariantIssues(generatedSystem, 'generate');
     return generatedSystem;
 }

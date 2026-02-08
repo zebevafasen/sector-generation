@@ -112,8 +112,8 @@
     { "value": "high_adventure", "label": "Standard" }
   ],
   "starDistributionOptions": [
-    { "value": "standard", "label": "Standard" },
-    { "value": "clusters", "label": "Clusters" }
+    { "value": "clusters", "label": "Clusters" },
+    { "value": "standard", "label": "Standard" }
   ],
   "namePrefix": [
     "Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta", "Eta", "Theta", "Iota", "Kappa",

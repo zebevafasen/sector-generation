@@ -92,6 +92,7 @@ export function rerollSelectedSystemAction(deps) {
         getGlobalHexDisplayId,
         setAndUseNewSeed,
         generateSystemData,
+        resolveCoreSystemHexId,
         reportSystemInvariantIssues,
         redrawHexAndReselect,
         sanitizePinnedHexes
@@ -130,6 +131,17 @@ export function rerollSelectedSystemAction(deps) {
         sectorsByCoord: otherSystems
     });
     reportSystemInvariantIssues(state.sectors[selectedHexId], 'reroll-selected');
+    const core = resolveCoreSystemHexId({
+        sectors: state.sectors,
+        width: config.width,
+        height: config.height,
+        preferredHexId: state.coreSystemHexId,
+        preferredIsManual: state.coreSystemManual,
+        preferredIsAuto: !state.coreSystemManual && !!state.coreSystemHexId,
+        settings: config
+    });
+    state.coreSystemHexId = core.coreSystemHexId;
+    state.coreSystemManual = core.coreSystemManual;
 
     redrawHexAndReselect(selectedHexId);
     sanitizePinnedHexes(config.width, config.height);
@@ -257,7 +269,9 @@ export function rerollUnpinnedSystemsAction(deps) {
         width,
         height,
         preferredHexId: state.coreSystemHexId,
-        preferredIsManual: state.coreSystemManual
+        preferredIsManual: state.coreSystemManual,
+        preferredIsAuto: !state.coreSystemManual && !!state.coreSystemHexId,
+        settings: config
     });
     state.coreSystemHexId = core.coreSystemHexId;
     state.coreSystemManual = core.coreSystemManual;
@@ -270,7 +284,8 @@ export function rerollUnpinnedSystemsAction(deps) {
     state.deepSpacePois = generateDeepSpacePois(width, height, nextSectors, {
         randomFn: rand,
         sectorKey: currentSectorKey,
-        knownSectorRecords
+        knownSectorRecords,
+        config
     });
     Object.entries(fixedPois).forEach(([hexId, poi]) => {
         if (!state.sectors[hexId]) {

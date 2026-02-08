@@ -50,7 +50,7 @@ export function readGenerationConfigFromUi(defaults = {}) {
         manualMin: refs.manualMinInput ? parseInt(refs.manualMinInput.value, 10) : parseInt(String(defaults.manualMin ?? 0), 10),
         manualMax: refs.manualMaxInput ? parseInt(refs.manualMaxInput.value, 10) : parseInt(String(defaults.manualMax ?? 0), 10),
         generationProfile: refs.generationProfileSelect ? refs.generationProfileSelect.value : (defaults.generationProfile || 'high_adventure'),
-        starDistribution: refs.starDistributionSelect ? refs.starDistributionSelect.value : (defaults.starDistribution || 'standard'),
+        starDistribution: refs.starDistributionSelect ? refs.starDistributionSelect.value : (defaults.starDistribution || 'clusters'),
         realisticPlanetWeights: refs.realisticWeightsToggle ? !!refs.realisticWeightsToggle.checked : !!defaults.realisticPlanetWeights
     };
 }

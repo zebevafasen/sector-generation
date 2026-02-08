@@ -119,8 +119,8 @@ const DEFAULT_GENERATION_PROFILE_OPTIONS = [
 ];
 
 const DEFAULT_STAR_DISTRIBUTION_OPTIONS = [
-    { value: 'standard', label: 'Standard' },
-    { value: 'clusters', label: 'Clusters' }
+    { value: 'clusters', label: 'Clusters' },
+    { value: 'standard', label: 'Standard' }
 ];
 
 const DEFAULT_NAME_PREFIX = [

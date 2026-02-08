@@ -1,4 +1,5 @@
 import { normalizeDensityPresetKey } from './generation-data.js';
+import { normalizeGenerationRolloutStage } from './generation-rollout.js';
 import { JUMP_GATE_POI_CATEGORY, normalizeJumpGateState, normalizePoiCategory } from './jump-gate-model.js';
 import { MAX_GRID_DIMENSION, MIN_GRID_DIMENSION } from './config.js';
 import { HOME_SECTOR_KEY, isSectorKey } from './sector-address.js';
@@ -34,11 +35,19 @@ function sanitizeBody(body) {
 
 function sanitizeSystem(system) {
     if (!isPlainObject(system)) return null;
+    const tags = Array.isArray(system.tags)
+        ? system.tags.map((tag) => String(tag || '').trim()).filter(Boolean)
+        : [];
+    const starTags = Array.isArray(system.starTags)
+        ? system.starTags.map((tag) => String(tag || '').trim()).filter(Boolean)
+        : [];
     const planets = Array.isArray(system.planets)
         ? system.planets.map(sanitizeBody).filter(Boolean)
         : [];
     return {
         ...system,
+        tags,
+        starTags,
         planets
     };
 }
@@ -84,7 +93,8 @@ function sanitizeMultiSector(value) {
         sectorsByKey[key] = {
             ...record,
             coreSystemHexId: coreHexId,
-            coreSystemManual: !!(coreHexId && record.coreSystemManual)
+            coreSystemManual: !!(coreHexId && record.coreSystemManual),
+            generationContextSummary: sanitizeGenerationContextSummary(record.generationContextSummary)
         };
     });
     return {
@@ -208,6 +218,78 @@ function sanitizeViewState(value) {
     };
 }
 
+function sanitizeGenerationContextSummary(value) {
+    if (!isPlainObject(value)) return null;
+    const clamp01 = (raw) => {
+        const num = Number(raw);
+        if (!Number.isFinite(num)) return 0;
+        return Math.max(0, Math.min(1, num));
+    };
+    const edge = isPlainObject(value.edgeOccupancy) ? value.edgeOccupancy : {};
+    return {
+        densityRatio: clamp01(value.densityRatio),
+        edgeOccupancy: {
+            north: clamp01(edge.north),
+            south: clamp01(edge.south),
+            west: clamp01(edge.west),
+            east: clamp01(edge.east)
+        },
+        coreHexId: typeof value.coreHexId === 'string' ? value.coreHexId : null,
+        dominantTagSignals: Array.isArray(value.dominantTagSignals)
+            ? value.dominantTagSignals.map((tag) => String(tag || '').trim().toLowerCase()).filter(Boolean).slice(0, 8)
+            : [],
+        densityMap: Array.isArray(value.densityMap)
+            ? value.densityMap.slice(0, 3).map((row) => (
+                Array.isArray(row) ? row.slice(0, 3).map((cell) => clamp01(cell)) : []
+            ))
+            : []
+    };
+}
+
+function sanitizeSectorConfigSnapshot(value) {
+    if (!isPlainObject(value)) return null;
+    const toFinite = (raw, fallback) => {
+        const parsed = Number(raw);
+        return Number.isFinite(parsed) ? parsed : fallback;
+    };
+    const coreTagWeights = isPlainObject(value.coreTagWeights)
+        ? Object.fromEntries(
+            Object.entries(value.coreTagWeights).map(([key, weight]) => [
+                String(key).trim().toLowerCase(),
+                toFinite(weight, 0)
+            ])
+        )
+        : {};
+    const coreScoreWeights = isPlainObject(value.coreScoreWeights)
+        ? Object.fromEntries(
+            Object.entries(value.coreScoreWeights).map(([key, weight]) => [
+                String(key),
+                toFinite(weight, 0)
+            ])
+        )
+        : {};
+    return {
+        ...value,
+        starDistribution: value.starDistribution === 'standard' ? 'standard' : 'clusters',
+        generationRolloutStage: normalizeGenerationRolloutStage(value.generationRolloutStage, 'full_release'),
+        clusterV2Enabled: value.clusterV2Enabled ?? true,
+        crossSectorContextEnabled: value.crossSectorContextEnabled ?? true,
+        centerBiasStrength: Math.max(0, toFinite(value.centerBiasStrength, 1.35)),
+        boundaryContinuityStrength: Math.max(0, toFinite(value.boundaryContinuityStrength, 0.55)),
+        clusterAnchorJitter: Math.max(0, toFinite(value.clusterAnchorJitter, 1.25)),
+        clusterGrowthDecay: Math.max(0.05, toFinite(value.clusterGrowthDecay, 0.82)),
+        clusterSecondaryAnchorThreshold: Math.max(1, Math.floor(toFinite(value.clusterSecondaryAnchorThreshold, 11))),
+        clusterEdgeBalance: Math.max(0, toFinite(value.clusterEdgeBalance, 0.26)),
+        clusterCenterVoidProtection: Math.max(0, toFinite(value.clusterCenterVoidProtection, 0.35)),
+        coreScoringDebugEnabled: value.coreScoringDebugEnabled ?? false,
+        generationPerformanceDebugEnabled: value.generationPerformanceDebugEnabled ?? false,
+        coreTagWeights,
+        coreTagContributionCap: Math.max(0, toFinite(value.coreTagContributionCap, 16)),
+        coreTagPerTagCap: Math.max(0, toFinite(value.coreTagPerTagCap, 8)),
+        coreScoreWeights
+    };
+}
+
 export function validateSectorPayload(rawPayload) {
     if (!isPlainObject(rawPayload)) {
         return { ok: false, error: 'Payload must be an object.' };
@@ -242,7 +324,7 @@ export function validateSectorPayload(rawPayload) {
         generationProfile: typeof rawPayload.generationProfile === 'string' && rawPayload.generationProfile
             ? rawPayload.generationProfile
             : 'high_adventure',
-        starDistribution: rawPayload.starDistribution === 'clusters' ? 'clusters' : 'standard',
+        starDistribution: rawPayload.starDistribution === 'standard' ? 'standard' : 'clusters',
         seed: typeof rawPayload.seed === 'string' ? rawPayload.seed : '',
         layoutSeed: typeof rawPayload.layoutSeed === 'string'
             ? rawPayload.layoutSeed
@@ -274,7 +356,7 @@ export function validateSectorPayload(rawPayload) {
             totalSystems: toNonNegativeInt(rawPayload.stats && rawPayload.stats.totalSystems, Object.keys(sectors).length)
         },
         multiSector: sanitizeMultiSector(rawPayload.multiSector),
-        sectorConfigSnapshot: isPlainObject(rawPayload.sectorConfigSnapshot) ? rawPayload.sectorConfigSnapshot : null
+        sectorConfigSnapshot: sanitizeSectorConfigSnapshot(rawPayload.sectorConfigSnapshot)
     };
 
     const totalDropped = dropped + droppedPois;

@@ -85,7 +85,7 @@ export function populateDataDrivenOptions() {
         STAR_DISTRIBUTION_OPTIONS
             .map((option) => `<option value="${option.value}">${option.label}</option>`)
             .join(''),
-        'standard',
+        'clusters',
         (value) => STAR_DISTRIBUTION_OPTIONS.some((option) => option.value === value)
     );
 }

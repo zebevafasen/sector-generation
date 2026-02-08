@@ -11,6 +11,7 @@ import { deepClone } from './utils.js';
 import { createJumpGateService } from './multi-sector-jump-gates.js';
 import { createCorridorService } from './multi-sector-corridors.js';
 import { createNavigationService } from './multi-sector-navigation.js';
+import { rebuildGenerationContextSummaries } from './generation-context-summary.js';
 
 const DIRECTIONS = {
     north: { dx: 0, dy: -1 },
@@ -78,7 +79,7 @@ function getCurrentConfig() {
         manualMin: 0,
         manualMax: 0,
         generationProfile: 'high_adventure',
-        starDistribution: 'standard',
+        starDistribution: 'clusters',
         realisticPlanetWeights: false
     });
 }
@@ -122,6 +123,11 @@ function saveCurrentSectorRecord() {
         systemCount: Object.keys(state.sectors || {}).length
     };
     state.multiSector.sectorsByKey[key] = nextRecord;
+    rebuildGenerationContextSummaries({
+        layoutSeed: state.layoutSeed || state.currentSeed || nextRecord.seed || '',
+        sectorsByKey: state.multiSector.sectorsByKey,
+        settings: config
+    });
     jumpGateService.ensureJumpGateLinksForRecord(key, nextRecord);
     jumpGateService.ensureInboundJumpGatesForRecord(key, nextRecord);
 
@@ -155,7 +161,7 @@ function applySectorRecord(key, record, options = {}) {
         autoSeed: isAutoSeedEnabled(),
         realisticPlanetWeights: !!record.config.realisticPlanetWeights,
         generationProfile: record.config.generationProfile || 'high_adventure',
-        starDistribution: record.config.starDistribution || 'standard',
+        starDistribution: record.config.starDistribution || 'clusters',
         sectorConfigSnapshot: deepClone(record.config),
         deepSpacePois: deepClone(record.deepSpacePois || {}),
         pinnedHexIds: deepClone(record.pinnedHexIds || []),
@@ -189,27 +195,7 @@ function applySectorRecord(key, record, options = {}) {
 }
 
 function getOrCreateSectorRecord(targetKey) {
-    ensureState();
-    const existing = state.multiSector.sectorsByKey[targetKey];
-    if (existing) return existing;
-
-    const fromRecord = state.multiSector.sectorsByKey[state.multiSector.currentKey];
-    if (!fromRecord) return null;
-
-    const homeSeed = state.multiSector.sectorsByKey[HOME_SECTOR_KEY]?.seed || '';
-    const baseSeed = homeSeed || fromRecord.seed || 'sector';
-    const seed = `${baseSeed} / ${targetKey}`;
-    const record = createSectorRecord({
-        config: fromRecord.config,
-        seed,
-        fixedSystems: {},
-        sectorKey: targetKey,
-        knownSectorRecords: state.multiSector.sectorsByKey
-    });
-    state.multiSector.sectorsByKey[targetKey] = record;
-    jumpGateService.ensureJumpGateLinksForRecord(targetKey, record);
-    jumpGateService.ensureInboundJumpGatesForRecord(targetKey, record);
-    return record;
+    return getOrCreateSectorRecordByKey(targetKey);
 }
 
 function getOrCreateSectorRecordByKey(targetKey) {
@@ -234,6 +220,11 @@ function getOrCreateSectorRecordByKey(targetKey) {
         knownSectorRecords: state.multiSector.sectorsByKey
     });
     state.multiSector.sectorsByKey[targetKey] = record;
+    rebuildGenerationContextSummaries({
+        layoutSeed: state.layoutSeed || state.currentSeed || seed,
+        sectorsByKey: state.multiSector.sectorsByKey,
+        settings: fromRecord.config || getCurrentConfig()
+    });
     jumpGateService.ensureJumpGateLinksForRecord(targetKey, record);
     jumpGateService.ensureInboundJumpGatesForRecord(targetKey, record);
     return record;
@@ -270,6 +261,11 @@ function getOrCreateSectorRecordFromSource(sourceKey, targetKey) {
         knownSectorRecords: state.multiSector.sectorsByKey
     });
     state.multiSector.sectorsByKey[targetKey] = record;
+    rebuildGenerationContextSummaries({
+        layoutSeed: state.layoutSeed || state.currentSeed || seed,
+        sectorsByKey: state.multiSector.sectorsByKey,
+        settings: sourceRecord.config || getCurrentConfig()
+    });
     jumpGateService.ensureJumpGateLinksForRecord(targetKey, record);
     jumpGateService.ensureInboundJumpGatesForRecord(targetKey, record);
     return record;
@@ -399,6 +395,11 @@ export function setupMultiSectorLinks() {
         saveCurrentSectorRecord();
     } else {
         const currentRecord = state.multiSector.sectorsByKey[state.multiSector.currentKey];
+        rebuildGenerationContextSummaries({
+            layoutSeed: state.layoutSeed || state.currentSeed || currentRecord.seed || '',
+            sectorsByKey: state.multiSector.sectorsByKey,
+            settings: currentRecord.config || getCurrentConfig()
+        });
         jumpGateService.ensureJumpGateLinksForRecord(state.multiSector.currentKey, currentRecord);
         jumpGateService.ensureInboundJumpGatesForRecord(state.multiSector.currentKey, currentRecord);
         state.deepSpacePois = deepClone(currentRecord.deepSpacePois || {});
