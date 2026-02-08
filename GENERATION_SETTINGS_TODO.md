@@ -74,8 +74,9 @@ This document breaks the procedural generation redesign into phased, step-by-ste
 - Removed: duplicate helper logic cleanup by consolidating `getOrCreateSectorRecord` into `getOrCreateSectorRecordByKey`.
 
 ### Phase 8 - Completed
-- Added: tests for deterministic context outputs, Cluster V2 behavior, and tag-aware core scoring in `tests/unit-logic.spec.js`.
-- Changed: full Playwright suite validated against the redesign changes.
+- Added: expanded logic and guardrail coverage for deterministic context outputs, Cluster V2 behavior, tag-aware core scoring, and boundary pressure blending.
+- Added: integration/E2E checks for default `clusters` mode, core deletion auto-reselection, and seam mismatch sanity between home/neighbor sectors.
+- Changed: full Playwright suite validated against the redesign changes after each phase checkpoint.
 - Removed: no functional removals in this phase.
 
 ### Phase 9 - Completed
