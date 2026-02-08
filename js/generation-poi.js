@@ -1,4 +1,4 @@
-import { DEEP_SPACE_POI_TEMPLATES, JUMP_GATE_RULES } from './generation-data.js';
+import { DEEP_SPACE_POI_TEMPLATES, JUMP_GATE_RULES, getDensityRatioForPreset, normalizeDensityPresetKey } from './generation-data.js';
 import { HOME_SECTOR_KEY, parseSectorKeyToCoords } from './sector-address.js';
 import { hexDistanceById } from './generation-spatial.js';
 import { parseHexId } from './utils.js';
@@ -15,6 +15,15 @@ function parseSectorKey(sectorKey) {
 
 function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
+}
+
+function shuffleInPlace(values, randomFn) {
+    for (let i = values.length - 1; i > 0; i--) {
+        const j = Math.floor(randomFn() * (i + 1));
+        const tmp = values[i];
+        values[i] = values[j];
+        values[j] = tmp;
+    }
 }
 
 function computeNeighborhoodEmptinessScore(hexId, width, height, occupiedHexIds) {
@@ -53,6 +62,34 @@ function computeNeighborhoodEmptinessScore(hexId, width, height, occupiedHexIds)
         ? 1 - (nearbyOccupied / nearbyTotal)
         : 1;
     return clamp((immediateEmptyRatio * 0.72) + (nearbyEmptyRatio * 0.28), 0, 1);
+}
+
+function getDensityRatioFromConfig(config, totalHexes, sectors) {
+    if (!config || typeof config !== 'object') {
+        return clamp(Object.keys(sectors || {}).length / Math.max(1, totalHexes), 0, 1);
+    }
+    if (config.densityMode === 'manual') {
+        const min = Number(config.manualMin);
+        const max = Number(config.manualMax);
+        if (Number.isFinite(min) && Number.isFinite(max)) {
+            return clamp(((Math.max(0, min) + Math.max(0, max)) / 2) / Math.max(1, totalHexes), 0, 1);
+        }
+    }
+    const preset = normalizeDensityPresetKey(config.densityPreset);
+    const profile = String(config.generationProfile || 'high_adventure');
+    return clamp(getDensityRatioForPreset(preset, profile), 0, 1);
+}
+
+function computePoiTargetCount(width, height, sectors, options, randomFn) {
+    const totalHexes = Math.max(1, width * height);
+    const systemCount = Object.keys(sectors || {}).length;
+    const availableHexes = Math.max(0, totalHexes - systemCount);
+    const densityRatio = getDensityRatioFromConfig(options.config, totalHexes, sectors);
+    const basePoiRatio = clamp(0.018 + (densityRatio * 0.13), 0.012, 0.11);
+    const baseTarget = totalHexes * basePoiRatio;
+    const variance = ((randomFn() - 0.5) * 2) * 1.2;
+    const target = Math.round(baseTarget + variance);
+    return clamp(target, 0, availableHexes);
 }
 
 function getNearbyActiveJumpGateStats(sectorKey, knownSectorRecords = {}) {
@@ -244,6 +281,7 @@ export function generateDeepSpacePois(width, height, sectors, options = {}) {
         : 2;
     const canSpawnActiveJumpGate = canSpawnActiveJumpGateInSector(sectorKey, knownSectorRecords);
     const occupiedHexIds = new Set(Object.keys(sectors || {}));
+    const targetPoiCount = computePoiTargetCount(width, height, sectors, options, randomFn);
     let edgeSlotCount = 0;
     for (let c = 0; c < width; c++) {
         for (let r = 0; r < height; r++) {
@@ -254,63 +292,80 @@ export function generateDeepSpacePois(width, height, sectors, options = {}) {
         }
     }
     const canSpawnJumpGateAtAll = edgeSlotCount > 0;
-
+    let poiCount = 0;
+    const candidateHexes = [];
     for (let c = 0; c < width; c++) {
         for (let r = 0; r < height; r++) {
             const hexId = `${c}-${r}`;
-            if (sectors[hexId]) continue;
-            if (occupiedHexIds.has(hexId)) continue;
-            const edgeDistance = Math.min(c, r, (width - 1) - c, (height - 1) - r);
-            const canRollJumpGateAtHex = canSpawnJumpGateAtAll
-                && jumpGateHexes.length < maxJumpGatesPerSector
-                && edgeDistance <= edgeDistanceMax;
-
-            if (canRollJumpGateAtHex) {
-                const edgeWeight = getJumpGateEdgeWeightMultiplier(edgeDistance);
-                const jumpGateBypassChance = clamp(0.0025 * edgeWeight, 0.0008, 0.0085);
-                if (randomFn() <= jumpGateBypassChance) {
-                    const bypassGate = createJumpGatePoi({
-                        edgeDistance,
-                        activeJumpGateWeightMultiplier,
-                        randomFn,
-                        allowActiveJumpGates: canSpawnActiveJumpGate
-                    });
-                    if (bypassGate) {
-                        jumpGateHexes.push(hexId);
-                        pois[hexId] = bypassGate;
-                        occupiedHexIds.add(hexId);
-                        continue;
-                    }
-                }
-            }
-
-            const emptinessScore = computeNeighborhoodEmptinessScore(hexId, width, height, occupiedHexIds);
-            const spawnChance = clamp(0.008 + (Math.pow(emptinessScore, 2) * 0.072), 0.004, 0.085);
-            if (randomFn() > spawnChance) continue;
-            let poi = createDeepSpacePoi({
-                edgeDistance,
-                allowJumpGates: canRollJumpGateAtHex,
-                activeJumpGateWeightMultiplier,
-                randomFn
-            });
-            if (!poi) continue;
-            if (isJumpGatePoi(poi)) {
-                const isAtGateCap = jumpGateHexes.length >= maxJumpGatesPerSector;
-                const isTooCloseToOtherGate = jumpGateHexes.some((otherHexId) =>
-                    hexDistanceById(otherHexId, hexId) < minJumpGateSeparation
-                );
-                const isOutsideEdgeWindow = edgeDistance > edgeDistanceMax;
-                const isBlockedActiveGate = poi.jumpGateState === 'active' && !canSpawnActiveJumpGate;
-                if (isAtGateCap || isTooCloseToOtherGate || isOutsideEdgeWindow || isBlockedActiveGate) {
-                    poi = createDeepSpacePoi({ edgeDistance, allowJumpGates: false, activeJumpGateWeightMultiplier, randomFn });
-                }
-            }
-            if (isJumpGatePoi(poi)) {
-                jumpGateHexes.push(hexId);
-            }
-            pois[hexId] = poi;
-            occupiedHexIds.add(hexId);
+            if (!sectors[hexId]) candidateHexes.push(hexId);
         }
+    }
+    shuffleInPlace(candidateHexes, randomFn);
+
+    for (let i = 0; i < candidateHexes.length; i++) {
+        const hexId = candidateHexes[i];
+        if (occupiedHexIds.has(hexId)) continue;
+        const parsed = parseHexId(hexId);
+        if (!parsed) continue;
+        const edgeDistance = Math.min(parsed.col, parsed.row, (width - 1) - parsed.col, (height - 1) - parsed.row);
+        const canRollJumpGateAtHex = canSpawnJumpGateAtAll
+            && jumpGateHexes.length < maxJumpGatesPerSector
+            && edgeDistance <= edgeDistanceMax;
+
+        if (canRollJumpGateAtHex) {
+            const edgeWeight = getJumpGateEdgeWeightMultiplier(edgeDistance);
+            const jumpGateBypassChance = clamp(0.0025 * edgeWeight, 0.0008, 0.0085);
+            if (randomFn() <= jumpGateBypassChance) {
+                const bypassGate = createJumpGatePoi({
+                    edgeDistance,
+                    activeJumpGateWeightMultiplier,
+                    randomFn,
+                    allowActiveJumpGates: canSpawnActiveJumpGate
+                });
+                if (bypassGate) {
+                    jumpGateHexes.push(hexId);
+                    pois[hexId] = bypassGate;
+                    occupiedHexIds.add(hexId);
+                    poiCount++;
+                    continue;
+                }
+            }
+        }
+
+        if (poiCount >= targetPoiCount) continue;
+
+        const emptinessScore = computeNeighborhoodEmptinessScore(hexId, width, height, occupiedHexIds);
+        const remainingTarget = Math.max(0, targetPoiCount - poiCount);
+        const remainingCandidates = Math.max(1, candidateHexes.length - i);
+        const quotaChance = remainingTarget / remainingCandidates;
+        const emptinessBias = 0.35 + (emptinessScore * 0.95);
+        const spawnChance = clamp(quotaChance * emptinessBias, 0, 1);
+        if (randomFn() > spawnChance) continue;
+
+        let poi = createDeepSpacePoi({
+            edgeDistance,
+            allowJumpGates: canRollJumpGateAtHex,
+            activeJumpGateWeightMultiplier,
+            randomFn
+        });
+        if (!poi) continue;
+        if (isJumpGatePoi(poi)) {
+            const isAtGateCap = jumpGateHexes.length >= maxJumpGatesPerSector;
+            const isTooCloseToOtherGate = jumpGateHexes.some((otherHexId) =>
+                hexDistanceById(otherHexId, hexId) < minJumpGateSeparation
+            );
+            const isOutsideEdgeWindow = edgeDistance > edgeDistanceMax;
+            const isBlockedActiveGate = poi.jumpGateState === 'active' && !canSpawnActiveJumpGate;
+            if (isAtGateCap || isTooCloseToOtherGate || isOutsideEdgeWindow || isBlockedActiveGate) {
+                poi = createDeepSpacePoi({ edgeDistance, allowJumpGates: false, activeJumpGateWeightMultiplier, randomFn });
+            }
+        }
+        if (isJumpGatePoi(poi)) {
+            jumpGateHexes.push(hexId);
+        }
+        pois[hexId] = poi;
+        occupiedHexIds.add(hexId);
+        poiCount++;
     }
     return pois;
 }

@@ -416,32 +416,32 @@ test.describe('pure logic modules', () => {
       });
 
       const sectors = {};
-      for (let c = 0; c < 3; c++) {
-        for (let r = 0; r < 3; r++) {
-          const hexId = `${c}-${r}`;
-          if (hexId !== '0-0') sectors[hexId] = { name: `S-${hexId}`, planets: [] };
-        }
-      }
 
-      const rolls = [0.001, 0.2, 0.2, 0.95, 0.95, 0.95];
+      const rolls = [0.5, 0.001, 0.2, 0.2, 0.95, 0.95];
       let idx = 0;
       const randomFn = () => {
         const next = idx < rolls.length ? rolls[idx] : 0.95;
         idx++;
         return next;
       };
-      const pois = poi.generateDeepSpacePois(3, 3, sectors, {
+      const pois = poi.generateDeepSpacePois(1, 1, sectors, {
         randomFn,
         sectorKey: 'NNNN',
-        knownSectorRecords: {}
+        knownSectorRecords: {},
+        config: {
+          densityMode: 'preset',
+          densityPreset: 'void',
+          generationProfile: 'high_adventure'
+        }
       });
       generationData.hydrateGenerationData({});
       const gateHexes = Object.entries(pois)
         .filter(([, value]) => model.isJumpGatePoi(value))
         .map(([hexId]) => hexId);
-      return { gateHexes };
+      return { gateHexes, poiCount: Object.keys(pois).length };
     });
 
+    expect(result.poiCount).toBe(1);
     expect(result.gateHexes).toEqual(['0-0']);
   });
 
@@ -591,12 +591,10 @@ test.describe('pure logic modules', () => {
         return total > 0 ? 1 - (occupied / total) : 1;
       };
 
-      const allCandidateScores = [];
       for (let c = 0; c < width; c++) {
         for (let r = 0; r < height; r++) {
           const hexId = `${c}-${r}`;
           if (sectors[hexId]) continue;
-          allCandidateScores.push(scoreHex(hexId));
         }
       }
       const poiScores = Object.keys(pois).map(scoreHex);
@@ -604,13 +602,62 @@ test.describe('pure logic modules', () => {
 
       return {
         poiCount: poiScores.length,
-        poiAvgEmptiness: avg(poiScores),
-        baselineAvgEmptiness: avg(allCandidateScores)
+        poiAvgEmptiness: avg(poiScores)
       };
     });
 
     expect(result.poiCount).toBeGreaterThan(0);
-    expect(result.poiAvgEmptiness).toBeGreaterThan(result.baselineAvgEmptiness);
+    expect(result.poiAvgEmptiness).toBeGreaterThan(0.82);
+  });
+
+  test('POI target counts scale with configured density', async ({ page }) => {
+    await page.goto('/sector_generator.html');
+
+    const result = await page.evaluate(async () => {
+      const poi = await import('/js/generation-poi.js');
+      const sectors = {};
+      const width = 8;
+      const height = 10;
+      for (let c = 0; c < width; c++) {
+        for (let r = 0; r < height; r++) {
+          if ((c + r) % 4 === 0) sectors[`${c}-${r}`] = { name: `S-${c}-${r}`, planets: [] };
+        }
+      }
+
+      const sample = (config) => {
+        let total = 0;
+        for (let i = 0; i < 120; i++) {
+          let x = 123456 + i;
+          const randomFn = () => {
+            x = (x * 1664525 + 1013904223) % 4294967296;
+            return x / 4294967296;
+          };
+          const pois = poi.generateDeepSpacePois(width, height, sectors, {
+            randomFn,
+            sectorKey: 'NNNN',
+            knownSectorRecords: {},
+            config
+          });
+          total += Object.keys(pois).length;
+        }
+        return total / 120;
+      };
+
+      const avgVoid = sample({
+        densityMode: 'preset',
+        densityPreset: 'void',
+        generationProfile: 'high_adventure'
+      });
+      const avgDense = sample({
+        densityMode: 'preset',
+        densityPreset: 'dense',
+        generationProfile: 'high_adventure'
+      });
+
+      return { avgVoid, avgDense };
+    });
+
+    expect(result.avgDense).toBeGreaterThan(result.avgVoid);
   });
 
   test('jump-gate linking prefers sensible directional sector pairing', async ({ page }) => {

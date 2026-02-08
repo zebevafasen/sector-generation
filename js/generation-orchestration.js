@@ -314,7 +314,8 @@ export function buildSectorFromConfigAction(config, fixedSystems = {}, options =
         activeJumpGateWeightMultiplier,
         randomFn: rand,
         sectorKey: options.sectorKey || homeSectorKey,
-        knownSectorRecords: options.knownSectorRecords || {}
+        knownSectorRecords: options.knownSectorRecords || {},
+        config: normalized
     });
     if (perfEnabled) {
         const elapsed = performance.now() - perfStart;

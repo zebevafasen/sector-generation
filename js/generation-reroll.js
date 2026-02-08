@@ -284,7 +284,8 @@ export function rerollUnpinnedSystemsAction(deps) {
     state.deepSpacePois = generateDeepSpacePois(width, height, nextSectors, {
         randomFn: rand,
         sectorKey: currentSectorKey,
-        knownSectorRecords
+        knownSectorRecords,
+        config
     });
     Object.entries(fixedPois).forEach(([hexId, poi]) => {
         if (!state.sectors[hexId]) {
