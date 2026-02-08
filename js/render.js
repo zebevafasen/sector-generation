@@ -5,7 +5,7 @@ import { refreshSystemPlanetPopulation } from './planet-population.js';
 import { refreshSystemPlanetTags } from './planet-tags.js';
 import { ensureSystemStarFields, getSystemStars } from './star-system.js';
 import { countSystemBodies } from './body-classification.js';
-import { formatLocalHexDisplayId, getGlobalHexDisplayId, renderRouteOverlay } from './render-shared.js';
+import { formatLocalHexDisplayId, getCurrentGridDimensions, getGlobalHexDisplayId, renderRouteOverlay } from './render-shared.js';
 import { parseSectorKeyToCoords } from './sector-address.js';
 import { resetBodyDetailsPanel } from './render-body-details.js';
 import { renderSystemBodyLists } from './render-system-bodies.js';
@@ -95,6 +95,62 @@ function getSectorExtent(sectorEntries, cols, rows) {
         worldWidth: ((maxX - minX) * stepX) + single.width,
         worldHeight: ((maxY - minY) * stepY) + single.height
     };
+}
+
+function getSectorWorldCenter(entry, extent, singleDimensions) {
+    return {
+        x: ((entry.coord.x - extent.minX) * extent.stepX) + (singleDimensions.width / 2),
+        y: ((entry.coord.y - extent.minY) * extent.stepY) + (singleDimensions.height / 2)
+    };
+}
+
+export function getClosestSectorKeyToViewportCenter() {
+    const entries = getLoadedSectorEntries();
+    if (!entries.length) return getCurrentSectorKey();
+
+    const mapContainer = document.getElementById('mapContainer');
+    if (!mapContainer) return getCurrentSectorKey();
+
+    const { width, height } = getCurrentGridDimensions();
+    const single = getSingleSectorDimensions(width, height);
+    const extent = getSectorExtent(entries, width, height);
+    const scale = Number.isFinite(state.viewState.scale) && state.viewState.scale > 0 ? state.viewState.scale : 1;
+    const centerWorldX = ((mapContainer.clientWidth / 2) - state.viewState.x) / scale;
+    const centerWorldY = ((mapContainer.clientHeight / 2) - state.viewState.y) / scale;
+
+    let bestSectorKey = entries[0].sectorKey;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    entries.forEach((entry) => {
+        const center = getSectorWorldCenter(entry, extent, single);
+        const dx = center.x - centerWorldX;
+        const dy = center.y - centerWorldY;
+        const distance = (dx * dx) + (dy * dy);
+        if (distance < bestDistance) {
+            bestDistance = distance;
+            bestSectorKey = entry.sectorKey;
+        }
+    });
+    return bestSectorKey;
+}
+
+export function centerViewOnSector(sectorKey) {
+    const entries = getLoadedSectorEntries();
+    if (!entries.length) return;
+
+    const mapContainer = document.getElementById('mapContainer');
+    if (!mapContainer) return;
+
+    const normalizedSectorKey = String(sectorKey || '').trim().toUpperCase();
+    const target = entries.find((entry) => entry.sectorKey === normalizedSectorKey) || entries[0];
+    const { width, height } = getCurrentGridDimensions();
+    const single = getSingleSectorDimensions(width, height);
+    const extent = getSectorExtent(entries, width, height);
+    const center = getSectorWorldCenter(target, extent, single);
+    const scale = Number.isFinite(state.viewState.scale) && state.viewState.scale > 0 ? state.viewState.scale : 1;
+
+    state.viewState.x = (mapContainer.clientWidth / 2) - (center.x * scale);
+    state.viewState.y = (mapContainer.clientHeight / 2) - (center.y * scale);
+    updateViewTransform();
 }
 
 function getDeepSpacePoiPalette(kind) {
@@ -377,10 +433,10 @@ export function drawGrid(cols, rows, options = {}) {
             frame.setAttribute('height', String(single.height + 6));
             frame.setAttribute('rx', '8');
             frame.setAttribute('ry', '8');
-            frame.setAttribute('fill', entry.sectorKey === currentKey ? 'rgba(8,47,73,0.25)' : 'rgba(15,23,42,0.22)');
-            frame.setAttribute('stroke', entry.sectorKey === currentKey ? '#38bdf8' : '#334155');
-            frame.setAttribute('stroke-width', entry.sectorKey === currentKey ? '2' : '1.2');
-            frame.setAttribute('stroke-dasharray', entry.sectorKey === currentKey ? 'none' : '6 4');
+            frame.setAttribute('fill', entry.sectorKey === currentKey ? 'rgba(15,23,42,0.3)' : 'rgba(15,23,42,0.22)');
+            frame.setAttribute('stroke', '#334155');
+            frame.setAttribute('stroke-width', '1.2');
+            frame.setAttribute('stroke-dasharray', '6 4');
             layer.appendChild(frame);
 
             const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');

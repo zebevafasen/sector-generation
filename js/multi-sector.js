@@ -6,7 +6,7 @@ import { readGenerationConfigFromUi } from './sector-config.js';
 import { HOME_SECTOR_KEY, makeSectorKeyFromCoords, offsetSectorKey, parseSectorKeyToCoords } from './sector-address.js';
 import { getGlobalHexDisplayIdForSector } from './render-shared.js';
 import { applySectorPayload } from './storage.js';
-import { findHexGroup, selectHex, updateViewTransform } from './render.js';
+import { centerViewOnSector, findHexGroup, getClosestSectorKeyToViewportCenter, selectHex, updateViewTransform } from './render.js';
 import { deepClone, parseHexId, sortHexIds, xmur3, mulberry32 } from './utils.js';
 
 const DIRECTIONS = {
@@ -558,15 +558,31 @@ function moveDirection(direction) {
 function toggleExpandedSectorView() {
     ensureState();
     saveCurrentSectorRecord();
-    state.multiSector.expandedView = !state.multiSector.expandedView;
+    const wasExpanded = !!state.multiSector.expandedView;
     const currentKey = state.multiSector.currentKey;
-    const currentRecord = state.multiSector.sectorsByKey[currentKey];
-    if (!currentRecord) return;
-    applySectorRecord(currentKey, currentRecord, {
-        preferredSelectedHexId: state.selectedHexId,
-        preserveView: true,
-        showLoadedToast: false
-    });
+
+    if (!wasExpanded) {
+        state.multiSector.expandedView = true;
+        const currentRecord = state.multiSector.sectorsByKey[currentKey];
+        if (!currentRecord) return;
+        applySectorRecord(currentKey, currentRecord, {
+            preferredSelectedHexId: state.selectedHexId,
+            preserveView: false,
+            showLoadedToast: false
+        });
+        centerViewOnSector(currentKey);
+    } else {
+        const nearestKey = getClosestSectorKeyToViewportCenter();
+        const targetKey = nearestKey || currentKey;
+        const targetRecord = getOrCreateSectorRecordByKey(targetKey);
+        if (!targetRecord) return;
+        state.multiSector.expandedView = false;
+        applySectorRecord(targetKey, targetRecord, {
+            preferredSelectedHexId: null,
+            preserveView: false,
+            showLoadedToast: false
+        });
+    }
     emitEvent(EVENTS.SECTOR_DATA_CHANGED, { label: 'Toggle Expanded View' });
     showStatusMessage(
         state.multiSector.expandedView ? 'Expanded sector view enabled.' : 'Expanded sector view disabled.',
