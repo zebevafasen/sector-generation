@@ -429,6 +429,38 @@ test.describe('pure logic modules', () => {
     expect(result.deterministic).toBeTruthy();
   });
 
+  test('deep-space POI generation is independent from core-system hex inputs', async ({ page }) => {
+    await page.goto('/sector_generator.html');
+
+    const result = await page.evaluate(async () => {
+      const poi = await import('/js/generation-poi.js');
+      const utils = await import('/js/utils.js');
+      const sectors = {
+        '2-2': { name: 'Center', planets: [] },
+        '4-4': { name: 'Outer', planets: [] }
+      };
+      const run = (coreSystemHexId) => {
+        const rand = utils.mulberry32(utils.xmur3('poi-core-detach-seed')());
+        return poi.generateDeepSpacePois(8, 8, sectors, {
+          randomFn: rand,
+          sectorKey: 'NNNN',
+          knownSectorRecords: {},
+          coreSystemHexId
+        });
+      };
+      const withCenterCore = run('2-2');
+      const withOuterCore = run('4-4');
+      const withoutCore = run(null);
+      return {
+        centerVsOuter: JSON.stringify(withCenterCore) === JSON.stringify(withOuterCore),
+        centerVsNone: JSON.stringify(withCenterCore) === JSON.stringify(withoutCore)
+      };
+    });
+
+    expect(result.centerVsOuter).toBeTruthy();
+    expect(result.centerVsNone).toBeTruthy();
+  });
+
   test('jump-gate linking prefers sensible directional sector pairing', async ({ page }) => {
     await page.goto('/sector_generator.html');
 

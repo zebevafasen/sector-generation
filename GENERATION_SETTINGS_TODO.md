@@ -48,7 +48,7 @@ This document breaks the procedural generation redesign into phased, step-by-ste
 - Added: core-anchor-first ordering in generation orchestration so systems are generated radially from the selected core anchor candidate.
 - Added: provisional auto-core selection during system generation using weighted scoring (`computeCoreSystemScore`) before POI pass.
 - Changed: core generation now establishes a center-biased (not fixed-center) pre-generation origin hex, seeds clustered anchor selection from that origin, and uses it as preferred auto-core resolution.
-- Changed: deep-space POIs continue using core-anchor radial influence, now driven by earlier core determination.
+- Changed: deep-space POI placement is decoupled from core-anchor radial influence and now uses independent deep-space weighting.
 - Changed: manual core override remains authoritative when valid; non-manual core preservation now uses explicit `preferredIsAuto`.
 - Changed: delete/reroll flows now reseat cores through the same resolver path with generation settings, including auto-reselect on core invalidation.
 - Removed: no functional removals in this phase.

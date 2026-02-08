@@ -163,7 +163,6 @@ export function generateDeepSpacePois(width, height, sectors, options = {}) {
         ? Math.max(0, Number(JUMP_GATE_RULES.edgeDistanceMax))
         : 2;
     const canSpawnActiveJumpGate = canSpawnActiveJumpGateInSector(sectorKey, knownSectorRecords);
-    const coreSystemHexId = typeof options.coreSystemHexId === 'string' ? options.coreSystemHexId : null;
     let edgeSlotCount = 0;
     for (let c = 0; c < width; c++) {
         for (let r = 0; r < height; r++) {
@@ -182,13 +181,9 @@ export function generateDeepSpacePois(width, height, sectors, options = {}) {
 
             const nearbySystems = countNeighborSystems(hexId, sectors);
             const baseChance = 0.035;
-            const nearbyBoost = nearbySystems > 0 ? Math.min(0.05, nearbySystems * 0.015) : 0;
-            const remoteBoost = nearbySystems === 0 ? 0.015 : 0;
-            const coreDistance = coreSystemHexId ? hexDistanceById(coreSystemHexId, hexId) : Number.POSITIVE_INFINITY;
-            const coreRadialBoost = Number.isFinite(coreDistance)
-                ? Math.max(0, 0.018 - (coreDistance * 0.0035))
-                : 0;
-            const spawnChance = baseChance + nearbyBoost + remoteBoost + coreRadialBoost;
+            const nearbyPenalty = nearbySystems > 0 ? Math.min(0.03, nearbySystems * 0.01) : 0;
+            const remoteBoost = nearbySystems === 0 ? 0.025 : 0;
+            const spawnChance = Math.max(0.01, baseChance + remoteBoost - nearbyPenalty);
             if (randomFn() > spawnChance) continue;
             const edgeDistance = Math.min(c, r, (width - 1) - c, (height - 1) - r);
             const canRollJumpGateAtHex = canSpawnJumpGateAtAll
