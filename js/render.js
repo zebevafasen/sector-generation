@@ -348,14 +348,13 @@ export function drawGrid(cols, rows, options = {}) {
                 state.multiSector.selectedSectorKey = entry.sectorKey;
                 applyExpandedSectorSelectionUi(entry.sectorKey);
             });
-            if (!isSelectedSector) {
-                layer.addEventListener('mouseenter', () => {
-                    frame.classList.add('sector-frame-hover');
-                });
-                layer.addEventListener('mouseleave', () => {
-                    frame.classList.remove('sector-frame-hover');
-                });
-            }
+            layer.addEventListener('mouseenter', () => {
+                if (layer.classList.contains('current-sector-layer')) return;
+                frame.classList.add('sector-frame-hover');
+            });
+            layer.addEventListener('mouseleave', () => {
+                frame.classList.remove('sector-frame-hover');
+            });
         }
 
         const offsetX = (entry.coord.x - extent.minX) * extent.stepX;

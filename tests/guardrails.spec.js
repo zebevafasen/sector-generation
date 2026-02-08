@@ -76,6 +76,44 @@ test('expanded view hex click selects and highlights the clicked sector after cl
   await expect(page.locator(`.sector-layer[data-sector-key="${targetKey}"] .hex.selected`)).toHaveCount(1);
 });
 
+test('expanded view deselect keeps sector hover highlight available on previously selected sector', async ({ page }) => {
+  await page.goto('/sector_generator.html');
+  await page.locator('#generateSectorBtn').click();
+  await page.evaluate(() => {
+    const currentLabel = document.getElementById('currentSectorLabel');
+    const sourceSectorKey = String(currentLabel?.textContent || '').replace('Current:', '').trim();
+    window.dispatchEvent(new CustomEvent('requestMoveSectorEdge', {
+      detail: { sourceSectorKey, direction: 'east' }
+    }));
+  });
+  await page.locator('#toggleExpandedSectorViewBtn').click();
+
+  const currentLabel = await page.locator('#currentSectorLabel').innerText();
+  const currentKey = currentLabel.replace('Current:', '').trim();
+  const sectorKeys = await page.locator('.sector-layer').evaluateAll((layers) =>
+    layers.map((layer) => String(layer.getAttribute('data-sector-key') || '').trim()).filter(Boolean)
+  );
+  const targetKey = sectorKeys.find((key) => key !== currentKey);
+  expect(targetKey).toBeTruthy();
+
+  await page.evaluate((key) => {
+    const node = document.querySelector(`.sector-layer[data-sector-key="${key}"] .hex-group[data-id="0-0"]`);
+    if (!node) throw new Error('Target hex not found.');
+    node.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+  }, targetKey);
+  await expect(page.locator(`.sector-layer.current-sector-layer[data-sector-key="${targetKey}"]`)).toHaveCount(1);
+
+  await page.locator('#mapContainer').click({ position: { x: 8, y: 8 } });
+  await expect(page.locator('.sector-layer.current-sector-layer')).toHaveCount(0);
+
+  await page.evaluate((key) => {
+    const layer = document.querySelector(`.sector-layer[data-sector-key="${key}"]`);
+    if (!layer) throw new Error('Target sector layer not found.');
+    layer.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, cancelable: true }));
+  }, targetKey);
+  await expect(page.locator(`.sector-layer[data-sector-key="${targetKey}"] .sector-frame.sector-frame-hover`)).toHaveCount(1);
+});
+
 test('route planner can bridge long gaps using refueling-station POIs', async ({ page }) => {
   await page.goto('/sector_generator.html');
   await page.locator('#modeSizeCustomBtn').click();
