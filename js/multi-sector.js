@@ -3,12 +3,14 @@ import { createSectorRecord } from './generation.js';
 import { isAutoSeedEnabled, showStatusMessage } from './core.js';
 import { EVENTS, emitEvent } from './events.js';
 import { readGenerationConfigFromUi } from './sector-config.js';
-import { HOME_SECTOR_KEY, makeSectorKeyFromCoords, offsetSectorKey, parseSectorKeyToCoords } from './sector-address.js';
+import { HOME_SECTOR_KEY, offsetSectorKey, parseSectorKeyToCoords } from './sector-address.js';
 import { getGlobalHexDisplayIdForSector } from './render-shared.js';
 import { applySectorPayload } from './storage.js';
 import { centerViewOnSector, findHexGroup, selectHex, updateViewTransform } from './render.js';
 import { deepClone } from './utils.js';
 import { createJumpGateService } from './multi-sector-jump-gates.js';
+import { createCorridorService } from './multi-sector-corridors.js';
+import { createNavigationService } from './multi-sector-navigation.js';
 
 const DIRECTIONS = {
     north: { dx: 0, dy: -1 },
@@ -18,6 +20,28 @@ const DIRECTIONS = {
 };
 
 const jumpGateService = createJumpGateService(state, ensureState);
+const corridorService = createCorridorService(state, {
+    ensureState,
+    parseKey,
+    getOrCreateSectorRecordByKey,
+    renderSectorLinksUi,
+    saveCurrentSectorRecord,
+    emitSectorDataChanged,
+    showStatusMessage
+});
+const navigationService = createNavigationService(state, {
+    directions: DIRECTIONS,
+    ensureState,
+    saveCurrentSectorRecord,
+    applySectorRecord,
+    getOrCreateSectorRecord,
+    getOrCreateSectorRecordByKey,
+    getOrCreateSectorRecordFromSource,
+    centerViewOnSector,
+    emitSectorDataChanged,
+    showStatusMessage,
+    offsetSectorKey
+});
 
 function getRefs() {
     return {
@@ -37,9 +61,8 @@ function parseKey(key) {
     return parseSectorKeyToCoords(key || HOME_SECTOR_KEY);
 }
 
-function getStepToward(value, target) {
-    if (value === target) return 0;
-    return value < target ? 1 : -1;
+function emitSectorDataChanged(label) {
+    emitEvent(EVENTS.SECTOR_DATA_CHANGED, { label });
 }
 
 function getCurrentConfig() {
@@ -253,102 +276,16 @@ function getOrCreateSectorRecordByKey(targetKey) {
     return record;
 }
 
-function getIntermediarySectorKeysBetween(startKey, endKey) {
-    const path = getShortestPathSectorKeys(startKey, endKey);
-    if (path.length <= 2) return [];
-    return path.slice(1, path.length - 1);
-}
-
-function getShortestPathSectorKeys(startKey, endKey) {
-    const start = parseKey(startKey);
-    const end = parseKey(endKey);
-    const keys = [makeSectorKeyFromCoords(start.x, start.y)];
-    let x = start.x;
-    let y = start.y;
-    while (!(x === end.x && y === end.y)) {
-        if (x !== end.x) {
-            x += getStepToward(x, end.x);
-        } else if (y !== end.y) {
-            y += getStepToward(y, end.y);
-        }
-        keys.push(makeSectorKeyFromCoords(x, y));
-    }
-    return keys;
-}
-
 function getMissingGateCorridorSectorKeys() {
-    ensureState();
-    const missing = new Set();
-    const loaded = state.multiSector.sectorsByKey || {};
-    const homeKey = HOME_SECTOR_KEY;
-
-    const loadedGateSectorKeys = new Set();
-    Object.values(state.multiSector.jumpGateRegistry || {}).forEach((pair) => {
-        if (!pair || !pair.a || !pair.b) return;
-        if (pair.a.sectorKey && loaded[pair.a.sectorKey]) loadedGateSectorKeys.add(pair.a.sectorKey);
-        if (pair.b.sectorKey && loaded[pair.b.sectorKey]) loadedGateSectorKeys.add(pair.b.sectorKey);
-    });
-
-    loadedGateSectorKeys.forEach((sectorKey) => {
-        if (sectorKey === homeKey) return;
-        const pathKeys = getShortestPathSectorKeys(homeKey, sectorKey);
-        pathKeys.forEach((key, index) => {
-            if (index === 0 || index === pathKeys.length - 1) return;
-            if (!loaded[key]) missing.add(key);
-        });
-    });
-
-    Object.values(state.multiSector.jumpGateRegistry || {}).forEach((pair) => {
-        if (!pair || !pair.a || !pair.b || !pair.a.sectorKey || !pair.b.sectorKey) return;
-        if (!loaded[pair.a.sectorKey] || !loaded[pair.b.sectorKey]) return;
-        const a = parseKey(pair.a.sectorKey);
-        const b = parseKey(pair.b.sectorKey);
-        const chebyshevDistance = Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
-        if (chebyshevDistance <= 1) return;
-        getIntermediarySectorKeysBetween(pair.a.sectorKey, pair.b.sectorKey).forEach((key) => {
-            if (!loaded[key]) missing.add(key);
-        });
-    });
-    return Array.from(missing);
+    return corridorService.getMissingGateCorridorSectorKeys();
 }
 
 function chartMissingGateCorridors() {
-    ensureState();
-    saveCurrentSectorRecord();
-    const missingKeys = getMissingGateCorridorSectorKeys();
-    if (!missingKeys.length) {
-        state.multiSector.chartGateCorridorsPending = false;
-        showStatusMessage('No gate corridors need charting right now.', 'info');
-        renderSectorLinksUi();
-        return;
-    }
-    missingKeys.forEach((sectorKey) => {
-        getOrCreateSectorRecordByKey(sectorKey);
-    });
-    state.multiSector.chartGateCorridorsPending = false;
-    renderSectorLinksUi();
-    emitEvent(EVENTS.SECTOR_DATA_CHANGED, { label: 'Chart Gate Corridors' });
-    const listedKeys = missingKeys.slice(0, 6).join(', ');
-    const extra = missingKeys.length > 6 ? ` +${missingKeys.length - 6} more` : '';
-    showStatusMessage(
-        `Charted ${missingKeys.length} corridor sector${missingKeys.length === 1 ? '' : 's'}: ${listedKeys}${extra}.`,
-        'success'
-    );
+    corridorService.chartMissingGateCorridors();
 }
 
 function moveDirection(direction) {
-    ensureState();
-    saveCurrentSectorRecord();
-    const delta = DIRECTIONS[direction];
-    if (!delta) return;
-    const targetKey = offsetSectorKey(state.multiSector.currentKey, delta.dx, delta.dy);
-    const targetRecord = getOrCreateSectorRecord(targetKey, direction);
-    if (!targetRecord) return;
-    applySectorRecord(targetKey, targetRecord, {
-        preferredSelectedHexId: state.selectedHexId,
-        preserveView: true
-    });
-    emitEvent(EVENTS.SECTOR_DATA_CHANGED, { label: `Switch Sector ${direction}` });
+    navigationService.moveDirection(direction);
 }
 
 function getOrCreateSectorRecordFromSource(sourceKey, targetKey, direction) {
@@ -377,75 +314,19 @@ function getOrCreateSectorRecordFromSource(sourceKey, targetKey, direction) {
 }
 
 function toggleExpandedSectorView() {
-    ensureState();
-    saveCurrentSectorRecord();
-    const wasExpanded = !!state.multiSector.expandedView;
-    const currentKey = state.multiSector.currentKey;
-
-    if (!wasExpanded) {
-        state.multiSector.expandedView = true;
-        const currentRecord = state.multiSector.sectorsByKey[currentKey];
-        if (!currentRecord) return;
-        applySectorRecord(currentKey, currentRecord, {
-            preferredSelectedHexId: state.selectedHexId,
-            preserveView: false,
-            showLoadedToast: false
-        });
-        state.viewState.scale = Math.max(0.2, Math.min(5, state.viewState.scale * 0.85));
-        centerViewOnSector(currentKey);
-    } else {
-        const targetKey = currentKey;
-        const targetRecord = getOrCreateSectorRecordByKey(targetKey);
-        if (!targetRecord) return;
-        state.multiSector.expandedView = false;
-        applySectorRecord(targetKey, targetRecord, {
-            preferredSelectedHexId: state.selectedHexId,
-            preserveView: false,
-            showLoadedToast: false
-        });
-    }
-    emitEvent(EVENTS.SECTOR_DATA_CHANGED, { label: 'Toggle Expanded View' });
-    showStatusMessage(
-        state.multiSector.expandedView ? 'Expanded sector view enabled.' : 'Expanded sector view disabled.',
-        'info'
-    );
+    navigationService.toggleExpandedSectorView();
 }
 
 function switchToSectorHex(sectorKey, hexId) {
-    ensureState();
-    saveCurrentSectorRecord();
-    const targetRecord = getOrCreateSectorRecordByKey(sectorKey);
-    if (!targetRecord) return;
-    applySectorRecord(sectorKey, targetRecord, {
-        preferredSelectedHexId: hexId || null,
-        preserveView: true
-    });
-    emitEvent(EVENTS.SECTOR_DATA_CHANGED, { label: 'Switch Sector Hex' });
+    navigationService.switchToSectorHex(sectorKey, hexId);
 }
 
 function moveFromSectorEdge(sourceSectorKey, direction) {
-    ensureState();
-    saveCurrentSectorRecord();
-    const delta = DIRECTIONS[direction];
-    if (!delta) return;
-    const targetKey = offsetSectorKey(sourceSectorKey, delta.dx, delta.dy);
-    const targetRecord = getOrCreateSectorRecordFromSource(sourceSectorKey, targetKey, direction);
-    if (!targetRecord) return;
-    applySectorRecord(targetKey, targetRecord, {
-        preferredSelectedHexId: state.selectedHexId,
-        preserveView: true
-    });
-    emitEvent(EVENTS.SECTOR_DATA_CHANGED, { label: `Switch Sector ${direction}` });
+    navigationService.moveFromSectorEdge(sourceSectorKey, direction);
 }
 
 function goHome() {
-    ensureState();
-    saveCurrentSectorRecord();
-    const homeKey = HOME_SECTOR_KEY;
-    const home = state.multiSector.sectorsByKey[homeKey];
-    if (!home) return;
-    applySectorRecord(homeKey, home, { preferredSelectedHexId: state.selectedHexId, preserveView: true });
-    emitEvent(EVENTS.SECTOR_DATA_CHANGED, { label: 'Switch Sector Home' });
+    navigationService.goHome();
 }
 
 function renderSectorLinksUi() {
