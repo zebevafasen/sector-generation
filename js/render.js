@@ -6,7 +6,24 @@ import { refreshSystemPlanetTags } from './planet-tags.js';
 import { ensureSystemStarFields, getSystemStars } from './star-system.js';
 import { countSystemBodies } from './body-classification.js';
 import { formatLocalHexDisplayId, getCurrentGridDimensions, getGlobalHexDisplayId, renderRouteOverlay } from './render-shared.js';
-import { makeSectorKeyFromCoords, parseSectorKeyToCoords } from './sector-address.js';
+import {
+    buildCurrentSectorEntry,
+    getCurrentSectorKey,
+    getHexGroupSelector,
+    getLoadedSectorEntries,
+    getSectorExtent,
+    getSectorWorldCenter,
+    getSelectedSectorKey,
+    getSingleSectorDimensions,
+    isExpandedSectorViewEnabled
+} from './render-layout.js';
+import {
+    ensureStarGradient as ensureStarGradientInternal,
+    getDeepSpacePoiPalette,
+    getStarMarkerRadius,
+    getStarOffsets
+} from './render-markers.js';
+import { updateSectorNavigationAnchors as updateSectorNavigationAnchorsInternal } from './render-navigation.js';
 import { resetBodyDetailsPanel } from './render-body-details.js';
 import { renderSystemBodyLists } from './render-system-bodies.js';
 import { configureSystemHeaderAndStar, renderEmptyHexInfo } from './render-system-panels.js';
@@ -21,97 +38,14 @@ import {
     setPinButtonStyle
 } from './info-panel-ui.js';
 
-const STAR_GRADIENT_CACHE = {};
-const SECTOR_GAP_PX = 20;
-
-function getCurrentSectorKey() {
-    return state.multiSector && state.multiSector.currentKey ? state.multiSector.currentKey : '';
-}
-
-function getSelectedSectorKey() {
-    if (!(state.multiSector && typeof state.multiSector === 'object')) return null;
-    const key = state.multiSector.selectedSectorKey;
-    return typeof key === 'string' && key.trim() ? key : null;
-}
-
-function isExpandedSectorViewEnabled() {
-    return !!(state.multiSector && state.multiSector.expandedView);
-}
-
-function getHexGroupSelector(hexId, sectorKey = getCurrentSectorKey()) {
-    if (!hexId) return '';
-    const normalizedSectorKey = String(sectorKey || '').trim().toUpperCase();
-    return `.hex-group[data-id="${hexId}"][data-sector-key="${normalizedSectorKey}"]`;
-}
-
-export function findHexGroup(hexId, sectorKey = getCurrentSectorKey()) {
+export function findHexGroup(hexId, sectorKey = getCurrentSectorKey(state)) {
     const selector = getHexGroupSelector(hexId, sectorKey);
     if (!selector) return null;
     return document.querySelector(selector);
 }
 
-function getSingleSectorDimensions(cols, rows) {
-    return {
-        width: cols * HEX_WIDTH + (HEX_WIDTH * 0.5),
-        height: rows * (HEX_HEIGHT * 0.75) + (HEX_HEIGHT * 0.25)
-    };
-}
-
-function getLoadedSectorEntries() {
-    const loaded = state.multiSector && state.multiSector.sectorsByKey && typeof state.multiSector.sectorsByKey === 'object'
-        ? state.multiSector.sectorsByKey
-        : {};
-    return Object.entries(loaded)
-        .map(([sectorKey, record]) => ({
-            sectorKey: String(sectorKey || '').trim().toUpperCase(),
-            record,
-            coord: parseSectorKeyToCoords(sectorKey)
-        }))
-        .filter((entry) => entry.record && entry.coord && Number.isInteger(entry.coord.x) && Number.isInteger(entry.coord.y));
-}
-
-function getSectorExtent(sectorEntries, cols, rows) {
-    const single = getSingleSectorDimensions(cols, rows);
-    if (!sectorEntries.length) {
-        return {
-            minX: 0,
-            maxX: 0,
-            minY: 0,
-            maxY: 0,
-            stepX: single.width + SECTOR_GAP_PX,
-            stepY: single.height + SECTOR_GAP_PX,
-            worldWidth: single.width,
-            worldHeight: single.height
-        };
-    }
-
-    const minX = Math.min(...sectorEntries.map((entry) => entry.coord.x));
-    const maxX = Math.max(...sectorEntries.map((entry) => entry.coord.x));
-    const minY = Math.min(...sectorEntries.map((entry) => entry.coord.y));
-    const maxY = Math.max(...sectorEntries.map((entry) => entry.coord.y));
-    const stepX = single.width + SECTOR_GAP_PX;
-    const stepY = single.height + SECTOR_GAP_PX;
-    return {
-        minX,
-        maxX,
-        minY,
-        maxY,
-        stepX,
-        stepY,
-        worldWidth: ((maxX - minX) * stepX) + single.width,
-        worldHeight: ((maxY - minY) * stepY) + single.height
-    };
-}
-
-function getSectorWorldCenter(entry, extent, singleDimensions) {
-    return {
-        x: ((entry.coord.x - extent.minX) * extent.stepX) + (singleDimensions.width / 2),
-        y: ((entry.coord.y - extent.minY) * extent.stepY) + (singleDimensions.height / 2)
-    };
-}
-
 export function centerViewOnSector(sectorKey) {
-    const entries = getLoadedSectorEntries();
+    const entries = getLoadedSectorEntries(state);
     if (!entries.length) return;
 
     const mapContainer = document.getElementById('mapContainer');
@@ -130,41 +64,6 @@ export function centerViewOnSector(sectorKey) {
     updateViewTransform();
 }
 
-function getDeepSpacePoiPalette(kind) {
-    switch (String(kind || '').toLowerCase()) {
-    case 'hazard':
-        return { fill: '#fb7185', stroke: '#fecdd3', glow: 'rgba(251,113,133,0.75)' };
-    case 'navigation':
-        return { fill: '#22d3ee', stroke: '#a5f3fc', glow: 'rgba(34,211,238,0.75)' };
-    case 'opportunity':
-        return { fill: '#34d399', stroke: '#a7f3d0', glow: 'rgba(52,211,153,0.75)' };
-    case 'mystery':
-        return { fill: '#a78bfa', stroke: '#ddd6fe', glow: 'rgba(167,139,250,0.75)' };
-    default:
-        return { fill: '#94a3b8', stroke: '#e2e8f0', glow: 'rgba(148,163,184,0.7)' };
-    }
-}
-
-function getStarMarkerRadius(starClass) {
-    if (starClass === 'M' || starClass === 'Neutron') return 4;
-    if (starClass === 'O' || starClass === 'B') return 9;
-    if (starClass === 'Black Hole') return 5;
-    return 6;
-}
-
-function getStarOffsets(starCount, radius) {
-    const spread = radius + 4;
-    if (starCount === 2) return [{ dx: -spread * 0.6, dy: 0 }, { dx: spread * 0.6, dy: 0 }];
-    if (starCount >= 3) {
-        return [
-            { dx: 0, dy: -spread * 0.75 },
-            { dx: -spread * 0.75, dy: spread * 0.55 },
-            { dx: spread * 0.75, dy: spread * 0.55 }
-        ];
-    }
-    return [{ dx: 0, dy: 0 }];
-}
-
 function notifySectorDataChanged(label = 'Edit Sector') {
     emitEvent(EVENTS.SECTOR_DATA_CHANGED, { label });
 }
@@ -181,7 +80,7 @@ function redrawAndReselect(hexId, preselectedBodyIndex = null) {
 
 function createHexGroup(svg, col, row, sectorKey, sectorRecord = null) {
     const hexId = `${col}-${row}`;
-    const normalizedSectorKey = String(sectorKey || getCurrentSectorKey()).trim().toUpperCase();
+    const normalizedSectorKey = String(sectorKey || getCurrentSectorKey(state)).trim().toUpperCase();
     const scopedSectors = sectorRecord && sectorRecord.sectors ? sectorRecord.sectors : state.sectors;
     const scopedPois = sectorRecord && sectorRecord.deepSpacePois ? sectorRecord.deepSpacePois : state.deepSpacePois;
     const scopedPinned = sectorRecord && Array.isArray(sectorRecord.pinnedHexIds) ? sectorRecord.pinnedHexIds : state.pinnedHexIds;
@@ -282,7 +181,7 @@ export function redrawHex(hexId) {
     const row = parseInt(rowRaw, 10);
     if (!Number.isInteger(col) || !Number.isInteger(row)) return null;
 
-    const currentSectorKey = getCurrentSectorKey();
+    const currentSectorKey = getCurrentSectorKey(state);
     const nextGroup = createHexGroup(svg, col, row, currentSectorKey);
     const existing = viewport.querySelector(getHexGroupSelector(hexId, currentSectorKey));
     if (!existing) return null;
@@ -297,71 +196,20 @@ export function redrawHex(hexId) {
     return nextGroup;
 }
 export function ensureStarGradient(svg, starClass) {
-    const key = (starClass || 'default').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    if (STAR_GRADIENT_CACHE[key]) return STAR_GRADIENT_CACHE[key];
-
-    let defs = svg.querySelector('defs');
-    if (!defs) {
-        defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-        svg.insertBefore(defs, svg.firstChild);
-    }
-
-    const gradientId = `starGradient-${key}`;
-    let gradient = document.getElementById(gradientId);
-    if (!gradient) {
-        gradient = document.createElementNS('http://www.w3.org/2000/svg', 'radialGradient');
-        gradient.setAttribute('id', gradientId);
-        gradient.setAttribute('cx', '50%');
-        gradient.setAttribute('cy', '50%');
-        gradient.setAttribute('r', '50%');
-
-        const palette = STAR_VISUALS[starClass] || STAR_VISUALS.default;
-        const stops = [
-            { offset: '0%', color: palette.core },
-            { offset: '55%', color: palette.mid },
-            { offset: '100%', color: palette.halo }
-        ];
-
-        stops.forEach(stopData => {
-            const stop = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-            stop.setAttribute('offset', stopData.offset);
-            stop.setAttribute('stop-color', stopData.color);
-            gradient.appendChild(stop);
-        });
-
-        defs.appendChild(gradient);
-    }
-
-    STAR_GRADIENT_CACHE[key] = gradientId;
-    return gradientId;
+    return ensureStarGradientInternal(svg, starClass, STAR_VISUALS);
 }
 
 export function drawGrid(cols, rows, options = {}) {
     const svg = document.getElementById('hexGrid');
     const resetView = options.resetView !== false;
-    const isExpanded = isExpandedSectorViewEnabled();
+    const isExpanded = isExpandedSectorViewEnabled(state);
     const single = getSingleSectorDimensions(cols, rows);
+    const currentEntry = buildCurrentSectorEntry(state);
     const sectorEntries = isExpanded
-        ? getLoadedSectorEntries()
-        : [{
-            sectorKey: getCurrentSectorKey(),
-            record: {
-                sectors: state.sectors,
-                deepSpacePois: state.deepSpacePois,
-                pinnedHexIds: state.pinnedHexIds
-            },
-            coord: parseSectorKeyToCoords(getCurrentSectorKey())
-        }];
+        ? getLoadedSectorEntries(state)
+        : [currentEntry];
     if (isExpanded && !sectorEntries.length) {
-        sectorEntries.push({
-            sectorKey: getCurrentSectorKey(),
-            record: {
-                sectors: state.sectors,
-                deepSpacePois: state.deepSpacePois,
-                pinnedHexIds: state.pinnedHexIds
-            },
-            coord: parseSectorKeyToCoords(getCurrentSectorKey())
-        });
+        sectorEntries.push(currentEntry);
     }
     const extent = getSectorExtent(sectorEntries, cols, rows);
     const realWidth = extent.worldWidth;
@@ -391,8 +239,8 @@ export function drawGrid(cols, rows, options = {}) {
     }
     updateViewTransform();
 
-    const currentKey = getCurrentSectorKey();
-    const selectedKey = getSelectedSectorKey();
+    const currentKey = getCurrentSectorKey(state);
+    const selectedKey = getSelectedSectorKey(state);
     let currentSectorLayer = null;
     sectorEntries.forEach((entry) => {
         const isSelectedSector = !!selectedKey && entry.sectorKey === selectedKey;
@@ -470,140 +318,16 @@ export function calculateHexPoints(cx, cy, size) {
 }
 
 function updateSectorNavigationAnchors(cols, rows) {
-    const northBtn = document.getElementById('sectorNorthBtn');
-    const southBtn = document.getElementById('sectorSouthBtn');
-    const westBtn = document.getElementById('sectorWestBtn');
-    const eastBtn = document.getElementById('sectorEastBtn');
-    const expandedEdgeContainer = document.getElementById('expandedSectorEdgeNavContainer');
-    const mapContainer = document.getElementById('mapContainer');
-    if (!northBtn || !southBtn || !westBtn || !eastBtn || !expandedEdgeContainer || !mapContainer) return;
-
-    if (!isExpandedSectorViewEnabled()) {
-        expandedEdgeContainer.innerHTML = '';
-        const rect = mapContainer.getBoundingClientRect();
-        const scale = Number.isFinite(state.viewState.scale) && state.viewState.scale > 0 ? state.viewState.scale : 1;
-        const single = getSingleSectorDimensions(cols, rows);
-        const leftPx = state.viewState.x;
-        const topPx = state.viewState.y;
-        const rightPx = leftPx + (single.width * scale);
-        const bottomPx = topPx + (single.height * scale);
-        const centerX = leftPx + ((rightPx - leftPx) / 2);
-        const centerY = topPx + ((bottomPx - topPx) / 2);
-        const current = parseSectorKeyToCoords(getCurrentSectorKey());
-        const loaded = state.multiSector && state.multiSector.sectorsByKey && typeof state.multiSector.sectorsByKey === 'object'
-            ? state.multiSector.sectorsByKey
-            : {};
-        const directionMeta = [
-            { button: northBtn, key: 'north', dx: 0, dy: -1, rotateDeg: -90, x: centerX, y: topPx - 16 },
-            { button: southBtn, key: 'south', dx: 0, dy: 1, rotateDeg: 90, x: centerX, y: bottomPx + 16 },
-            { button: westBtn, key: 'west', dx: -1, dy: 0, rotateDeg: 180, x: leftPx - 16, y: centerY },
-            { button: eastBtn, key: 'east', dx: 1, dy: 0, rotateDeg: 0, x: rightPx + 16, y: centerY }
-        ];
-
-        directionMeta.forEach((item) => {
-            const targetKey = makeSectorKeyFromCoords(current.x + item.dx, current.y + item.dy);
-            const exists = !!loaded[targetKey];
-            const inView = item.x >= 0 && item.x <= rect.width && item.y >= 0 && item.y <= rect.height;
-            if (!inView) {
-                item.button.classList.add('hidden');
-                return;
-            }
-
-            item.button.classList.remove('hidden');
-            item.button.style.left = `${item.x}px`;
-            item.button.style.top = `${item.y}px`;
-            item.button.style.right = '';
-            item.button.style.bottom = '';
-            const symbol = exists ? '>' : '+';
-            item.button.style.transform = exists
-                ? `translate(-50%, -50%) rotate(${item.rotateDeg}deg)`
-                : 'translate(-50%, -50%)';
-            item.button.innerText = symbol;
-            item.button.title = exists ? `Move ${item.key}` : `Expand ${item.key}`;
-            item.button.setAttribute('aria-label', exists ? `Move ${item.key}` : `Expand ${item.key}`);
-        });
-        return;
-    }
-
-    [northBtn, southBtn, westBtn, eastBtn].forEach((button) => {
-        button.classList.add('hidden');
-    });
-
-    const entries = getLoadedSectorEntries();
-    expandedEdgeContainer.innerHTML = '';
-    if (!entries.length) return;
-    const loadedSet = new Set(entries.map((entry) => entry.sectorKey));
-    const extent = getSectorExtent(entries, cols, rows);
-    const single = getSingleSectorDimensions(cols, rows);
-    const rect = mapContainer.getBoundingClientRect();
-    const scale = Number.isFinite(state.viewState.scale) && state.viewState.scale > 0 ? state.viewState.scale : 1;
-    const directionMeta = [
-        { key: 'north', dx: 0, dy: -1, rotateDeg: -90 },
-        { key: 'south', dx: 0, dy: 1, rotateDeg: 90 },
-        { key: 'west', dx: -1, dy: 0, rotateDeg: 180 },
-        { key: 'east', dx: 1, dy: 0, rotateDeg: 0 }
-    ];
-
-    entries.forEach((entry) => {
-        const sectorLeftWorld = (entry.coord.x - extent.minX) * extent.stepX;
-        const sectorTopWorld = (entry.coord.y - extent.minY) * extent.stepY;
-        const leftPx = state.viewState.x + (sectorLeftWorld * scale);
-        const topPx = state.viewState.y + (sectorTopWorld * scale);
-        const rightPx = leftPx + (single.width * scale);
-        const bottomPx = topPx + (single.height * scale);
-        const centerX = leftPx + ((rightPx - leftPx) / 2);
-        const centerY = topPx + ((bottomPx - topPx) / 2);
-
-        directionMeta.forEach((direction) => {
-            const adjacentKey = makeSectorKeyFromCoords(entry.coord.x + direction.dx, entry.coord.y + direction.dy);
-            if (loadedSet.has(adjacentKey)) return;
-
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'expanded-sector-edge-btn';
-            button.title = `Generate/load ${direction.key} of ${entry.sectorKey}`;
-            button.setAttribute('aria-label', button.title);
-            button.textContent = '+';
-            button.style.position = 'absolute';
-
-            if (direction.key === 'north') {
-                button.style.left = `${centerX}px`;
-                button.style.top = `${topPx - 16}px`;
-                button.style.transform = `translate(-50%, -50%) rotate(${direction.rotateDeg}deg)`;
-            } else if (direction.key === 'south') {
-                button.style.left = `${centerX}px`;
-                button.style.top = `${bottomPx + 16}px`;
-                button.style.transform = `translate(-50%, -50%) rotate(${direction.rotateDeg}deg)`;
-            } else if (direction.key === 'west') {
-                button.style.left = `${leftPx - 16}px`;
-                button.style.top = `${centerY}px`;
-                button.style.transform = `translate(-50%, -50%) rotate(${direction.rotateDeg}deg)`;
-            } else {
-                button.style.left = `${rightPx + 16}px`;
-                button.style.top = `${centerY}px`;
-                button.style.transform = `translate(-50%, -50%) rotate(${direction.rotateDeg}deg)`;
-            }
-
-            const anchorX = parseFloat(button.style.left);
-            const anchorY = parseFloat(button.style.top);
-            if (
-                !Number.isFinite(anchorX) || !Number.isFinite(anchorY)
-                || anchorX < 0 || anchorX > rect.width
-                || anchorY < 0 || anchorY > rect.height
-            ) {
-                return;
-            }
-
-            button.addEventListener('click', (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                emitEvent(EVENTS.REQUEST_MOVE_SECTOR_EDGE, {
-                    sourceSectorKey: entry.sectorKey,
-                    direction: direction.key
-                });
-            });
-            expandedEdgeContainer.appendChild(button);
-        });
+    updateSectorNavigationAnchorsInternal({
+        state,
+        cols,
+        rows,
+        getCurrentSectorKey: () => getCurrentSectorKey(state),
+        isExpandedSectorViewEnabled: () => isExpandedSectorViewEnabled(state),
+        getLoadedSectorEntries: () => getLoadedSectorEntries(state),
+        getSingleSectorDimensions,
+        getSectorExtent,
+        emitEvent
     });
 }
 
@@ -674,7 +398,7 @@ export function setupPanZoom() {
         state.selectedHexId = null;
         state.selectedBodyIndex = null;
         clearInfoPanel();
-        if (isExpandedSectorViewEnabled() && state.multiSector) {
+        if (isExpandedSectorViewEnabled(state) && state.multiSector) {
             state.multiSector.selectedSectorKey = null;
             const { width, height } = getCurrentGridDimensions();
             drawGrid(width, height, { resetView: false });
@@ -697,15 +421,15 @@ export function refreshRouteOverlay() {
     const viewport = document.getElementById('mapViewport');
     if (!viewport) return;
     viewport.querySelectorAll('.route-overlay').forEach((node) => node.remove());
-    const currentLayer = viewport.querySelector(`.sector-layer[data-sector-key="${getCurrentSectorKey()}"]`);
+    const currentLayer = viewport.querySelector(`.sector-layer[data-sector-key="${getCurrentSectorKey(state)}"]`);
     renderRouteOverlay(currentLayer || viewport);
 }
 
-export function handleHexClick(e, id, groupElement, sectorKey = getCurrentSectorKey()) {
+export function handleHexClick(e, id, groupElement, sectorKey = getCurrentSectorKey(state)) {
     if (state.viewState.dragDistance > 5) return;
     const normalizedSectorKey = String(sectorKey || '').trim().toUpperCase();
-    const currentSectorKey = getCurrentSectorKey();
-    if (isExpandedSectorViewEnabled() && normalizedSectorKey && normalizedSectorKey !== currentSectorKey) {
+    const currentSectorKey = getCurrentSectorKey(state);
+    if (isExpandedSectorViewEnabled(state) && normalizedSectorKey && normalizedSectorKey !== currentSectorKey) {
         emitEvent(EVENTS.REQUEST_SWITCH_SECTOR_HEX, { sectorKey: normalizedSectorKey, hexId: id });
         return;
     }
