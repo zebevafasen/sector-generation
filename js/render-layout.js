@@ -25,8 +25,8 @@ export function getHexGroupSelector(hexId, sectorKey) {
 
 export function getSingleSectorDimensions(cols, rows) {
     return {
-        width: cols * HEX_WIDTH + (HEX_WIDTH * 0.5),
-        height: rows * (HEX_HEIGHT * 0.75) + (HEX_HEIGHT * 0.25)
+        width: cols * (HEX_WIDTH * 0.75) + (HEX_WIDTH * 0.25),
+        height: (rows * HEX_HEIGHT) + (cols > 1 ? (HEX_HEIGHT * 0.5) : 0)
     };
 }
 

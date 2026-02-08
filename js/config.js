@@ -1,7 +1,7 @@
 import { HOME_SECTOR_KEY } from './sector-address.js';
 export const HEX_SIZE = 40;
-export const HEX_WIDTH = Math.sqrt(3) * HEX_SIZE;
-export const HEX_HEIGHT = 2 * HEX_SIZE;
+export const HEX_WIDTH = 2 * HEX_SIZE;
+export const HEX_HEIGHT = Math.sqrt(3) * HEX_SIZE;
 
 // Colors & glow data for Star Classes (approximate blackbody colors)
 const DEFAULT_STAR_VISUALS = {

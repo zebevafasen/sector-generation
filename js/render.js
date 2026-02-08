@@ -93,9 +93,9 @@ function createHexGroup(svg, col, row, sectorKey, sectorRecord = null) {
     const scopedPinned = sectorRecord && Array.isArray(sectorRecord.pinnedHexIds) ? sectorRecord.pinnedHexIds : state.pinnedHexIds;
     const system = scopedSectors && scopedSectors[hexId] ? scopedSectors[hexId] : null;
     const deepSpacePoi = !system && scopedPois ? scopedPois[hexId] : null;
-    const xOffset = (row % 2 === 1) ? (HEX_WIDTH / 2) : 0;
-    const x = (col * HEX_WIDTH) + xOffset + (HEX_WIDTH / 2);
-    const y = (row * (HEX_HEIGHT * 0.75)) + (HEX_HEIGHT / 2);
+    const yOffset = (col % 2 === 1) ? (HEX_HEIGHT / 2) : 0;
+    const x = (col * (HEX_WIDTH * 0.75)) + (HEX_WIDTH / 2);
+    const y = (row * HEX_HEIGHT) + yOffset + (HEX_HEIGHT / 2);
 
     const hasPinTarget = !!system || !!deepSpacePoi;
     const isPinned = !!(hasPinTarget && scopedPinned && scopedPinned.includes(hexId));
@@ -117,7 +117,7 @@ function createHexGroup(svg, col, row, sectorKey, sectorRecord = null) {
 
     const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     text.setAttribute('x', x);
-    text.setAttribute('y', y + HEX_SIZE / 1.5);
+    text.setAttribute('y', y + HEX_SIZE * 0.45);
     text.setAttribute('text-anchor', 'middle');
     text.setAttribute('class', 'hex-text');
     text.textContent = formatLocalHexDisplayId(hexId);
@@ -317,7 +317,7 @@ export function drawGrid(cols, rows, options = {}) {
 export function calculateHexPoints(cx, cy, size) {
     const points = [];
     for (let i = 0; i < 6; i++) {
-        const angleDeg = 60 * i - 30;
+        const angleDeg = 60 * i;
         const angleRad = (Math.PI / 180) * angleDeg;
         points.push(`${cx + size * Math.cos(angleRad)},${cy + size * Math.sin(angleRad)}`);
     }

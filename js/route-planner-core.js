@@ -53,16 +53,16 @@ class MinPriorityQueue {
     }
 }
 
-function oddrToCube(col, row) {
-    const x = col - ((row - (row & 1)) / 2);
-    const z = row;
+function oddqToCube(col, row) {
+    const x = col;
+    const z = row - ((col - (col & 1)) / 2);
     const y = -x - z;
     return { x, y, z };
 }
 
-function cubeToOddr(cube) {
-    const col = cube.x + ((cube.z - (cube.z & 1)) / 2);
-    const row = cube.z;
+function cubeToOddq(cube) {
+    const col = cube.x;
+    const row = cube.z + ((cube.x - (cube.x & 1)) / 2);
     return { col, row };
 }
 
@@ -75,11 +75,11 @@ function cubeDistance(a, b) {
 }
 
 export function hexDistance(a, b) {
-    return cubeDistance(oddrToCube(a.col, a.row), oddrToCube(b.col, b.row));
+    return cubeDistance(oddqToCube(a.col, a.row), oddqToCube(b.col, b.row));
 }
 
 function getNeighbors(col, row, width, height, isHexCoordInBounds) {
-    const base = oddrToCube(col, row);
+    const base = oddqToCube(col, row);
     const directions = [
         { x: 1, y: -1, z: 0 },
         { x: 1, y: 0, z: -1 },
@@ -90,7 +90,7 @@ function getNeighbors(col, row, width, height, isHexCoordInBounds) {
     ];
 
     return directions
-        .map((dir) => cubeToOddr({
+        .map((dir) => cubeToOddq({
             x: base.x + dir.x,
             y: base.y + dir.y,
             z: base.z + dir.z

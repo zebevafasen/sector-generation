@@ -21,10 +21,10 @@ export function getCurrentGridDimensions() {
 }
 
 export function getHexCenter(col, row) {
-    const xOffset = (row % 2 === 1) ? (HEX_WIDTH / 2) : 0;
+    const yOffset = (col % 2 === 1) ? (HEX_HEIGHT / 2) : 0;
     return {
-        x: (col * HEX_WIDTH) + xOffset + (HEX_WIDTH / 2),
-        y: (row * (HEX_HEIGHT * 0.75)) + (HEX_HEIGHT / 2)
+        x: (col * (HEX_WIDTH * 0.75)) + (HEX_WIDTH / 2),
+        y: (row * HEX_HEIGHT) + yOffset + (HEX_HEIGHT / 2)
     };
 }
 

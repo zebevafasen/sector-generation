@@ -1,24 +1,40 @@
 import { parseHexId, shuffleArray } from './utils.js';
 
+function oddqToCube(col, row) {
+    const x = col;
+    const z = row - ((col - (col & 1)) / 2);
+    const y = -x - z;
+    return { x, y, z };
+}
+
+function cubeToOddq(cube) {
+    const col = cube.x;
+    const row = cube.z + ((cube.x - (cube.x & 1)) / 2);
+    return { col, row };
+}
+
+function getNeighborHexIds(col, row) {
+    const base = oddqToCube(col, row);
+    const directions = [
+        { x: 1, y: -1, z: 0 },
+        { x: 1, y: 0, z: -1 },
+        { x: 0, y: 1, z: -1 },
+        { x: -1, y: 1, z: 0 },
+        { x: -1, y: 0, z: 1 },
+        { x: 0, y: -1, z: 1 }
+    ];
+    return directions.map((dir) => cubeToOddq({
+        x: base.x + dir.x,
+        y: base.y + dir.y,
+        z: base.z + dir.z
+    }));
+}
+
 export function countNeighborSystems(hexId, sectors) {
     const parsed = parseHexId(hexId);
     if (!parsed) return 0;
-    let count = 0;
-    for (let dc = -1; dc <= 1; dc++) {
-        for (let dr = -1; dr <= 1; dr++) {
-            if (dc === 0 && dr === 0) continue;
-            const neighborHexId = `${parsed.col + dc}-${parsed.row + dr}`;
-            if (sectors[neighborHexId]) count++;
-        }
-    }
-    return count;
-}
-
-function oddrToCube(col, row) {
-    const x = col - ((row - (row & 1)) / 2);
-    const z = row;
-    const y = -x - z;
-    return { x, y, z };
+    return getNeighborHexIds(parsed.col, parsed.row)
+        .reduce((count, next) => count + (sectors[`${next.col}-${next.row}`] ? 1 : 0), 0);
 }
 
 function cubeDistance(a, b) {
@@ -34,8 +50,8 @@ export function hexDistanceById(hexA, hexB) {
     const parsedB = parseHexId(hexB);
     if (!parsedA || !parsedB) return Number.POSITIVE_INFINITY;
     return cubeDistance(
-        oddrToCube(parsedA.col, parsedA.row),
-        oddrToCube(parsedB.col, parsedB.row)
+        oddqToCube(parsedA.col, parsedA.row),
+        oddqToCube(parsedB.col, parsedB.row)
     );
 }
 

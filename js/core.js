@@ -69,7 +69,7 @@ export function showStatusMessage(message, tone = 'info', options = {}) {
     const toneClass = toneMap[tone] || toneMap.info;
     if (state.statusMessageTimer) clearTimeout(state.statusMessageTimer);
     state.statusMessageTimer = null;
-    statusEl.className = `text-[10px] mt-0.5 ${toneClass}`;
+    statusEl.className = `pointer-events-none text-[10px] mt-0.5 ${toneClass}`;
     statusEl.textContent = message;
     if (persist) return;
     if (!message || durationMs === 0) {
