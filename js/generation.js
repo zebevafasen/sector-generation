@@ -30,6 +30,7 @@ import {
 import { autoSaveSectorState, buildSectorPayload } from './storage.js';
 import { readGenerationConfigFromUi } from './sector-config.js';
 import { getGlobalHexDisplayId } from './render-shared.js';
+import { HOME_SECTOR_KEY, parseSectorKeyToCoords } from './sector-address.js';
 import { ensureSystemStarFields } from './star-system.js';
 import { redrawGridAndReselect, redrawHexAndReselect, redrawHexAndSelectHex, refreshHexInfo, clearSelectionInfo } from './ui-sync.js';
 import { deepClone, isHexIdInBounds, parseHexId, romanize, shuffleArray, sortHexIds } from './utils.js';
@@ -366,11 +367,7 @@ function hexDistanceById(hexA, hexB) {
 }
 
 function parseSectorKey(sectorKey) {
-    const [xRaw, yRaw] = String(sectorKey || '').split(',');
-    const x = parseInt(xRaw, 10);
-    const y = parseInt(yRaw, 10);
-    if (!Number.isInteger(x) || !Number.isInteger(y)) return { x: 0, y: 0 };
-    return { x, y };
+    return parseSectorKeyToCoords(sectorKey || HOME_SECTOR_KEY);
 }
 
 function isActiveJumpGatePoi(poi) {
@@ -632,7 +629,7 @@ function buildSectorFromConfig(config, fixedSystems = {}, options = {}) {
         });
     });
     const activeJumpGateWeightMultiplier = getActiveJumpGateSectorWeightMultiplier(
-        options.sectorKey || '0,0',
+        options.sectorKey || HOME_SECTOR_KEY,
         options.knownSectorRecords || {}
     );
     const deepSpacePois = generateDeepSpacePois(width, height, nextSectors, { activeJumpGateWeightMultiplier });
@@ -687,7 +684,7 @@ export function generateSector() {
     state.layoutSeed = seedUsed;
     state.rerollIteration = 0;
     const built = buildSectorFromConfig(config, {}, {
-        sectorKey: '0,0',
+        sectorKey: HOME_SECTOR_KEY,
         knownSectorRecords: {}
     });
 
@@ -696,10 +693,10 @@ export function generateSector() {
     state.pinnedHexIds = [];
     state.selectedHexId = null;
     state.multiSector = {
-        currentKey: '0,0',
+        currentKey: HOME_SECTOR_KEY,
         jumpGateRegistry: {},
         sectorsByKey: {
-            '0,0': {
+            [HOME_SECTOR_KEY]: {
                 seed: seedUsed,
                 config: deepClone(config),
                 sectors: deepClone(built.sectors),
@@ -1231,7 +1228,7 @@ export function createSectorRecord(options = {}) {
     const previousRandom = state.seededRandomFn;
     setSeed(seed);
     const built = buildSectorFromConfig(config, fixedSystems, {
-        sectorKey: options && options.sectorKey ? options.sectorKey : '0,0',
+        sectorKey: options && options.sectorKey ? options.sectorKey : HOME_SECTOR_KEY,
         knownSectorRecords: options && options.knownSectorRecords ? options.knownSectorRecords : {}
     });
     state.currentSeed = previousSeed;

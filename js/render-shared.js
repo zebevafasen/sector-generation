@@ -1,4 +1,5 @@
 import { HEX_HEIGHT, HEX_WIDTH, state } from './config.js';
+import { HOME_SECTOR_KEY } from './sector-address.js';
 
 export function getCurrentGridDimensions() {
     const snapshot = state.sectorConfigSnapshot
@@ -27,47 +28,32 @@ export function getHexCenter(col, row) {
     };
 }
 
-export function formatGlobalCoord(value) {
-    const sign = value < 0 ? '-' : '';
-    const abs = Math.abs(value);
-    return `${sign}${String(abs).padStart(2, '0')}`;
+function formatLocalHexCoord(value) {
+    const parsed = parseInt(value, 10);
+    if (!Number.isInteger(parsed) || parsed < 0) return '--';
+    return String(parsed).padStart(2, '0');
+}
+
+export function formatLocalHexDisplayId(localHexId) {
+    const [cRaw, rRaw] = String(localHexId || '').split('-');
+    const c = parseInt(cRaw, 10);
+    const r = parseInt(rRaw, 10);
+    if (!Number.isInteger(c) || !Number.isInteger(r) || c < 0 || r < 0) return '--';
+    return `${formatLocalHexCoord(c)}${formatLocalHexCoord(r)}`;
 }
 
 export function getGlobalHexDisplayId(localHexId) {
-    const [cRaw, rRaw] = String(localHexId || '').split('-');
-    const c = parseInt(cRaw, 10);
-    const r = parseInt(rRaw, 10);
-    if (!Number.isInteger(c) || !Number.isInteger(r)) return '--';
-
-    const { width, height } = getCurrentGridDimensions();
-    const key = state.multiSector && state.multiSector.currentKey ? state.multiSector.currentKey : '0,0';
-    const [sxRaw, syRaw] = String(key).split(',');
-    const sectorX = parseInt(sxRaw, 10);
-    const sectorY = parseInt(syRaw, 10);
-    const normalizedSectorX = Number.isInteger(sectorX) ? sectorX : 0;
-    const normalizedSectorY = Number.isInteger(sectorY) ? sectorY : 0;
-
-    const globalC = c + (normalizedSectorX * width);
-    const globalR = r + (normalizedSectorY * height);
-    return `${formatGlobalCoord(globalC)}${formatGlobalCoord(globalR)}`;
+    const key = state.multiSector && state.multiSector.currentKey ? state.multiSector.currentKey : HOME_SECTOR_KEY;
+    const local = formatLocalHexDisplayId(localHexId);
+    if (local === '--') return '--';
+    return `${key}${local}`;
 }
 
 export function getGlobalHexDisplayIdForSector(sectorKey, localHexId) {
-    const [cRaw, rRaw] = String(localHexId || '').split('-');
-    const c = parseInt(cRaw, 10);
-    const r = parseInt(rRaw, 10);
-    if (!Number.isInteger(c) || !Number.isInteger(r)) return '--';
-
-    const { width, height } = getCurrentGridDimensions();
-    const [sxRaw, syRaw] = String(sectorKey || '').split(',');
-    const sectorX = parseInt(sxRaw, 10);
-    const sectorY = parseInt(syRaw, 10);
-    const normalizedSectorX = Number.isInteger(sectorX) ? sectorX : 0;
-    const normalizedSectorY = Number.isInteger(sectorY) ? sectorY : 0;
-
-    const globalC = c + (normalizedSectorX * width);
-    const globalR = r + (normalizedSectorY * height);
-    return `${formatGlobalCoord(globalC)}${formatGlobalCoord(globalR)}`;
+    const key = String(sectorKey || HOME_SECTOR_KEY).trim().toUpperCase();
+    const local = formatLocalHexDisplayId(localHexId);
+    if (!/^[A-Z]{4}$/.test(key) || local === '--') return '--';
+    return `${key}${local}`;
 }
 
 export function renderRouteOverlay(viewport) {

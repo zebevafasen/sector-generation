@@ -1,4 +1,5 @@
 import { normalizeDensityPresetKey } from './generation-data.js';
+import { HOME_SECTOR_KEY, isSectorKey } from './sector-address.js';
 import { isHexCoordInBounds, parseHexId } from './utils.js';
 
 function isPlainObject(value) {
@@ -61,8 +62,11 @@ function sanitizeSectors(rawSectors, width, height) {
 
 function sanitizeMultiSector(value) {
     if (!isPlainObject(value) || !isPlainObject(value.sectorsByKey)) return null;
+    const currentKey = typeof value.currentKey === 'string' && isSectorKey(value.currentKey)
+        ? value.currentKey.trim().toUpperCase()
+        : HOME_SECTOR_KEY;
     return {
-        currentKey: typeof value.currentKey === 'string' && value.currentKey.trim() ? value.currentKey : '0,0',
+        currentKey,
         sectorsByKey: value.sectorsByKey,
         jumpGateRegistry: isPlainObject(value.jumpGateRegistry) ? value.jumpGateRegistry : {}
     };

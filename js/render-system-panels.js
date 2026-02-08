@@ -294,7 +294,7 @@ export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
     if (deepSpacePoi) {
         const poiStyle = getPoiTypeStyle(deepSpacePoi.kind);
         const jumpLinkLabel = (deepSpacePoi.jumpGateLink && deepSpacePoi.jumpGateLink.sectorKey)
-            ? `Sector ${deepSpacePoi.jumpGateLink.sectorKey} | Hex ${getGlobalHexDisplayIdForSector(deepSpacePoi.jumpGateLink.sectorKey, deepSpacePoi.jumpGateLink.hexId || '')}`
+            ? getGlobalHexDisplayIdForSector(deepSpacePoi.jumpGateLink.sectorKey, deepSpacePoi.jumpGateLink.hexId || '')
             : 'Unresolved';
         refs.emptyDetails.innerHTML = `
             <div class="space-y-2 text-left">

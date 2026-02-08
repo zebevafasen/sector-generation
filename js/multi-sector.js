@@ -3,6 +3,8 @@ import { createSectorRecord } from './generation.js';
 import { isAutoSeedEnabled, showStatusMessage } from './core.js';
 import { EVENTS, emitEvent } from './events.js';
 import { readGenerationConfigFromUi } from './sector-config.js';
+import { HOME_SECTOR_KEY, makeSectorKeyFromCoords, offsetSectorKey, parseSectorKeyToCoords } from './sector-address.js';
+import { getGlobalHexDisplayIdForSector } from './render-shared.js';
 import { applySectorPayload } from './storage.js';
 import { selectHex, updateViewTransform } from './render.js';
 import { deepClone, parseHexId, sortHexIds, xmur3, mulberry32 } from './utils.js';
@@ -28,15 +30,7 @@ function getRefs() {
 }
 
 function parseKey(key) {
-    const [xRaw, yRaw] = String(key || '').split(',');
-    const x = parseInt(xRaw, 10);
-    const y = parseInt(yRaw, 10);
-    if (!Number.isInteger(x) || !Number.isInteger(y)) return { x: 0, y: 0 };
-    return { x, y };
-}
-
-function makeKey(x, y) {
-    return `${x},${y}`;
+    return parseSectorKeyToCoords(key || HOME_SECTOR_KEY);
 }
 
 function getStepToward(value, target) {
@@ -107,7 +101,7 @@ function chooseJumpGateDestination({ sourceSectorKey, sourceHexId, config, pairI
 
     const reserved = getReservedJumpEndpoints(pairId);
     for (let i = 0; i < offsets.length; i++) {
-        const targetSectorKey = makeKey(sourceSector.x + offsets[i].dx, sourceSector.y + offsets[i].dy);
+        const targetSectorKey = makeSectorKeyFromCoords(sourceSector.x + offsets[i].dx, sourceSector.y + offsets[i].dy);
         for (let attempt = 0; attempt < 5; attempt++) {
             const col = Math.floor(rng() * width);
             const row = Math.floor(rng() * height);
@@ -255,15 +249,6 @@ function ensureInboundJumpGatesForRecord(sectorKey, record) {
     });
 }
 
-function mapSelectedHexForDirection(selectedHexId) {
-    if (!selectedHexId) return null;
-    const [cRaw, rRaw] = String(selectedHexId).split('-');
-    const c = parseInt(cRaw, 10);
-    const r = parseInt(rRaw, 10);
-    if (!Number.isInteger(c) || !Number.isInteger(r)) return null;
-    return `${c}-${r}`;
-}
-
 function getCurrentConfig() {
     const snapshot = state.sectorConfigSnapshot || (state.lastSectorSnapshot && state.lastSectorSnapshot.sectorConfigSnapshot);
     if (snapshot) return deepClone(snapshot);
@@ -284,9 +269,9 @@ function getCurrentConfig() {
 
 function ensureState() {
     if (!state.multiSector || typeof state.multiSector !== 'object') {
-        state.multiSector = { currentKey: '0,0', sectorsByKey: {}, jumpGateRegistry: {}, chartGateCorridorsPending: false };
+        state.multiSector = { currentKey: HOME_SECTOR_KEY, sectorsByKey: {}, jumpGateRegistry: {}, chartGateCorridorsPending: false };
     }
-    if (!state.multiSector.currentKey) state.multiSector.currentKey = '0,0';
+    if (!state.multiSector.currentKey) state.multiSector.currentKey = HOME_SECTOR_KEY;
     if (!state.multiSector.sectorsByKey || typeof state.multiSector.sectorsByKey !== 'object') {
         state.multiSector.sectorsByKey = {};
     }
@@ -300,7 +285,7 @@ function ensureState() {
 
 function saveCurrentSectorRecord() {
     ensureState();
-    const key = state.multiSector.currentKey || '0,0';
+    const key = state.multiSector.currentKey || HOME_SECTOR_KEY;
     const config = getCurrentConfig();
     const totalHexes = config.width * config.height;
     const nextRecord = {
@@ -424,7 +409,7 @@ function getOrCreateSectorRecord(targetKey, direction) {
     if (!fromRecord) return null;
 
     const continuityFixed = buildEdgeContinuityFixedSystems(fromRecord, direction);
-    const homeSeed = state.multiSector.sectorsByKey['0,0']?.seed || '';
+    const homeSeed = state.multiSector.sectorsByKey[HOME_SECTOR_KEY]?.seed || '';
     const baseSeed = homeSeed || fromRecord.seed || 'sector';
     const seed = `${baseSeed} / ${targetKey}`;
     const record = createSectorRecord({
@@ -451,7 +436,7 @@ function getOrCreateSectorRecordByKey(targetKey) {
 
     const fromRecord = state.multiSector.sectorsByKey[state.multiSector.currentKey];
     if (!fromRecord) return null;
-    const homeSeed = state.multiSector.sectorsByKey['0,0']?.seed || '';
+    const homeSeed = state.multiSector.sectorsByKey[HOME_SECTOR_KEY]?.seed || '';
     const baseSeed = homeSeed || fromRecord.seed || 'sector';
     const seed = `${baseSeed} / ${targetKey}`;
     const record = createSectorRecord({
@@ -476,7 +461,7 @@ function getIntermediarySectorKeysBetween(startKey, endKey) {
 function getShortestPathSectorKeys(startKey, endKey) {
     const start = parseKey(startKey);
     const end = parseKey(endKey);
-    const keys = [makeKey(start.x, start.y)];
+    const keys = [makeSectorKeyFromCoords(start.x, start.y)];
     let x = start.x;
     let y = start.y;
     while (!(x === end.x && y === end.y)) {
@@ -485,7 +470,7 @@ function getShortestPathSectorKeys(startKey, endKey) {
         } else if (y !== end.y) {
             y += getStepToward(y, end.y);
         }
-        keys.push(makeKey(x, y));
+        keys.push(makeSectorKeyFromCoords(x, y));
     }
     return keys;
 }
@@ -494,7 +479,7 @@ function getMissingGateCorridorSectorKeys() {
     ensureState();
     const missing = new Set();
     const loaded = state.multiSector.sectorsByKey || {};
-    const homeKey = '0,0';
+    const homeKey = HOME_SECTOR_KEY;
 
     const loadedGateSectorKeys = new Set();
     Object.values(state.multiSector.jumpGateRegistry || {}).forEach((pair) => {
@@ -555,13 +540,11 @@ function moveDirection(direction) {
     saveCurrentSectorRecord();
     const delta = DIRECTIONS[direction];
     if (!delta) return;
-    const { x, y } = parseKey(state.multiSector.currentKey);
-    const targetKey = makeKey(x + delta.dx, y + delta.dy);
+    const targetKey = offsetSectorKey(state.multiSector.currentKey, delta.dx, delta.dy);
     const targetRecord = getOrCreateSectorRecord(targetKey, direction);
     if (!targetRecord) return;
-    const mappedSelectedHexId = mapSelectedHexForDirection(state.selectedHexId);
     applySectorRecord(targetKey, targetRecord, {
-        preferredSelectedHexId: mappedSelectedHexId,
+        preferredSelectedHexId: state.selectedHexId,
         preserveView: true
     });
     emitEvent(EVENTS.SECTOR_DATA_CHANGED, { label: `Switch Sector ${direction}` });
@@ -570,7 +553,7 @@ function moveDirection(direction) {
 function goHome() {
     ensureState();
     saveCurrentSectorRecord();
-    const homeKey = '0,0';
+    const homeKey = HOME_SECTOR_KEY;
     const home = state.multiSector.sectorsByKey[homeKey];
     if (!home) return;
     applySectorRecord(homeKey, home, { preferredSelectedHexId: state.selectedHexId, preserveView: true });
@@ -596,7 +579,7 @@ export function travelSelectedJumpGate() {
     ensureState();
     saveCurrentSectorRecord();
 
-    const sourceSectorKey = state.multiSector.currentKey || '0,0';
+    const sourceSectorKey = state.multiSector.currentKey || HOME_SECTOR_KEY;
     const sourceHexId = state.selectedHexId;
     const sourceRecord = state.multiSector.sectorsByKey[sourceSectorKey];
     if (!sourceHexId || !sourceRecord || !sourceRecord.deepSpacePois || !sourceRecord.deepSpacePois[sourceHexId]) {
@@ -636,7 +619,7 @@ export function travelSelectedJumpGate() {
         preserveView: true
     });
     emitEvent(EVENTS.SECTOR_DATA_CHANGED, { label: 'Travel Jump Gate' });
-    showStatusMessage(`Jumped to sector ${targetSectorKey} at ${targetHexId}.`, 'success');
+    showStatusMessage(`Jumped to sector ${targetSectorKey} at ${getGlobalHexDisplayIdForSector(targetSectorKey, targetHexId)}.`, 'success');
 }
 
 export function setupMultiSectorLinks() {
