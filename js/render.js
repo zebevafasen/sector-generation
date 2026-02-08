@@ -22,7 +22,7 @@ import {
 } from './info-panel-ui.js';
 
 const STAR_GRADIENT_CACHE = {};
-const SECTOR_GAP_PX = 32;
+const SECTOR_GAP_PX = 20;
 
 function getCurrentSectorKey() {
     return state.multiSector && state.multiSector.currentKey ? state.multiSector.currentKey : '';
@@ -426,18 +426,19 @@ export function drawGrid(cols, rows, options = {}) {
         layer.setAttribute('transform', `translate(${offsetX}, ${offsetY})`);
 
         if (isExpanded) {
-            const frame = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-            frame.setAttribute('x', '-3');
-            frame.setAttribute('y', '-3');
-            frame.setAttribute('width', String(single.width + 6));
-            frame.setAttribute('height', String(single.height + 6));
-            frame.setAttribute('rx', '8');
-            frame.setAttribute('ry', '8');
-            frame.setAttribute('fill', entry.sectorKey === currentKey ? 'rgba(15,23,42,0.34)' : 'rgba(15,23,42,0.2)');
-            frame.setAttribute('stroke', entry.sectorKey === currentKey ? '#cbd5e1' : '#64748b');
-            frame.setAttribute('stroke-width', entry.sectorKey === currentKey ? '2.1' : '1.15');
-            frame.setAttribute('stroke-dasharray', entry.sectorKey === currentKey ? 'none' : '6 4');
-            layer.appendChild(frame);
+            if (entry.sectorKey === currentKey) {
+                const frame = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                frame.setAttribute('x', '-3');
+                frame.setAttribute('y', '-3');
+                frame.setAttribute('width', String(single.width + 6));
+                frame.setAttribute('height', String(single.height + 6));
+                frame.setAttribute('rx', '8');
+                frame.setAttribute('ry', '8');
+                frame.setAttribute('fill', 'none');
+                frame.setAttribute('stroke', '#cbd5e1');
+                frame.setAttribute('stroke-width', '1.8');
+                layer.appendChild(frame);
+            }
 
             const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
             label.setAttribute('x', String(single.width / 2));
