@@ -78,7 +78,7 @@
   "jumpGateRules": {
     "maxPerSector": 1,
     "minSectorSeparation": 2,
-    "edgeDistanceMax": 2,
+    "edgeDistanceMax": 1,
     "minHexSeparation": 4,
     "activeSuppressionByDistance": {
       "1": 0,
