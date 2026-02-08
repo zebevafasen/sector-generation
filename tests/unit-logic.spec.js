@@ -405,4 +405,63 @@ test.describe('pure logic modules', () => {
     expect(result.fromTwo).toBe(0.22);
     expect(result.fromThree).toBe(0.33);
   });
+
+  test('core system selection is deterministic and respects valid preferred overrides', async ({ page }) => {
+    await page.goto('/sector_generator.html');
+
+    const result = await page.evaluate(async () => {
+      const core = await import('/js/core-system.js');
+      const sectors = {
+        '0-0': {
+          planets: [
+            { pop: 0, habitable: false },
+            { pop: 0.2, habitable: false }
+          ]
+        },
+        '2-2': {
+          planets: [
+            { pop: 0.4, habitable: true },
+            { pop: 0.2, habitable: true }
+          ]
+        },
+        '3-3': {
+          planets: [
+            { pop: 1.2, habitable: false }
+          ]
+        }
+      };
+
+      const picked = core.pickCoreSystemHexId(sectors, 4, 4);
+      const resolvedPreferred = core.resolveCoreSystemHexId({
+        sectors,
+        width: 4,
+        height: 4,
+        preferredHexId: '3-3',
+        preferredIsManual: true
+      });
+      const resolvedInvalidPreferred = core.resolveCoreSystemHexId({
+        sectors,
+        width: 4,
+        height: 4,
+        preferredHexId: '9-9',
+        preferredIsManual: true
+      });
+
+      return {
+        picked,
+        resolvedPreferred,
+        resolvedInvalidPreferred
+      };
+    });
+
+    expect(result.picked).toBe('2-2');
+    expect(result.resolvedPreferred).toEqual({
+      coreSystemHexId: '3-3',
+      coreSystemManual: true
+    });
+    expect(result.resolvedInvalidPreferred).toEqual({
+      coreSystemHexId: '2-2',
+      coreSystemManual: false
+    });
+  });
 });

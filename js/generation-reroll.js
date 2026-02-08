@@ -189,6 +189,7 @@ export function rerollUnpinnedSystemsAction(deps) {
         isHexIdInBounds,
         setAndUseNewSeed,
         composeContentSeed,
+        resolveCoreSystemHexId,
         setRandomStream,
         deepClone,
         sortHexIds,
@@ -251,6 +252,15 @@ export function rerollUnpinnedSystemsAction(deps) {
     state.rerollIteration = nextIteration;
     state.currentSeed = layoutSeed;
     state.sectors = nextSectors;
+    const core = resolveCoreSystemHexId({
+        sectors: nextSectors,
+        width,
+        height,
+        preferredHexId: state.coreSystemHexId,
+        preferredIsManual: state.coreSystemManual
+    });
+    state.coreSystemHexId = core.coreSystemHexId;
+    state.coreSystemManual = core.coreSystemManual;
     const currentSectorKey = state.multiSector && state.multiSector.currentKey
         ? state.multiSector.currentKey
         : HOME_SECTOR_KEY;

@@ -116,6 +116,8 @@ function saveCurrentSectorRecord() {
         sectors: deepClone(state.sectors || {}),
         deepSpacePois: deepClone(state.deepSpacePois || {}),
         pinnedHexIds: deepClone(state.pinnedHexIds || []),
+        coreSystemHexId: typeof state.coreSystemHexId === 'string' ? state.coreSystemHexId : null,
+        coreSystemManual: !!state.coreSystemManual,
         totalHexes,
         systemCount: Object.keys(state.sectors || {}).length
     };
@@ -157,6 +159,8 @@ function applySectorRecord(key, record, options = {}) {
         sectorConfigSnapshot: deepClone(record.config),
         deepSpacePois: deepClone(record.deepSpacePois || {}),
         pinnedHexIds: deepClone(record.pinnedHexIds || []),
+        coreSystemHexId: record.coreSystemHexId || null,
+        coreSystemManual: !!record.coreSystemManual,
         selectedHexId: null,
         multiSector: deepClone(state.multiSector),
         dimensions: {
@@ -398,6 +402,8 @@ export function setupMultiSectorLinks() {
         jumpGateService.ensureJumpGateLinksForRecord(state.multiSector.currentKey, currentRecord);
         jumpGateService.ensureInboundJumpGatesForRecord(state.multiSector.currentKey, currentRecord);
         state.deepSpacePois = deepClone(currentRecord.deepSpacePois || {});
+        state.coreSystemHexId = typeof currentRecord.coreSystemHexId === 'string' ? currentRecord.coreSystemHexId : null;
+        state.coreSystemManual = !!currentRecord.coreSystemManual;
     }
 
     refs.northBtn?.addEventListener('click', () => moveDirection('north'));

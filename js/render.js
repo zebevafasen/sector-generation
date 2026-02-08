@@ -93,6 +93,9 @@ function createHexGroup(svg, col, row, sectorKey, sectorRecord = null) {
     const scopedSectors = sectorRecord && sectorRecord.sectors ? sectorRecord.sectors : state.sectors;
     const scopedPois = sectorRecord && sectorRecord.deepSpacePois ? sectorRecord.deepSpacePois : state.deepSpacePois;
     const scopedPinned = sectorRecord && Array.isArray(sectorRecord.pinnedHexIds) ? sectorRecord.pinnedHexIds : state.pinnedHexIds;
+    const scopedCoreSystemHexId = sectorRecord && typeof sectorRecord.coreSystemHexId === 'string'
+        ? sectorRecord.coreSystemHexId
+        : state.coreSystemHexId;
     const system = scopedSectors && scopedSectors[hexId] ? scopedSectors[hexId] : null;
     const deepSpacePoi = !system && scopedPois ? scopedPois[hexId] : null;
     const yOffset = (col % 2 === 1) ? (HEX_HEIGHT / 2) : 0;
@@ -101,6 +104,7 @@ function createHexGroup(svg, col, row, sectorKey, sectorRecord = null) {
 
     const hasPinTarget = !!system || !!deepSpacePoi;
     const isPinned = !!(hasPinTarget && scopedPinned && scopedPinned.includes(hexId));
+    const isCoreSystem = !!(system && scopedCoreSystemHexId === hexId);
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     g.setAttribute('class', 'hex-group');
     if (system) g.classList.add('route-eligible');
@@ -164,6 +168,17 @@ function createHexGroup(svg, col, row, sectorKey, sectorRecord = null) {
             pinRing.setAttribute('stroke-dasharray', '2 2');
             pinRing.setAttribute('class', 'star-circle');
             g.appendChild(pinRing);
+        }
+        if (isCoreSystem) {
+            const coreMarker = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            const markerY = y - Math.max(8, baseRadius + 6);
+            coreMarker.setAttribute('points', `${x},${markerY - 4} ${x + 4},${markerY} ${x},${markerY + 4} ${x - 4},${markerY}`);
+            coreMarker.setAttribute('fill', '#fde047');
+            coreMarker.setAttribute('stroke', '#f59e0b');
+            coreMarker.setAttribute('stroke-width', '0.9');
+            coreMarker.setAttribute('class', 'core-system-marker');
+            coreMarker.style.filter = 'drop-shadow(0 0 5px rgba(245, 158, 11, 0.8))';
+            g.appendChild(coreMarker);
         }
     }
     if (deepSpacePoi) {
@@ -524,7 +539,14 @@ export function clearInfoPanel() {
         setPinButtonStyle(refs.pinSelectedSystemBtn, false);
     }
     if (refs.rerollSelectedSystemBtn) refs.rerollSelectedSystemBtn.disabled = true;
+    if (refs.setCoreSystemBtn) {
+        refs.setCoreSystemBtn.disabled = true;
+        refs.setCoreSystemBtn.title = 'Set core system';
+        refs.setCoreSystemBtn.setAttribute('aria-label', 'Set core system');
+        refs.setCoreSystemBtn.className = 'py-1.5 text-xs rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-slate-900/50 border-slate-700 text-slate-500';
+    }
     if (refs.selectedSystemPinState) refs.selectedSystemPinState.innerText = 'Pinned: --';
+    if (refs.selectedSystemCoreState) refs.selectedSystemCoreState.innerText = 'Core: --';
 
     resetBodyDetailsPanel();
 }

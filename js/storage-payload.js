@@ -207,6 +207,8 @@ export function buildSectorPayload(meta = {}) {
         starDistribution: uiConfig.starDistribution || 'standard',
         sectorConfigSnapshot: state.sectorConfigSnapshot || null,
         pinnedHexIds: Array.isArray(state.pinnedHexIds) ? state.pinnedHexIds : [],
+        coreSystemHexId: typeof state.coreSystemHexId === 'string' ? state.coreSystemHexId : null,
+        coreSystemManual: !!state.coreSystemManual,
         selectedHexId: state.selectedHexId || null,
         viewState: {
             x: Number.isFinite(state.viewState && state.viewState.x) ? state.viewState.x : 0,

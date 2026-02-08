@@ -47,6 +47,7 @@ export function buildSectorFromConfigAction(config, fixedSystems = {}, options =
         generateSystemData,
         getActiveJumpGateSectorWeightMultiplier,
         generateDeepSpacePois,
+        resolveCoreSystemHexId,
         homeSectorKey
     } = deps;
     const normalized = normalizeGenerationConfig(config);
@@ -106,6 +107,13 @@ export function buildSectorFromConfigAction(config, fixedSystems = {}, options =
         sectorKey: options.sectorKey || homeSectorKey,
         knownSectorRecords: options.knownSectorRecords || {}
     });
+    const core = resolveCoreSystemHexId({
+        sectors: nextSectors,
+        width,
+        height,
+        preferredHexId: options.preferredCoreSystemHexId || null,
+        preferredIsManual: !!options.preferredCoreSystemManual
+    });
 
     return {
         config: normalized,
@@ -114,7 +122,9 @@ export function buildSectorFromConfigAction(config, fixedSystems = {}, options =
         totalHexes,
         systemCount: Object.keys(nextSectors).length,
         sectors: nextSectors,
-        deepSpacePois
+        deepSpacePois,
+        coreSystemHexId: core.coreSystemHexId,
+        coreSystemManual: core.coreSystemManual
     };
 }
 
@@ -169,6 +179,8 @@ export function generateSectorAction(deps) {
     state.sectors = built.sectors;
     state.deepSpacePois = built.deepSpacePois;
     state.pinnedHexIds = [];
+    state.coreSystemHexId = built.coreSystemHexId || null;
+    state.coreSystemManual = !!built.coreSystemManual;
     state.selectedHexId = null;
     state.multiSector = {
         currentKey: homeSectorKey,
@@ -182,6 +194,8 @@ export function generateSectorAction(deps) {
                 sectors: deepClone(built.sectors),
                 deepSpacePois: deepClone(built.deepSpacePois),
                 pinnedHexIds: [],
+                coreSystemHexId: built.coreSystemHexId || null,
+                coreSystemManual: !!built.coreSystemManual,
                 totalHexes: built.totalHexes,
                 systemCount: built.systemCount
             }
@@ -216,7 +230,9 @@ export function createSectorRecordAction(options = {}, deps) {
     setSeed(seed);
     const built = buildSectorFromConfig(config, fixedSystems, {
         sectorKey: options && options.sectorKey ? options.sectorKey : homeSectorKey,
-        knownSectorRecords: options && options.knownSectorRecords ? options.knownSectorRecords : {}
+        knownSectorRecords: options && options.knownSectorRecords ? options.knownSectorRecords : {},
+        preferredCoreSystemHexId: options && options.preferredCoreSystemHexId ? options.preferredCoreSystemHexId : null,
+        preferredCoreSystemManual: !!(options && options.preferredCoreSystemManual)
     });
     state.currentSeed = previousSeed;
     state.seededRandomFn = previousRandom;
@@ -227,6 +243,8 @@ export function createSectorRecordAction(options = {}, deps) {
         sectors: deepClone(built.sectors),
         deepSpacePois: deepClone(built.deepSpacePois),
         pinnedHexIds: [],
+        coreSystemHexId: built.coreSystemHexId || null,
+        coreSystemManual: !!built.coreSystemManual,
         totalHexes: built.totalHexes,
         systemCount: built.systemCount
     };

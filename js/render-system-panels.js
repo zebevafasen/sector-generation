@@ -100,6 +100,7 @@ export function configureSystemHeaderAndStar({ refs, system, id, preselectedBody
     });
 
     const isPinned = !!(state.pinnedHexIds && state.pinnedHexIds.includes(id));
+    const isCore = !!(id && state.coreSystemHexId === id && state.sectors && state.sectors[id]);
     if (refs.pinSelectedSystemBtn) {
         refs.pinSelectedSystemBtn.disabled = false;
         setPinButtonContent(refs.pinSelectedSystemBtn, isPinned);
@@ -112,7 +113,18 @@ export function configureSystemHeaderAndStar({ refs, system, id, preselectedBody
         refs.rerollSelectedSystemBtn.title = 'Reroll system';
         refs.rerollSelectedSystemBtn.setAttribute('aria-label', 'Reroll system');
     }
+    if (refs.setCoreSystemBtn) {
+        refs.setCoreSystemBtn.disabled = !state.editMode;
+        refs.setCoreSystemBtn.title = isCore ? 'Clear core system' : 'Set core system';
+        refs.setCoreSystemBtn.setAttribute('aria-label', isCore ? 'Clear core system' : 'Set core system');
+        refs.setCoreSystemBtn.className = state.editMode
+            ? (isCore
+                ? 'py-1.5 text-xs rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-amber-900/35 border-amber-600 text-amber-200 hover:bg-amber-800/45 hover:border-amber-400'
+                : 'py-1.5 text-xs rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-slate-800 border-slate-700 text-slate-200 hover:border-amber-400')
+            : 'py-1.5 text-xs rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-slate-900/50 border-slate-700 text-slate-500';
+    }
     if (refs.selectedSystemPinState) refs.selectedSystemPinState.innerText = `Pinned: ${isPinned ? 'Yes' : 'No'}`;
+    if (refs.selectedSystemCoreState) refs.selectedSystemCoreState.innerText = `Core: ${isCore ? 'Yes' : 'No'}`;
 }
 
 export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
@@ -279,6 +291,13 @@ export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
         refs.rerollSelectedSystemBtn.title = canPinOrRerollPoi ? 'Reroll POI' : 'Reroll system';
         refs.rerollSelectedSystemBtn.setAttribute('aria-label', canPinOrRerollPoi ? 'Reroll POI' : 'Reroll system');
     }
+    if (refs.setCoreSystemBtn) {
+        refs.setCoreSystemBtn.disabled = true;
+        refs.setCoreSystemBtn.title = 'Set core system';
+        refs.setCoreSystemBtn.setAttribute('aria-label', 'Set core system');
+        refs.setCoreSystemBtn.className = 'py-1.5 text-xs rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-slate-900/50 border-slate-700 text-slate-500';
+    }
     if (refs.selectedSystemPinState) refs.selectedSystemPinState.innerText = canPinOrRerollPoi ? `Pinned: ${isPinned ? 'Yes' : 'No'}` : 'Pinned: --';
+    if (refs.selectedSystemCoreState) refs.selectedSystemCoreState.innerText = 'Core: --';
     resetBodyDetailsPanel();
 }

@@ -20,6 +20,7 @@ export function getMainRefs() {
         mainRefsCache.rerollUnpinnedBtn = document.getElementById('rerollUnpinnedBtn');
         mainRefsCache.rerollSelectedSystemBtn = document.getElementById('rerollSelectedSystemBtn');
         mainRefsCache.pinSelectedSystemBtn = document.getElementById('pinSelectedSystemBtn');
+        mainRefsCache.setCoreSystemBtn = document.getElementById('setCoreSystemBtn');
         mainRefsCache.editModeToggleBtn = document.getElementById('editModeToggleBtn');
         mainRefsCache.editAddPlanetInSectionBtn = document.getElementById('editAddPlanetInSectionBtn');
         mainRefsCache.editAddBeltInSectionBtn = document.getElementById('editAddBeltInSectionBtn');

@@ -27,6 +27,7 @@ import { computeSystemCount, getActiveGenerationProfile, getGenerationConfigSnap
 import { createDeepSpacePoi, generateDeepSpacePois, getActiveJumpGateSectorWeightMultiplier } from './generation-poi.js';
 import { selectClusteredSystemCoords } from './generation-spatial.js';
 import { generateSystemName, generateSystemStars } from './generation-system.js';
+import { resolveCoreSystemHexId } from './core-system.js';
 import { readGenerationConfigFromUi } from './sector-config.js';
 import { generateSystemDataAction, reconcilePlanetaryBodiesAction } from './generation-system-data.js';
 import { setEditModeAction, toggleEditModeAction } from './generation-edit-mode.js';
@@ -42,7 +43,8 @@ import {
     deletePoiAtHexAction,
     deleteSelectedBodyAction,
     deleteSelectedSystemAction,
-    renamePoiAtHexAction
+    renamePoiAtHexAction,
+    toggleSelectedCoreSystemAction
 } from './generation-actions.js';
 import {
     rerollSelectedPlanetAction,
@@ -74,6 +76,7 @@ function getOrchestrationCoreDeps() {
         selectClusteredSystemCoords,
         getActiveJumpGateSectorWeightMultiplier,
         generateDeepSpacePois,
+        resolveCoreSystemHexId,
         autoSaveSectorState,
         buildSectorPayload,
         emitEvent,
@@ -215,7 +218,8 @@ function getGenerationDepInputs() {
         sortHexIds,
         setRandomStream,
         setAndUseNewSeed,
-        composeContentSeed
+        composeContentSeed,
+        resolveCoreSystemHexId
     });
 }
 
@@ -245,6 +249,10 @@ export function addBodyToSelectedSystem(kind) {
 
 export function deleteSelectedBody() {
     deleteSelectedBodyAction(buildGenerationActionDeps(getGenerationDepInputs()));
+}
+
+export function toggleSelectedCoreSystem() {
+    toggleSelectedCoreSystemAction(buildGenerationActionDeps(getGenerationDepInputs()));
 }
 
 export function rerollSelectedPlanet() {

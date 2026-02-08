@@ -16,7 +16,8 @@ export function buildGenerationSharedDeps(inputs) {
         pickRandomPlanetType,
         generatePlanetEnvironment,
         generatePlanetSize,
-        reconcilePlanetaryBodies
+        reconcilePlanetaryBodies,
+        resolveCoreSystemHexId
     } = inputs;
     return {
         state,
@@ -35,7 +36,8 @@ export function buildGenerationSharedDeps(inputs) {
         pickRandomPlanetType,
         generatePlanetEnvironment,
         generatePlanetSize,
-        reconcilePlanetaryBodies
+        reconcilePlanetaryBodies,
+        resolveCoreSystemHexId
     };
 }
 

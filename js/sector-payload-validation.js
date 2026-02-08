@@ -75,10 +75,22 @@ function sanitizeMultiSector(value) {
     const selectedSectorKey = typeof value.selectedSectorKey === 'string' && isSectorKey(value.selectedSectorKey)
         ? value.selectedSectorKey.trim().toUpperCase()
         : currentKey;
+    const sectorsByKey = {};
+    Object.entries(value.sectorsByKey).forEach(([key, record]) => {
+        if (!isPlainObject(record)) return;
+        const coreHexId = typeof record.coreSystemHexId === 'string' && isPlainObject(record.sectors) && record.sectors[record.coreSystemHexId]
+            ? record.coreSystemHexId
+            : null;
+        sectorsByKey[key] = {
+            ...record,
+            coreSystemHexId: coreHexId,
+            coreSystemManual: !!(coreHexId && record.coreSystemManual)
+        };
+    });
     return {
         currentKey,
         selectedSectorKey,
-        sectorsByKey: value.sectorsByKey,
+        sectorsByKey,
         jumpGateRegistry: sanitizeJumpGateRegistry(value.jumpGateRegistry),
         expandedView: !!value.expandedView
     };
@@ -247,6 +259,10 @@ export function validateSectorPayload(rawPayload) {
                 && (Object.prototype.hasOwnProperty.call(sectors, hexId) || Object.prototype.hasOwnProperty.call(deepSpacePois, hexId))
             )
             : [],
+        coreSystemHexId: typeof rawPayload.coreSystemHexId === 'string' && Object.prototype.hasOwnProperty.call(sectors, rawPayload.coreSystemHexId)
+            ? rawPayload.coreSystemHexId
+            : null,
+        coreSystemManual: !!(typeof rawPayload.coreSystemHexId === 'string' && Object.prototype.hasOwnProperty.call(sectors, rawPayload.coreSystemHexId) && rawPayload.coreSystemManual),
         selectedHexId: typeof rawPayload.selectedHexId === 'string'
             && (Object.prototype.hasOwnProperty.call(sectors, rawPayload.selectedHexId)
                 || Object.prototype.hasOwnProperty.call(deepSpacePois, rawPayload.selectedHexId))

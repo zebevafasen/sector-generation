@@ -12,6 +12,7 @@ export function buildOrchestrationCoreDeps(inputs) {
         selectClusteredSystemCoords,
         getActiveJumpGateSectorWeightMultiplier,
         generateDeepSpacePois,
+        resolveCoreSystemHexId,
         autoSaveSectorState,
         buildSectorPayload,
         emitEvent,
@@ -31,6 +32,7 @@ export function buildOrchestrationCoreDeps(inputs) {
         selectClusteredSystemCoords,
         getActiveJumpGateSectorWeightMultiplier,
         generateDeepSpacePois,
+        resolveCoreSystemHexId,
         autoSaveSectorState,
         buildSectorPayload,
         emitEvent,
@@ -71,7 +73,8 @@ export function buildGenerationDepInputs(inputs) {
         sortHexIds,
         setRandomStream,
         setAndUseNewSeed,
-        composeContentSeed
+        composeContentSeed,
+        resolveCoreSystemHexId
     } = inputs;
     return {
         state,
@@ -104,6 +107,7 @@ export function buildGenerationDepInputs(inputs) {
         sortHexIds,
         setRandomStream,
         setAndUseNewSeed,
-        composeContentSeed
+        composeContentSeed,
+        resolveCoreSystemHexId
     };
 }

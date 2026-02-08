@@ -6,6 +6,7 @@ export function addSystemAtHexAction(hexId, deps) {
         showStatusMessage,
         generateSystemData,
         reportSystemInvariantIssues,
+        resolveCoreSystemHexId,
         redrawHexAndReselect,
         sanitizePinnedHexes,
         refreshSectorSnapshot,
@@ -41,6 +42,15 @@ export function addSystemAtHexAction(hexId, deps) {
         delete state.deepSpacePois[hexId];
     }
     reportSystemInvariantIssues(state.sectors[hexId], 'add-system');
+    const core = resolveCoreSystemHexId({
+        sectors: state.sectors,
+        width: config.width,
+        height: config.height,
+        preferredHexId: state.coreSystemHexId,
+        preferredIsManual: state.coreSystemManual
+    });
+    state.coreSystemHexId = core.coreSystemHexId;
+    state.coreSystemManual = core.coreSystemManual;
 
     redrawHexAndReselect(hexId);
     sanitizePinnedHexes(config.width, config.height);
@@ -55,6 +65,7 @@ export function deleteSelectedSystemAction(deps) {
         showStatusMessage,
         getGenerationConfigSnapshot,
         clearSelectionInfo,
+        resolveCoreSystemHexId,
         redrawHexAndReselect,
         sanitizePinnedHexes,
         refreshSectorSnapshot,
@@ -73,6 +84,15 @@ export function deleteSelectedSystemAction(deps) {
         delete state.deepSpacePois[selectedHexId];
     }
     state.pinnedHexIds = (state.pinnedHexIds || []).filter(id => id !== selectedHexId);
+    const core = resolveCoreSystemHexId({
+        sectors: state.sectors,
+        width: config.width,
+        height: config.height,
+        preferredHexId: selectedHexId === state.coreSystemHexId ? null : state.coreSystemHexId,
+        preferredIsManual: selectedHexId === state.coreSystemHexId ? false : state.coreSystemManual
+    });
+    state.coreSystemHexId = core.coreSystemHexId;
+    state.coreSystemManual = core.coreSystemManual;
     clearSelectionInfo();
 
     redrawHexAndReselect(selectedHexId);
@@ -136,6 +156,44 @@ export function deletePoiAtHexAction(hexId, deps) {
     redrawHexAndSelectHex(hexId);
     refreshSectorSnapshot(config, config.width, config.height, 'Delete POI');
     showStatusMessage(`Deleted POI at ${getGlobalHexDisplayId(hexId)}.`, 'success');
+}
+
+export function toggleSelectedCoreSystemAction(deps) {
+    const {
+        state,
+        showStatusMessage,
+        getGenerationConfigSnapshot,
+        refreshHexInfo,
+        refreshSectorSnapshot,
+        redrawHexAndReselect,
+        getGlobalHexDisplayId
+    } = deps;
+    const selectedHexId = state.selectedHexId;
+    const selectedSystem = selectedHexId ? state.sectors[selectedHexId] : null;
+    if (!selectedSystem) {
+        showStatusMessage('Select a system to set as core.', 'warn');
+        return;
+    }
+    if (!state.editMode) {
+        showStatusMessage('Enable Edit Mode to set or clear core system.', 'warn');
+        return;
+    }
+
+    const wasCore = state.coreSystemHexId === selectedHexId;
+    if (wasCore) {
+        state.coreSystemHexId = null;
+        state.coreSystemManual = false;
+        showStatusMessage(`Cleared core system at ${getGlobalHexDisplayId(selectedHexId)}.`, 'info');
+    } else {
+        state.coreSystemHexId = selectedHexId;
+        state.coreSystemManual = true;
+        showStatusMessage(`Set core system to ${getGlobalHexDisplayId(selectedHexId)}.`, 'success');
+    }
+
+    redrawHexAndReselect(selectedHexId);
+    refreshHexInfo(selectedHexId);
+    const config = getGenerationConfigSnapshot();
+    refreshSectorSnapshot(config, config.width, config.height, wasCore ? 'Clear Core System' : 'Set Core System');
 }
 
 export function renamePoiAtHexAction(hexId, deps) {

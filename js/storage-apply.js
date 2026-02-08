@@ -99,6 +99,10 @@ export function createStorageApplyService(deps) {
         state.pinnedHexIds = Array.isArray(nextPayload.pinnedHexIds)
             ? nextPayload.pinnedHexIds.filter((hexId) => !!state.sectors[hexId] || !!state.deepSpacePois[hexId])
             : [];
+        state.coreSystemHexId = typeof nextPayload.coreSystemHexId === 'string' && !!state.sectors[nextPayload.coreSystemHexId]
+            ? nextPayload.coreSystemHexId
+            : null;
+        state.coreSystemManual = !!(state.coreSystemHexId && nextPayload.coreSystemManual);
         state.sectorConfigSnapshot = nextPayload.sectorConfigSnapshot || {
             sizeMode: nextPayload.sizeMode || state.sizeMode,
             sizePreset: nextPayload.sizePreset || 'standard',

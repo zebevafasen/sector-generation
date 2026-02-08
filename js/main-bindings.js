@@ -13,6 +13,7 @@ import {
     rerollSelectedPlanet,
     rerollSelectedSystem,
     rerollUnpinnedSystems,
+    toggleSelectedCoreSystem,
     toggleEditMode,
     togglePinSelectedSystem
 } from './generation.js';
@@ -49,6 +50,7 @@ function bindPrimaryActions(refs) {
     refs.rerollUnpinnedBtn?.addEventListener('click', rerollUnpinnedSystems);
     refs.rerollSelectedSystemBtn?.addEventListener('click', rerollSelectedSystem);
     refs.pinSelectedSystemBtn?.addEventListener('click', togglePinSelectedSystem);
+    refs.setCoreSystemBtn?.addEventListener('click', toggleSelectedCoreSystem);
     refs.editModeToggleBtn?.addEventListener('click', toggleEditMode);
     refs.editAddPlanetInSectionBtn?.addEventListener('click', (event) => {
         event.preventDefault();

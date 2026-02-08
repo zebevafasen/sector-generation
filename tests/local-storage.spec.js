@@ -138,3 +138,30 @@ test('reload restores autosaved zoom level', async ({ page }) => {
   const restoredScale = parseViewportScale(restoredTransform);
   expect(Math.abs(restoredScale - zoomedScale)).toBeLessThan(0.05);
 });
+
+test('manual core system set in edit mode persists across save/load', async ({ page }) => {
+  await page.goto('/sector_generator.html');
+  await page.locator('#generateSectorBtn').click();
+
+  const coreHexId = await page.locator('.hex-group').filter({
+    has: page.locator('circle.star-circle')
+  }).first().getAttribute('data-id');
+  expect(coreHexId).toBeTruthy();
+
+  await page.locator(`#mapViewport .hex-group[data-id="${coreHexId}"]`).click();
+  await page.locator('#editModeToggleBtn').click();
+  await expect(page.locator('#editModeToggleBtn')).toContainText('EDIT MODE: ON');
+  await page.locator('#setCoreSystemBtn').click();
+  await expect(page.locator('#selectedSystemCoreState')).toContainText('Core: Yes');
+  await expect(page.locator(`#mapViewport .hex-group[data-id="${coreHexId}"] .core-system-marker`)).toHaveCount(1);
+
+  await page.locator('#saveSectorLocalBtn').click();
+  await expect(page.locator('#statusMessage')).toContainText('saved', { ignoreCase: true });
+
+  await page.locator('#generateSectorBtn').click();
+  await page.locator('#loadSectorLocalBtn').click();
+
+  await page.locator(`#mapViewport .hex-group[data-id="${coreHexId}"]`).click();
+  await expect(page.locator('#selectedSystemCoreState')).toContainText('Core: Yes');
+  await expect(page.locator(`#mapViewport .hex-group[data-id="${coreHexId}"] .core-system-marker`)).toHaveCount(1);
+});

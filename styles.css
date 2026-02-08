@@ -115,6 +115,10 @@ body {
     pointer-events: none;
 }
 
+.core-system-marker {
+    pointer-events: none;
+}
+
 .star-class-hint {
     text-decoration: underline;
     text-decoration-style: dashed;

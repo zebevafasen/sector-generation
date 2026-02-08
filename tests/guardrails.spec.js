@@ -190,10 +190,10 @@ test('edit mode warns before replacing a deep-space POI with a system', async ({
   await page.locator('#sizePreset').selectOption('dominion');
   await page.locator('#generateSectorBtn').click();
 
-  let poiCount = await page.locator('polygon.deep-space-poi-marker').count();
+  let poiCount = await page.locator('.deep-space-poi-marker').count();
   for (let attempt = 0; attempt < 3 && poiCount === 0; attempt++) {
     await page.locator('#generateSectorBtn').click();
-    poiCount = await page.locator('polygon.deep-space-poi-marker').count();
+    poiCount = await page.locator('.deep-space-poi-marker').count();
   }
   expect(poiCount).toBeGreaterThan(0);
 
@@ -201,7 +201,7 @@ test('edit mode warns before replacing a deep-space POI with a system', async ({
   await expect(page.locator('#editModeToggleBtn')).toContainText('EDIT MODE: ON');
 
   const poiHex = page.locator('.hex-group').filter({
-    has: page.locator('polygon.deep-space-poi-marker')
+    has: page.locator('.deep-space-poi-marker')
   }).first();
   await poiHex.evaluate((el) => {
     el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
@@ -238,16 +238,16 @@ test('edit mode can add and delete a deep-space POI from empty hexes', async ({ 
   const emptyHex = page.locator('.hex-group').filter({
     hasNot: page.locator('circle.star-circle')
   }).filter({
-    hasNot: page.locator('polygon.deep-space-poi-marker')
+    hasNot: page.locator('.deep-space-poi-marker')
   }).first();
   await emptyHex.click();
 
   await expect(page.locator('#addPoiHereBtn')).toBeVisible();
-  const poiCountBefore = await page.locator('polygon.deep-space-poi-marker').count();
+  const poiCountBefore = await page.locator('.deep-space-poi-marker').count();
   await page.locator('#addPoiHereBtn').click();
   await expect(page.locator('#statusMessage')).toContainText('Added POI');
 
-  const poiCountAfterAdd = await page.locator('polygon.deep-space-poi-marker').count();
+  const poiCountAfterAdd = await page.locator('.deep-space-poi-marker').count();
   expect(poiCountAfterAdd).toBeGreaterThan(poiCountBefore);
   await expect(page.locator('#deletePoiHereBtn')).toBeVisible();
   await expect(page.locator('#renamePoiBtn')).toBeVisible();
@@ -267,7 +267,7 @@ test('edit mode can add and delete a deep-space POI from empty hexes', async ({ 
 
   await page.locator('#deletePoiHereBtn').click();
   await expect(page.locator('#statusMessage')).toContainText('Deleted POI');
-  const poiCountAfterDelete = await page.locator('polygon.deep-space-poi-marker').count();
+  const poiCountAfterDelete = await page.locator('.deep-space-poi-marker').count();
   expect(poiCountAfterDelete).toBe(poiCountBefore);
 });
 

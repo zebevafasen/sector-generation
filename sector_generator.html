@@ -279,11 +279,13 @@
                     <span class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-600" id="infoType">Empty Space</span>
                 </div>
                 
-                <div class="grid grid-cols-2 gap-2 mb-2">
+                <div class="grid grid-cols-3 gap-2 mb-2">
                     <button id="pinSelectedSystemBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-amber-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Pin system" aria-label="Pin system">📌</button>
                     <button id="rerollSelectedSystemBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Reroll system" aria-label="Reroll system">🎲</button>
+                    <button id="setCoreSystemBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 text-slate-200 hover:border-amber-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Set core system" aria-label="Set core system">★</button>
                 </div>
                 <p id="selectedSystemPinState" class="text-[11px] text-slate-500 mb-3">Pinned: No</p>
+                <p id="selectedSystemCoreState" class="text-[11px] text-slate-500 mb-3">Core: --</p>
 
                 <div id="systemDetails" class="hidden space-y-4">
                     <div id="editModeControls" class="hidden grid grid-cols-2 gap-2">

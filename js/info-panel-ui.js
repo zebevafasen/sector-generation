@@ -76,7 +76,9 @@ export function getInfoPanelRefs() {
         deletePoiHereBtn: document.getElementById('deletePoiHereBtn'),
         pinSelectedSystemBtn: document.getElementById('pinSelectedSystemBtn'),
         rerollSelectedSystemBtn: document.getElementById('rerollSelectedSystemBtn'),
-        selectedSystemPinState: document.getElementById('selectedSystemPinState')
+        setCoreSystemBtn: document.getElementById('setCoreSystemBtn'),
+        selectedSystemPinState: document.getElementById('selectedSystemPinState'),
+        selectedSystemCoreState: document.getElementById('selectedSystemCoreState')
     };
 }
 
