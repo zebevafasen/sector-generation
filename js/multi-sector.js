@@ -4,6 +4,7 @@ import { isAutoSeedEnabled, showStatusMessage } from './core.js';
 import { EVENTS, emitEvent } from './events.js';
 import { readGenerationConfigFromUi } from './sector-config.js';
 import { HOME_SECTOR_KEY, offsetSectorKey, parseSectorKeyToCoords } from './sector-address.js';
+import { ensureSectorName, getSectorCoordsLabel, getSectorDisplayName } from './sector-naming.js';
 import { getGlobalHexDisplayIdForSector } from './render-shared.js';
 import { applySectorPayload } from './storage.js';
 import { centerViewOnSector, findHexGroup, redrawHex, selectHex, updateViewTransform } from './render.js';
@@ -122,6 +123,7 @@ function saveCurrentSectorRecord() {
         totalHexes,
         systemCount: Object.keys(state.sectors || {}).length
     };
+    ensureSectorName(key, nextRecord);
     state.multiSector.sectorsByKey[key] = nextRecord;
     rebuildGenerationContextSummaries({
         layoutSeed: state.layoutSeed || state.currentSeed || nextRecord.seed || '',
@@ -139,6 +141,7 @@ function saveCurrentSectorRecord() {
 function applySectorRecord(key, record, options = {}) {
     if (!record || !record.config || !record.sectors) return;
     ensureState();
+    const sectorName = ensureSectorName(key, record);
 
     state.multiSector.currentKey = key;
     state.multiSector.selectedSectorKey = key;
@@ -191,7 +194,7 @@ function applySectorRecord(key, record, options = {}) {
         updateViewTransform();
     }
     renderSectorLinksUi();
-    if (showLoadedToast) showStatusMessage(`Loaded sector ${key}.`, 'info');
+    if (showLoadedToast) showStatusMessage(`Loaded ${sectorName}.`, 'info');
 }
 
 function getOrCreateSectorRecord(targetKey) {
@@ -219,6 +222,7 @@ function getOrCreateSectorRecordByKey(targetKey) {
         sectorKey: targetKey,
         knownSectorRecords: state.multiSector.sectorsByKey
     });
+    ensureSectorName(targetKey, record);
     state.multiSector.sectorsByKey[targetKey] = record;
     rebuildGenerationContextSummaries({
         layoutSeed: state.layoutSeed || state.currentSeed || seed,
@@ -260,6 +264,7 @@ function getOrCreateSectorRecordFromSource(sourceKey, targetKey) {
         sectorKey: targetKey,
         knownSectorRecords: state.multiSector.sectorsByKey
     });
+    ensureSectorName(targetKey, record);
     state.multiSector.sectorsByKey[targetKey] = record;
     rebuildGenerationContextSummaries({
         layoutSeed: state.layoutSeed || state.currentSeed || seed,
@@ -290,7 +295,14 @@ function goHome() {
 function renderSectorLinksUi() {
     const refs = getRefs();
     ensureState();
-    if (refs.currentLabel) refs.currentLabel.innerText = `Current: ${state.multiSector.currentKey}`;
+    const currentKey = state.multiSector.currentKey || HOME_SECTOR_KEY;
+    const currentName = getSectorDisplayName(currentKey, state.multiSector.sectorsByKey);
+    const currentCoords = getSectorCoordsLabel(currentKey);
+    if (refs.currentLabel) {
+        refs.currentLabel.innerText = `Current: ${currentName}`;
+        refs.currentLabel.setAttribute('data-sector-key', currentKey);
+        refs.currentLabel.title = currentCoords ? `${currentKey} (${currentCoords})` : currentKey;
+    }
     if (refs.knownLabel) refs.knownLabel.innerText = `Loaded: ${Object.keys(state.multiSector.sectorsByKey).length}`;
     if (refs.expandedViewBtn) {
         refs.expandedViewBtn.innerText = state.multiSector.expandedView ? 'Expanded View: On' : 'Expanded View: Off';
@@ -354,7 +366,8 @@ export function travelSelectedJumpGate() {
         preserveView: true
     });
     emitEvent(EVENTS.SECTOR_DATA_CHANGED, { label: 'Travel Jump Gate' });
-    showStatusMessage(`Jumped to sector ${targetSectorKey} at ${getGlobalHexDisplayIdForSector(targetSectorKey, targetHexId)}.`, 'success');
+    const targetName = getSectorDisplayName(targetSectorKey, state.multiSector.sectorsByKey);
+    showStatusMessage(`Jumped to ${targetName} at ${getGlobalHexDisplayIdForSector(targetSectorKey, targetHexId)}.`, 'success');
 }
 
 export function activateSelectedJumpGate() {
@@ -391,6 +404,9 @@ export function setupMultiSectorLinks() {
     const refs = getRefs();
     if (!refs.northBtn || !refs.southBtn || !refs.westBtn || !refs.eastBtn || !refs.homeBtn || !refs.expandedViewBtn) return;
     ensureState();
+    Object.entries(state.multiSector.sectorsByKey || {}).forEach(([sectorKey, record]) => {
+        ensureSectorName(sectorKey, record);
+    });
     if (!state.multiSector.sectorsByKey[state.multiSector.currentKey]) {
         saveCurrentSectorRecord();
     } else {

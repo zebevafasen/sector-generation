@@ -92,6 +92,9 @@ function sanitizeMultiSector(value) {
             : null;
         sectorsByKey[key] = {
             ...record,
+            sectorName: typeof record.sectorName === 'string' && record.sectorName.trim()
+                ? record.sectorName.trim()
+                : null,
             coreSystemHexId: coreHexId,
             coreSystemManual: !!(coreHexId && record.coreSystemManual),
             generationContextSummary: sanitizeGenerationContextSummary(record.generationContextSummary)

@@ -80,7 +80,8 @@ test('load local restores expanded view rendering without extra sector clicks', 
 
   await page.evaluate(() => {
     const currentLabel = document.getElementById('currentSectorLabel');
-    const sourceSectorKey = String(currentLabel?.textContent || '').replace('Current:', '').trim();
+    const sourceSectorKey = String(currentLabel?.getAttribute('data-sector-key') || '').trim()
+      || String(currentLabel?.textContent || '').replace('Current:', '').trim();
     window.dispatchEvent(new CustomEvent('requestMoveSectorEdge', {
       detail: { sourceSectorKey, direction: 'east' }
     }));

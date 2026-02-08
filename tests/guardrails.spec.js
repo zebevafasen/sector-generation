@@ -5,6 +5,15 @@ function parseCountFromLabel(labelText) {
   return match ? Number(match[1]) : 0;
 }
 
+async function getCurrentSectorKey(page) {
+  return page.evaluate(() => {
+    const label = document.getElementById('currentSectorLabel');
+    const dataKey = String(label?.getAttribute('data-sector-key') || '').trim();
+    if (dataKey) return dataKey;
+    return String(label?.textContent || '').replace('Current:', '').trim();
+  });
+}
+
 test('route planner can create and clear a shortcut route overlay', async ({ page }) => {
   await page.goto('/sector_generator.html');
   await page.locator('#generateSectorBtn').click();
@@ -38,6 +47,19 @@ test('route planner can create and clear a shortcut route overlay', async ({ pag
   await expect(page.locator('#mapViewport polyline')).toHaveCount(0);
 });
 
+test('current sector header uses dynamic sector name while preserving sector key in data attribute', async ({ page }) => {
+  await page.goto('/sector_generator.html');
+  await page.locator('#generateSectorBtn').click();
+
+  const currentLabel = page.locator('#currentSectorLabel');
+  const text = await currentLabel.innerText();
+  const key = await currentLabel.getAttribute('data-sector-key');
+
+  expect(key).toBe('NNNN');
+  expect(text.startsWith('Current: ')).toBeTruthy();
+  expect(text).not.toBe('Current: NNNN');
+});
+
 test('default generation uses clusters distribution mode', async ({ page }) => {
   await page.goto('/sector_generator.html');
   await expect(page.locator('#starDistribution')).toHaveValue('clusters');
@@ -48,7 +70,8 @@ test('expanded view hex click selects and highlights the clicked sector after cl
   await page.locator('#generateSectorBtn').click();
   await page.evaluate(() => {
     const currentLabel = document.getElementById('currentSectorLabel');
-    const sourceSectorKey = String(currentLabel?.textContent || '').replace('Current:', '').trim();
+    const sourceSectorKey = String(currentLabel?.getAttribute('data-sector-key') || '').trim()
+      || String(currentLabel?.textContent || '').replace('Current:', '').trim();
     window.dispatchEvent(new CustomEvent('requestMoveSectorEdge', {
       detail: { sourceSectorKey, direction: 'east' }
     }));
@@ -58,8 +81,7 @@ test('expanded view hex click selects and highlights the clicked sector after cl
   await page.locator('#mapContainer').click({ position: { x: 8, y: 8 } });
   await expect(page.locator('.hex.selected')).toHaveCount(0);
 
-  const currentLabel = await page.locator('#currentSectorLabel').innerText();
-  const currentKey = currentLabel.replace('Current:', '').trim();
+  const currentKey = await getCurrentSectorKey(page);
   const sectorKeys = await page.locator('.sector-layer').evaluateAll((layers) =>
     layers.map((layer) => String(layer.getAttribute('data-sector-key') || '').trim()).filter(Boolean)
   );
@@ -81,15 +103,15 @@ test('expanded view deselect keeps sector hover highlight available on previousl
   await page.locator('#generateSectorBtn').click();
   await page.evaluate(() => {
     const currentLabel = document.getElementById('currentSectorLabel');
-    const sourceSectorKey = String(currentLabel?.textContent || '').replace('Current:', '').trim();
+    const sourceSectorKey = String(currentLabel?.getAttribute('data-sector-key') || '').trim()
+      || String(currentLabel?.textContent || '').replace('Current:', '').trim();
     window.dispatchEvent(new CustomEvent('requestMoveSectorEdge', {
       detail: { sourceSectorKey, direction: 'east' }
     }));
   });
   await page.locator('#toggleExpandedSectorViewBtn').click();
 
-  const currentLabel = await page.locator('#currentSectorLabel').innerText();
-  const currentKey = currentLabel.replace('Current:', '').trim();
+  const currentKey = await getCurrentSectorKey(page);
   const sectorKeys = await page.locator('.sector-layer').evaluateAll((layers) =>
     layers.map((layer) => String(layer.getAttribute('data-sector-key') || '').trim()).filter(Boolean)
   );
@@ -434,7 +456,8 @@ test('neighbor sector generation is independent from adjacent sectors', async ({
 
   await page.evaluate(() => {
     const currentLabel = document.getElementById('currentSectorLabel');
-    const sourceSectorKey = String(currentLabel?.textContent || '').replace('Current:', '').trim();
+    const sourceSectorKey = String(currentLabel?.getAttribute('data-sector-key') || '').trim()
+      || String(currentLabel?.textContent || '').replace('Current:', '').trim();
     window.dispatchEvent(new CustomEvent('requestMoveSectorEdge', {
       detail: { sourceSectorKey, direction: 'east' }
     }));
@@ -492,7 +515,8 @@ test('generated home and neighbor sectors have sane seam mismatch with continuit
 
   await page.evaluate(() => {
     const currentLabel = document.getElementById('currentSectorLabel');
-    const sourceSectorKey = String(currentLabel?.textContent || '').replace('Current:', '').trim();
+    const sourceSectorKey = String(currentLabel?.getAttribute('data-sector-key') || '').trim()
+      || String(currentLabel?.textContent || '').replace('Current:', '').trim();
     window.dispatchEvent(new CustomEvent('requestMoveSectorEdge', {
       detail: { sourceSectorKey, direction: 'east' }
     }));
