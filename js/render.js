@@ -28,6 +28,12 @@ function getCurrentSectorKey() {
     return state.multiSector && state.multiSector.currentKey ? state.multiSector.currentKey : '';
 }
 
+function getSelectedSectorKey() {
+    if (!(state.multiSector && typeof state.multiSector === 'object')) return null;
+    const key = state.multiSector.selectedSectorKey;
+    return typeof key === 'string' && key.trim() ? key : null;
+}
+
 function isExpandedSectorViewEnabled() {
     return !!(state.multiSector && state.multiSector.expandedView);
 }
@@ -415,18 +421,40 @@ export function drawGrid(cols, rows, options = {}) {
     updateViewTransform();
 
     const currentKey = getCurrentSectorKey();
+    const selectedKey = getSelectedSectorKey();
     let currentSectorLayer = null;
     sectorEntries.forEach((entry) => {
+        const isSelectedSector = !!selectedKey && entry.sectorKey === selectedKey;
         const layer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        layer.setAttribute('class', `sector-layer${entry.sectorKey === currentKey ? ' current-sector-layer' : ''}`);
+        layer.setAttribute('class', `sector-layer${isSelectedSector ? ' current-sector-layer' : ''}`);
         layer.setAttribute('data-sector-key', entry.sectorKey);
+        if (isExpanded) {
+            const hitbox = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            hitbox.setAttribute('x', '0');
+            hitbox.setAttribute('y', '0');
+            hitbox.setAttribute('width', String(single.width));
+            hitbox.setAttribute('height', String(single.height));
+            hitbox.setAttribute('fill', 'transparent');
+            hitbox.setAttribute('pointer-events', 'all');
+            layer.appendChild(hitbox);
+
+            layer.addEventListener('click', (event) => {
+                const target = event.target instanceof Element ? event.target : null;
+                if (target && target.closest('.hex-group')) return;
+                event.stopPropagation();
+                if (!state.multiSector) return;
+                if (state.multiSector.selectedSectorKey === entry.sectorKey) return;
+                state.multiSector.selectedSectorKey = entry.sectorKey;
+                drawGrid(cols, rows, { resetView: false });
+            });
+        }
 
         const offsetX = (entry.coord.x - extent.minX) * extent.stepX;
         const offsetY = (entry.coord.y - extent.minY) * extent.stepY;
         layer.setAttribute('transform', `translate(${offsetX}, ${offsetY})`);
 
         if (isExpanded) {
-            if (entry.sectorKey === currentKey) {
+            if (isSelectedSector) {
                 const frame = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
                 frame.setAttribute('x', '-3');
                 frame.setAttribute('y', '-3');
@@ -445,7 +473,7 @@ export function drawGrid(cols, rows, options = {}) {
             label.setAttribute('y', '14');
             label.setAttribute('text-anchor', 'middle');
             label.setAttribute('class', 'sector-label');
-            if (entry.sectorKey === currentKey) label.classList.add('sector-label-current');
+            if (isSelectedSector) label.classList.add('sector-label-current');
             label.textContent = entry.sectorKey;
             layer.appendChild(label);
         }
@@ -672,6 +700,20 @@ export function setupPanZoom() {
     window.addEventListener('blur', () => {
         setShiftShortcutCursor(false);
     });
+    container.addEventListener('click', (e) => {
+        if (state.viewState.dragDistance > 5) return;
+        const isHexClick = e.target instanceof Element && !!e.target.closest('.hex-group');
+        if (isHexClick) return;
+        document.querySelectorAll('.hex.selected').forEach(el => el.classList.remove('selected'));
+        state.selectedHexId = null;
+        state.selectedBodyIndex = null;
+        clearInfoPanel();
+        if (isExpandedSectorViewEnabled() && state.multiSector) {
+            state.multiSector.selectedSectorKey = null;
+            const { width, height } = getCurrentGridDimensions();
+            drawGrid(width, height, { resetView: false });
+        }
+    });
 }
 
 export function updateViewTransform() {
@@ -718,6 +760,8 @@ export function selectHex(id, groupElement) {
     poly.classList.add('selected');
     state.selectedHexId = id;
     state.selectedBodyIndex = null;
+    const sectorKey = groupElement && groupElement.getAttribute ? groupElement.getAttribute('data-sector-key') : null;
+    if (sectorKey && state.multiSector) state.multiSector.selectedSectorKey = sectorKey;
     updateInfoPanel(id);
     emitEvent(EVENTS.HEX_SELECTED, { hexId: id });
 }

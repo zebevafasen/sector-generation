@@ -694,6 +694,7 @@ export function generateSector() {
     state.selectedHexId = null;
     state.multiSector = {
         currentKey: HOME_SECTOR_KEY,
+        selectedSectorKey: HOME_SECTOR_KEY,
         jumpGateRegistry: {},
         expandedView: false,
         sectorsByKey: {

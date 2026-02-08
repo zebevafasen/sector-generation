@@ -559,12 +559,16 @@ export function applySectorPayload(payload) {
         if (!state.multiSector.jumpGateRegistry || typeof state.multiSector.jumpGateRegistry !== 'object') {
             state.multiSector.jumpGateRegistry = {};
         }
+        if (typeof state.multiSector.selectedSectorKey === 'undefined') {
+            state.multiSector.selectedSectorKey = state.multiSector.currentKey || HOME_SECTOR_KEY;
+        }
         if (typeof state.multiSector.expandedView !== 'boolean') {
             state.multiSector.expandedView = false;
         }
     } else {
         state.multiSector = {
             currentKey: HOME_SECTOR_KEY,
+            selectedSectorKey: HOME_SECTOR_KEY,
             sectorsByKey: {},
             jumpGateRegistry: {},
             expandedView: false

@@ -270,9 +270,12 @@ function getCurrentConfig() {
 
 function ensureState() {
     if (!state.multiSector || typeof state.multiSector !== 'object') {
-        state.multiSector = { currentKey: HOME_SECTOR_KEY, sectorsByKey: {}, jumpGateRegistry: {}, chartGateCorridorsPending: false, expandedView: false };
+        state.multiSector = { currentKey: HOME_SECTOR_KEY, selectedSectorKey: HOME_SECTOR_KEY, sectorsByKey: {}, jumpGateRegistry: {}, chartGateCorridorsPending: false, expandedView: false };
     }
     if (!state.multiSector.currentKey) state.multiSector.currentKey = HOME_SECTOR_KEY;
+    if (typeof state.multiSector.selectedSectorKey === 'undefined') {
+        state.multiSector.selectedSectorKey = state.multiSector.currentKey;
+    }
     if (!state.multiSector.sectorsByKey || typeof state.multiSector.sectorsByKey !== 'object') {
         state.multiSector.sectorsByKey = {};
     }
@@ -315,6 +318,7 @@ function applySectorRecord(key, record, options = {}) {
     ensureState();
 
     state.multiSector.currentKey = key;
+    state.multiSector.selectedSectorKey = key;
     const preferredSelectedHexId = options.preferredSelectedHexId || null;
     const preserveView = !!options.preserveView;
     const showLoadedToast = options.showLoadedToast !== false;
