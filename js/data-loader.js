@@ -1,5 +1,6 @@
 import { hydrateConfigData } from './config.js';
 import { hydrateGenerationData } from './generation-data.js';
+import { hydratePlanetEnvironmentData } from './planet-environment.js';
 import { hydrateTooltipData } from './tooltip-data.js';
 
 function buildDataUrl(fileName) {
@@ -38,18 +39,28 @@ function validateTooltipData(data) {
     }
 }
 
+function validatePlanetEnvironmentData(data) {
+    if (!data || typeof data !== 'object') throw new Error('planet-environment-data.json must be an object');
+    if (!data.profileByType || typeof data.profileByType !== 'object') {
+        throw new Error('planet-environment-data.json profileByType must be an object');
+    }
+}
+
 export async function loadAppData() {
-    const [configData, generationData, tooltipData] = await Promise.all([
+    const [configData, generationData, tooltipData, planetEnvironmentData] = await Promise.all([
         loadJson('config-data.json'),
         loadJson('generation-data.json'),
-        loadJson('tooltip-data.json')
+        loadJson('tooltip-data.json'),
+        loadJson('planet-environment-data.json')
     ]);
 
     validateConfigData(configData);
     validateGenerationData(generationData);
     validateTooltipData(tooltipData);
+    validatePlanetEnvironmentData(planetEnvironmentData);
 
     hydrateConfigData(configData);
     hydrateGenerationData(generationData);
     hydrateTooltipData(tooltipData);
+    hydratePlanetEnvironmentData(planetEnvironmentData);
 }
