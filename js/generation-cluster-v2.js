@@ -46,7 +46,11 @@ function sortByCoordThenScore(items) {
     });
 }
 
-function choosePrimaryAnchor(parsedCandidates, randomFn, width, height, jitter) {
+function choosePrimaryAnchor(parsedCandidates, randomFn, width, height, jitter, preferredPrimaryAnchorHexId = null) {
+    if (preferredPrimaryAnchorHexId) {
+        const preferred = parsedCandidates.find((item) => item.hexId === preferredPrimaryAnchorHexId);
+        if (preferred) return preferred;
+    }
     const centerX = (Math.max(1, width) - 1) / 2;
     const centerY = (Math.max(1, height) - 1) / 2;
     const targetX = centerX + ((randomFn() - 0.5) * 2 * jitter);
@@ -165,13 +169,14 @@ function computeCandidateScore(item, anchors, selectedHexIds, randomFn, options)
     );
 }
 
-function stageASelectAnchors(parsedCandidates, systemsToGenerate, randomFn, width, height, settings) {
+function stageASelectAnchors(parsedCandidates, systemsToGenerate, randomFn, width, height, settings, preferredPrimaryAnchorHexId = null) {
     const primaryAnchor = choosePrimaryAnchor(
         parsedCandidates,
         randomFn,
         width,
         height,
-        Math.max(0, Number(settings.clusterAnchorJitter) || 0)
+        Math.max(0, Number(settings.clusterAnchorJitter) || 0),
+        preferredPrimaryAnchorHexId
     );
     if (!primaryAnchor) return [];
     const secondaryAnchors = chooseSecondaryAnchors(primaryAnchor, parsedCandidates, systemsToGenerate, randomFn, settings);
@@ -398,7 +403,15 @@ export function selectClusteredSystemCoordsV2(candidateCoords, systemsToGenerate
         .filter((item) => !!item.coord);
     if (!parsedCandidates.length) return candidateCoords.slice(0, systemsToGenerate);
 
-    const anchors = stageASelectAnchors(parsedCandidates, systemsToGenerate, randomFn, width, height, settings);
+    const anchors = stageASelectAnchors(
+        parsedCandidates,
+        systemsToGenerate,
+        randomFn,
+        width,
+        height,
+        settings,
+        options.preferredPrimaryAnchorHexId || null
+    );
     if (!anchors.length) return candidateCoords.slice(0, systemsToGenerate);
     const stageBGrown = stageBGrowSelection(parsedCandidates, systemsToGenerate, anchors, randomFn, {
         width,

@@ -62,7 +62,7 @@ function compareHexIds(hexA, hexB) {
     return String(hexA).localeCompare(String(hexB));
 }
 
-function chooseCoreAnchorHexId(coordHexIds, width, height) {
+function chooseClosestToCenterHexId(coordHexIds, width, height) {
     const centerX = (Math.max(1, width) - 1) / 2;
     const centerY = (Math.max(1, height) - 1) / 2;
     const scored = coordHexIds
@@ -84,6 +84,37 @@ function sortCoordsByAnchorDistance(coords, anchorHexId) {
         if (distanceA !== distanceB) return distanceA - distanceB;
         return compareHexIds(a, b);
     });
+}
+
+function chooseCoreGenerationOriginHexId(candidateCoords, fixedHexIds, options = {}, width, height) {
+    const preferredHexId = options.preferredCoreSystemHexId || null;
+    if (options.preferredCoreSystemManual && preferredHexId && (candidateCoords.includes(preferredHexId) || fixedHexIds.has(preferredHexId))) {
+        return preferredHexId;
+    }
+    if (preferredHexId && (candidateCoords.includes(preferredHexId) || fixedHexIds.has(preferredHexId))) {
+        return preferredHexId;
+    }
+    if (candidateCoords.length) return chooseClosestToCenterHexId(candidateCoords, width, height);
+    if (fixedHexIds.size) return chooseClosestToCenterHexId([...fixedHexIds], width, height);
+    return null;
+}
+
+function ensureGenerationOriginIncluded(generatedCoords, systemsToGenerate, candidateCoords, originHexId) {
+    if (!originHexId || systemsToGenerate <= 0 || !candidateCoords.includes(originHexId)) return generatedCoords;
+    if (generatedCoords.includes(originHexId)) return generatedCoords;
+    if (!generatedCoords.length) return [originHexId];
+
+    const next = [...generatedCoords];
+    const dropIndex = next.reduce((worstIndex, hexId, index, list) => {
+        if (worstIndex < 0) return index;
+        const worstDistance = hexDistanceSimple(list[worstIndex], originHexId);
+        const currentDistance = hexDistanceSimple(hexId, originHexId);
+        if (currentDistance > worstDistance) return index;
+        if (currentDistance < worstDistance) return worstIndex;
+        return compareHexIds(hexId, list[worstIndex]) > 0 ? index : worstIndex;
+    }, -1);
+    if (dropIndex >= 0) next[dropIndex] = originHexId;
+    return next;
 }
 
 export function buildSectorFromConfigAction(config, fixedSystems = {}, options = {}, deps) {
@@ -127,6 +158,7 @@ export function buildSectorFromConfigAction(config, fixedSystems = {}, options =
     const sectorKey = options.sectorKey || homeSectorKey;
     const isHomeSector = sectorKey === homeSectorKey;
     const rollout = resolveGenerationRolloutFlags(normalized, { isHomeSector });
+    const coreGenerationOriginHexId = chooseCoreGenerationOriginHexId(candidateCoords, fixedHexIds, options, width, height);
     const layoutSeed = options.layoutSeed || state.layoutSeed || state.currentSeed || '';
     let generationContext = null;
     if (rollout.crossSectorContextEnabled) {
@@ -166,7 +198,8 @@ export function buildSectorFromConfigAction(config, fixedSystems = {}, options =
                     sectorKey,
                     isHomeSector,
                     settings: normalized,
-                    generationContext
+                    generationContext,
+                    preferredPrimaryAnchorHexId: coreGenerationOriginHexId
                 });
             } catch (error) {
                 console.warn('Cluster V2 failed; falling back to legacy cluster selector.', error);
@@ -178,9 +211,9 @@ export function buildSectorFromConfigAction(config, fixedSystems = {}, options =
     } else {
         generatedCoords = candidateCoords.slice(0, systemsToGenerate);
     }
+    generatedCoords = ensureGenerationOriginIncluded(generatedCoords, systemsToGenerate, candidateCoords, coreGenerationOriginHexId);
 
-    const coreAnchorHexId = chooseCoreAnchorHexId(generatedCoords, width, height);
-    const orderedGeneratedCoords = sortCoordsByAnchorDistance(generatedCoords, coreAnchorHexId);
+    const orderedGeneratedCoords = sortCoordsByAnchorDistance(generatedCoords, coreGenerationOriginHexId);
 
     let provisionalCoreHexId = null;
     let provisionalCoreScore = Number.NEGATIVE_INFINITY;
@@ -211,9 +244,9 @@ export function buildSectorFromConfigAction(config, fixedSystems = {}, options =
         height,
         preferredHexId: options.preferredCoreSystemManual
             ? (options.preferredCoreSystemHexId || null)
-            : provisionalCoreHexId,
+            : (coreGenerationOriginHexId || provisionalCoreHexId),
         preferredIsManual: !!options.preferredCoreSystemManual,
-        preferredIsAuto: !options.preferredCoreSystemManual && !!provisionalCoreHexId,
+        preferredIsAuto: !options.preferredCoreSystemManual && !!(coreGenerationOriginHexId || provisionalCoreHexId),
         settings: normalized,
         generationContext,
         sectorKey,
@@ -251,6 +284,7 @@ export function buildSectorFromConfigAction(config, fixedSystems = {}, options =
             rolloutStage: rollout.stage,
             clusterV2Enabled: !!rollout.clusterV2Enabled,
             contextEnabled: !!rollout.crossSectorContextEnabled,
+            coreGenerationOriginHexId,
             elapsedMs: Number(elapsed.toFixed(2))
         });
     }

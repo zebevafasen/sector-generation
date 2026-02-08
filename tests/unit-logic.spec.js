@@ -236,6 +236,67 @@ test.describe('pure logic modules', () => {
     expect(result.fallbackStage).toBe('full_release');
   });
 
+  test('orchestration uses core generation origin as anchor and preferred auto core', async ({ page }) => {
+    await page.goto('/sector_generator.html');
+
+    const result = await page.evaluate(async () => {
+      const orchestration = await import('/js/generation-orchestration.js');
+      const utils = await import('/js/utils.js');
+
+      let capturedClusterOptions = null;
+      let capturedResolveArgs = null;
+      const built = orchestration.buildSectorFromConfigAction({
+        width: 5,
+        height: 5,
+        starDistribution: 'clusters',
+        generationPerformanceDebugEnabled: false,
+        coreScoringDebugEnabled: false,
+        clusterV2Enabled: true,
+        crossSectorContextEnabled: false
+      }, {}, {
+        sectorKey: 'NNNN'
+      }, {
+        state: { layoutSeed: 'seed-core-origin', currentSeed: 'seed-core-origin' },
+        normalizeGenerationConfig: (value) => value,
+        isHexIdInBounds: utils.isHexIdInBounds,
+        computeSystemCount: () => 6,
+        shuffleArray: () => {},
+        rand: () => 0.5,
+        deepClone: (value) => JSON.parse(JSON.stringify(value)),
+        selectClusteredSystemCoords: (candidateCoords, count) => candidateCoords.slice(0, count),
+        selectClusteredSystemCoordsV2: (candidateCoords, count, _rand, options) => {
+          capturedClusterOptions = options;
+          return candidateCoords.slice(0, count);
+        },
+        createGenerationContext: () => null,
+        generateSystemData: (_config, context) => ({
+          name: `S-${context.coordId}`,
+          planets: [{ pop: 0.8, habitable: true }]
+        }),
+        computeCoreSystemScore: () => 1,
+        getActiveJumpGateSectorWeightMultiplier: () => 1,
+        generateDeepSpacePois: () => ({}),
+        resolveCoreSystemHexId: (args) => {
+          capturedResolveArgs = args;
+          return { coreSystemHexId: args.preferredHexId, coreSystemManual: !!args.preferredIsManual };
+        },
+        homeSectorKey: 'NNNN'
+      });
+
+      return {
+        capturedPreferredAnchor: capturedClusterOptions ? capturedClusterOptions.preferredPrimaryAnchorHexId : null,
+        capturedPreferredHexId: capturedResolveArgs ? capturedResolveArgs.preferredHexId : null,
+        coreSystemHexId: built.coreSystemHexId,
+        generatedHexIds: Object.keys(built.sectors || {})
+      };
+    });
+
+    expect(result.capturedPreferredAnchor).toBe('2-2');
+    expect(result.generatedHexIds.includes('2-2')).toBeTruthy();
+    expect(result.capturedPreferredHexId).toBe('2-2');
+    expect(result.coreSystemHexId).toBe('2-2');
+  });
+
   test('jump-gate generation enforces max-one-per-sector and edge-only placement', async ({ page }) => {
     await page.goto('/sector_generator.html');
 
