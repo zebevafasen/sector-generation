@@ -1,4 +1,4 @@
-export function refreshSectorSnapshot(config, width, height, changeLabel = 'Update Sector', deps) {
+export function refreshSectorSnapshotAction(config, width, height, changeLabel = 'Update Sector', deps) {
     const {
         state,
         normalizeGenerationConfig,
@@ -15,12 +15,12 @@ export function refreshSectorSnapshot(config, width, height, changeLabel = 'Upda
     emitEvent(events.SECTOR_DATA_CHANGED, { label: changeLabel });
 }
 
-export function updateSectorStatus(totalHexes, systemCount) {
+export function updateSectorStatusAction(totalHexes, systemCount) {
     document.getElementById('statusTotalHexes').innerText = `${totalHexes} Hexes`;
     document.getElementById('statusTotalSystems').innerText = `${systemCount} Systems`;
 }
 
-export function setAndUseNewSeed(updateInput = true, deps) {
+export function setAndUseNewSeedAction(updateInput = true, deps) {
     const { generateSeedString, setSeed } = deps;
     const seed = generateSeedString();
     if (updateInput) {
@@ -35,7 +35,7 @@ export function composeContentSeed(layoutSeed, iteration) {
     return `${layoutSeed}::content:${iteration}`;
 }
 
-export function buildSectorFromConfig(config, fixedSystems = {}, options = {}, deps) {
+export function buildSectorFromConfigAction(config, fixedSystems = {}, options = {}, deps) {
     const {
         normalizeGenerationConfig,
         isHexIdInBounds,
@@ -112,6 +112,11 @@ export function buildSectorFromConfig(config, fixedSystems = {}, options = {}, d
         deepSpacePois
     };
 }
+
+export const refreshSectorSnapshot = refreshSectorSnapshotAction;
+export const updateSectorStatus = updateSectorStatusAction;
+export const setAndUseNewSeed = setAndUseNewSeedAction;
+export const buildSectorFromConfig = buildSectorFromConfigAction;
 
 export function generateSectorAction(deps) {
     const {

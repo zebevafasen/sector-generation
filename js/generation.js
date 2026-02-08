@@ -51,13 +51,13 @@ import {
     togglePinSelectedSystemAction
 } from './generation-reroll.js';
 import {
-    buildSectorFromConfig as buildSectorFromConfigCore,
+    buildSectorFromConfigAction as buildSectorFromConfigCoreAction,
     composeContentSeed,
     createSectorRecordAction,
     generateSectorAction,
-    refreshSectorSnapshot as refreshSectorSnapshotCore,
-    setAndUseNewSeed as setAndUseNewSeedCore,
-    updateSectorStatus as updateSectorStatusCore
+    refreshSectorSnapshotAction as refreshSectorSnapshotCoreAction,
+    setAndUseNewSeedAction as setAndUseNewSeedCoreAction,
+    updateSectorStatusAction as updateSectorStatusCoreAction
 } from './generation-orchestration.js';
 
 function getOrchestrationCoreDeps() {
@@ -83,25 +83,25 @@ function getOrchestrationCoreDeps() {
 }
 
 function updateSectorStatus(totalHexes, systemCount) {
-    updateSectorStatusCore(totalHexes, systemCount);
+    updateSectorStatusCoreAction(totalHexes, systemCount);
 }
 
 function setAndUseNewSeed(updateInput = true) {
-    return setAndUseNewSeedCore(updateInput, {
+    return setAndUseNewSeedCoreAction(updateInput, {
         generateSeedString,
         setSeed
     });
 }
 
 function buildSectorFromConfig(config, fixedSystems = {}, options = {}) {
-    return buildSectorFromConfigCore(config, fixedSystems, options, {
+    return buildSectorFromConfigCoreAction(config, fixedSystems, options, {
         ...getOrchestrationCoreDeps(),
         generateSystemData
     });
 }
 
 function refreshSectorSnapshot(config, width, height, changeLabel = 'Update Sector') {
-    refreshSectorSnapshotCore(config, width, height, changeLabel, getOrchestrationCoreDeps());
+    refreshSectorSnapshotCoreAction(config, width, height, changeLabel, getOrchestrationCoreDeps());
 }
 
 function hasPinnedContentAtHex(hexId) {

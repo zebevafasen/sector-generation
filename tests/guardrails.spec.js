@@ -63,6 +63,8 @@ test('route planner can bridge long gaps using refueling-station POIs', async ({
   await expect(page.locator('#mapViewport polyline')).toHaveCount(0);
 
   await page.locator('.hex-group[data-id="0-3"]').click();
+  await expect(page.locator('#addPoiHereBtn')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('#addPoiHereBtn')).toBeEnabled();
   await page.locator('#addPoiHereBtn').click();
   await expect(page.locator('#statusMessage')).toContainText('Added POI');
 
