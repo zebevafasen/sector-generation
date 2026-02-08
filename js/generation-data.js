@@ -92,6 +92,79 @@ const DEFAULT_GENERATION_PROFILES = {
     }
 };
 
+const DEFAULT_DEEP_SPACE_POI_TEMPLATES = [
+    {
+        kind: 'Navigation',
+        name: 'Relay Beacon',
+        summary: 'A functioning long-range navigation relay anchored to old trade routes.',
+        risk: 'Low',
+        rewardHint: 'Improves navigation confidence for nearby travel plans.'
+    },
+    {
+        kind: 'Hazard',
+        name: 'Ion Storm Front',
+        summary: 'A volatile electromagnetic storm pocket that scrambles sensors.',
+        risk: 'High',
+        rewardHint: 'Forcing a crossing can save time at elevated danger.'
+    },
+    {
+        kind: 'Opportunity',
+        name: 'Drift Wreck Cluster',
+        summary: 'Scattered hulks from an old convoy battle with salvage potential.',
+        risk: 'Medium',
+        rewardHint: 'Potential salvage, encrypted logs, and recoverable cargo.'
+    },
+    {
+        kind: 'Mystery',
+        name: 'Anomalous Signal Echo',
+        summary: 'A periodic deep-space signal with no stable origin point.',
+        risk: 'Unknown',
+        rewardHint: 'Could indicate hidden structures, traps, or first-contact traces.'
+    },
+    {
+        kind: 'Opportunity',
+        name: 'Smuggler Dead-Drop',
+        summary: 'A masked cache buoy linked to covert transport networks.',
+        risk: 'Medium',
+        rewardHint: 'Useful supplies and faction leads if intercepted quietly.'
+    },
+    {
+        kind: 'Navigation',
+        name: 'Ancient Lane Marker',
+        summary: 'A pre-collapse gravimetric marker still broadcasting weak lane data.',
+        risk: 'Low',
+        rewardHint: 'Can reveal safer micro-routes and old map fragments.',
+        weight: 1
+    },
+    {
+        kind: 'Navigation',
+        name: 'Active Jump-Gate',
+        summary: 'A functioning gate nexus that can sling ships across major corridor distances.',
+        risk: 'Low',
+        rewardHint: 'Can open rapid transit options between distant regions.',
+        weight: 0.14,
+        jumpGateState: 'active'
+    },
+    {
+        kind: 'Navigation',
+        name: 'Inactive Jump-Gate',
+        summary: 'A dormant gate structure with partial telemetry and unstable startup traces.',
+        risk: 'Medium',
+        rewardHint: 'Potential to restore long-range transit if reactivated.',
+        weight: 0.32,
+        jumpGateState: 'inactive'
+    },
+    {
+        kind: 'Navigation',
+        name: 'Refueling Station',
+        summary: 'An autonomous tanker dock with reserve fuel cells and transfer hardpoints.',
+        risk: 'Low',
+        rewardHint: 'Extends long-haul range by enabling mid-route fuel top-offs.',
+        weight: 0.22,
+        isRefuelingStation: true
+    }
+];
+
 export let STAR_CLASS_PLANET_WEIGHTS = DEFAULT_STAR_CLASS_PLANET_WEIGHTS;
 export let HABITABLE_PLANET_TYPES = new Set(DEFAULT_HABITABLE_PLANET_TYPES);
 export let BASE_HABITABILITY_TYPE_WEIGHT = DEFAULT_BASE_HABITABILITY_TYPE_WEIGHT;
@@ -100,6 +173,7 @@ export let HABITABLE_WORLD_SUFFIXES = DEFAULT_HABITABLE_WORLD_SUFFIXES;
 export let DENSITY_PRESET_BASE_RATIOS = DEFAULT_DENSITY_PRESET_BASE_RATIOS;
 export let DENSITY_PRESET_RATIOS_BY_PROFILE = DEFAULT_DENSITY_PRESET_RATIOS_BY_PROFILE;
 export let GENERATION_PROFILES = DEFAULT_GENERATION_PROFILES;
+export let DEEP_SPACE_POI_TEMPLATES = DEFAULT_DEEP_SPACE_POI_TEMPLATES;
 
 export function hydrateGenerationData(loadedData = {}) {
     STAR_CLASS_PLANET_WEIGHTS = loadedData.starClassPlanetWeights || DEFAULT_STAR_CLASS_PLANET_WEIGHTS;
@@ -110,6 +184,7 @@ export function hydrateGenerationData(loadedData = {}) {
     DENSITY_PRESET_BASE_RATIOS = loadedData.densityPresetBaseRatios || DEFAULT_DENSITY_PRESET_BASE_RATIOS;
     DENSITY_PRESET_RATIOS_BY_PROFILE = loadedData.densityPresetRatiosByProfile || DEFAULT_DENSITY_PRESET_RATIOS_BY_PROFILE;
     GENERATION_PROFILES = loadedData.generationProfiles || DEFAULT_GENERATION_PROFILES;
+    DEEP_SPACE_POI_TEMPLATES = loadedData.deepSpacePoiTemplates || DEFAULT_DEEP_SPACE_POI_TEMPLATES;
 }
 
 export function normalizeDensityPresetKey(value) {
