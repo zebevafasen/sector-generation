@@ -110,6 +110,17 @@ const DEFAULT_STAR_AGE_DISPLAY = {
     unknownLabel: 'Unknown'
 };
 
+const DEFAULT_GENERATION_PROFILE_OPTIONS = [
+    { value: 'cinematic', label: 'Cinematic' },
+    { value: 'hard_scifi', label: 'Hard Sci-Fi' },
+    { value: 'high_adventure', label: 'Standard' }
+];
+
+const DEFAULT_STAR_DISTRIBUTION_OPTIONS = [
+    { value: 'standard', label: 'Standard' },
+    { value: 'clusters', label: 'Clusters' }
+];
+
 const DEFAULT_NAME_PREFIX = [
     'Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon', 'Zeta', 'Eta', 'Theta', 'Iota', 'Kappa',
     'Lambda', 'Mu', 'Nu', 'Xi', 'Omicron', 'Pi', 'Rho', 'Sigma', 'Tau', 'Upsilon',
@@ -139,6 +150,8 @@ export let STAR_CLASS_INFO = DEFAULT_STAR_CLASS_INFO;
 export let PLANET_TYPES = DEFAULT_PLANET_TYPES;
 export let GRID_PRESETS = DEFAULT_GRID_PRESETS;
 export let STAR_AGE_DISPLAY = DEFAULT_STAR_AGE_DISPLAY;
+export let GENERATION_PROFILE_OPTIONS = DEFAULT_GENERATION_PROFILE_OPTIONS;
+export let STAR_DISTRIBUTION_OPTIONS = DEFAULT_STAR_DISTRIBUTION_OPTIONS;
 export let NAME_PREFIX = DEFAULT_NAME_PREFIX;
 export let NAME_SUFFIX = DEFAULT_NAME_SUFFIX;
 
@@ -148,6 +161,8 @@ export function hydrateConfigData(loadedData = {}) {
     PLANET_TYPES = loadedData.planetTypes || DEFAULT_PLANET_TYPES;
     GRID_PRESETS = loadedData.gridPresets || DEFAULT_GRID_PRESETS;
     STAR_AGE_DISPLAY = loadedData.starAgeDisplay || DEFAULT_STAR_AGE_DISPLAY;
+    GENERATION_PROFILE_OPTIONS = loadedData.generationProfileOptions || DEFAULT_GENERATION_PROFILE_OPTIONS;
+    STAR_DISTRIBUTION_OPTIONS = loadedData.starDistributionOptions || DEFAULT_STAR_DISTRIBUTION_OPTIONS;
     NAME_PREFIX = loadedData.namePrefix || DEFAULT_NAME_PREFIX;
     NAME_SUFFIX = loadedData.nameSuffix || DEFAULT_NAME_SUFFIX;
 }

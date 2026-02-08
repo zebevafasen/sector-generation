@@ -9,7 +9,15 @@ import {
 import { randomizeSeed } from './core.js';
 import { loadAppData } from './data-loader.js';
 import { EVENTS } from './events.js';
-import { PLANET_TYPES, STAR_CLASS_INFO, state } from './config.js';
+import {
+    GENERATION_PROFILE_OPTIONS,
+    GRID_PRESETS,
+    PLANET_TYPES,
+    STAR_CLASS_INFO,
+    STAR_DISTRIBUTION_OPTIONS,
+    state
+} from './config.js';
+import { DENSITY_PRESET_LABELS, DENSITY_PRESET_ORDER } from './generation-data.js';
 import { addBodyToSelectedSystem, addPoiAtHex, addSystemAtHex, deletePoiAtHex, deleteSelectedBody, deleteSelectedSystem, generateSector, renamePoiAtHex, rerollSelectedPlanet, rerollSelectedSystem, rerollUnpinnedSystems, setEditMode, toggleEditMode, togglePinSelectedSystem } from './generation.js';
 import { captureHistorySnapshot, setupHistory } from './history.js';
 import { setupMultiSectorLinks, travelSelectedJumpGate } from './multi-sector.js';
@@ -340,6 +348,58 @@ function populateDataDrivenOptions() {
         editPlanetTypeSelect.innerHTML = PLANET_TYPES
             .map((planetType) => `<option value="${planetType}">${planetType}</option>`)
             .join('');
+    }
+
+    const sizePresetSelect = document.getElementById('sizePreset');
+    if (sizePresetSelect) {
+        const previousValue = sizePresetSelect.value;
+        const options = Object.entries(GRID_PRESETS || {});
+        sizePresetSelect.innerHTML = options
+            .map(([presetKey, preset]) => `<option value="${presetKey}">${preset.label} (${preset.width} x ${preset.height})</option>`)
+            .join('');
+        sizePresetSelect.value = previousValue;
+        if (!sizePresetSelect.value || !GRID_PRESETS[sizePresetSelect.value]) {
+            sizePresetSelect.value = 'standard';
+        }
+    }
+
+    const densityPresetSelect = document.getElementById('densityPreset');
+    if (densityPresetSelect) {
+        const previousValue = densityPresetSelect.value;
+        densityPresetSelect.innerHTML = DENSITY_PRESET_ORDER
+            .map((presetKey) => {
+                const label = DENSITY_PRESET_LABELS[presetKey] || presetKey;
+                return `<option value="${presetKey}">${label}</option>`;
+            })
+            .join('');
+        densityPresetSelect.value = previousValue;
+        if (!densityPresetSelect.value || !DENSITY_PRESET_ORDER.includes(densityPresetSelect.value)) {
+            densityPresetSelect.value = 'standard';
+        }
+    }
+
+    const generationProfileSelect = document.getElementById('generationProfile');
+    if (generationProfileSelect) {
+        const previousValue = generationProfileSelect.value;
+        generationProfileSelect.innerHTML = GENERATION_PROFILE_OPTIONS
+            .map((option) => `<option value="${option.value}">${option.label}</option>`)
+            .join('');
+        generationProfileSelect.value = previousValue;
+        if (!generationProfileSelect.value || !GENERATION_PROFILE_OPTIONS.some(option => option.value === generationProfileSelect.value)) {
+            generationProfileSelect.value = 'high_adventure';
+        }
+    }
+
+    const starDistributionSelect = document.getElementById('starDistribution');
+    if (starDistributionSelect) {
+        const previousValue = starDistributionSelect.value;
+        starDistributionSelect.innerHTML = STAR_DISTRIBUTION_OPTIONS
+            .map((option) => `<option value="${option.value}">${option.label}</option>`)
+            .join('');
+        starDistributionSelect.value = previousValue;
+        if (!starDistributionSelect.value || !STAR_DISTRIBUTION_OPTIONS.some(option => option.value === starDistributionSelect.value)) {
+            starDistributionSelect.value = 'standard';
+        }
     }
 }
 

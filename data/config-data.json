@@ -106,6 +106,15 @@
     "billionLabel": "B Years",
     "unknownLabel": "Unknown"
   },
+  "generationProfileOptions": [
+    { "value": "cinematic", "label": "Cinematic" },
+    { "value": "hard_scifi", "label": "Hard Sci-Fi" },
+    { "value": "high_adventure", "label": "Standard" }
+  ],
+  "starDistributionOptions": [
+    { "value": "standard", "label": "Standard" },
+    { "value": "clusters", "label": "Clusters" }
+  ],
   "namePrefix": [
     "Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta", "Eta", "Theta", "Iota", "Kappa",
     "Lambda", "Mu", "Nu", "Xi", "Omicron", "Pi", "Rho", "Sigma", "Tau", "Upsilon",

@@ -9,6 +9,8 @@ import {
     ADJACENT_DUPLICATE_NAME_CHANCE,
     DEEP_SPACE_POI_TEMPLATES,
     GENERATION_PROFILES,
+    STAR_CLASS_ROLL_TABLE,
+    STAR_COUNT_THRESHOLDS_BY_PROFILE,
     getDensityRatioForPreset,
     normalizeDensityPresetKey
 } from './generation-data.js';
@@ -100,32 +102,20 @@ function getActiveGenerationProfile(profileKey) {
 
 function rollStarClass() {
     const roll = rand();
-    if (roll > 0.99) return 'Black Hole';
-    if (roll > 0.97) return 'Neutron';
-    if (roll > 0.94) return 'O';
-    if (roll > 0.90) return 'B';
-    if (roll > 0.80) return 'A';
-    if (roll > 0.65) return 'F';
-    if (roll > 0.45) return 'G';
-    if (roll > 0.20) return 'K';
+    for (let i = 0; i < STAR_CLASS_ROLL_TABLE.length; i++) {
+        const entry = STAR_CLASS_ROLL_TABLE[i];
+        if (!entry || !entry.starClass) continue;
+        if (roll > Number(entry.minRollExclusive)) return entry.starClass;
+    }
     return 'M';
 }
 
 function pickStarCount(profileKey) {
     const profile = profileKey || 'high_adventure';
     const roll = rand();
-    if (profile === 'hard_scifi') {
-        if (roll < 0.03) return 3;
-        if (roll < 0.21) return 2;
-        return 1;
-    }
-    if (profile === 'cinematic') {
-        if (roll < 0.02) return 3;
-        if (roll < 0.16) return 2;
-        return 1;
-    }
-    if (roll < 0.015) return 3;
-    if (roll < 0.115) return 2;
+    const thresholds = STAR_COUNT_THRESHOLDS_BY_PROFILE[profile] || STAR_COUNT_THRESHOLDS_BY_PROFILE.high_adventure;
+    if (roll < Number(thresholds.triMaxExclusive)) return 3;
+    if (roll < Number(thresholds.binaryMaxExclusive)) return 2;
     return 1;
 }
 

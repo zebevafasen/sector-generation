@@ -1,6 +1,6 @@
 import { state } from './config.js';
 import { hideFieldInfoTooltip, hideStarClassInfo, showFieldInfoTooltip, showStarClassInfo } from './core.js';
-import { getDensityRatioForPreset, normalizeDensityPresetKey } from './generation-data.js';
+import { DENSITY_PRESET_LABELS, getDensityRatioForPreset, normalizeDensityPresetKey } from './generation-data.js';
 
 const controlsRefsCache = {};
 const MODE_BUTTON_BASE_CLASSES = ['flex-1', 'py-1', 'text-xs', 'rounded', 'transition-all'];
@@ -50,18 +50,9 @@ export function syncDensityPresetForProfile(profileKey = null) {
         densitySelect.value = normalizedSelection;
     }
 
-    const labels = {
-        void: 'Void',
-        sparse: 'Sparse',
-        standard: 'Standard',
-        busy: 'Busy',
-        dense: 'Dense',
-        core: 'Core'
-    };
-
     Array.from(densitySelect.options).forEach((option) => {
         const preset = normalizeDensityPresetKey(option.value);
-        const label = labels[preset];
+        const label = DENSITY_PRESET_LABELS[preset];
         if (!label) return;
         const percent = Math.round(getDensityRatioForPreset(preset, activeProfile) * 100);
         option.textContent = `${label} (${percent}%)`;
