@@ -496,11 +496,13 @@ test.describe('pure logic modules', () => {
       const coreBias = context.getCoreBias('NNNN');
       const intent = context.getSectorIntent('NNNN');
       const neighborSummaries = context.getNeighborSummaries('NNNN');
+      const summary = context.getSummary('NNNN');
       return {
         edgePressure,
         coreBias,
         neighborCount: neighborSummaries.length,
         neighborHasTags: neighborSummaries.some((n) => (n.summary?.dominantTagSignals || []).includes('trade')),
+        hasDensityMap: Array.isArray(summary?.densityMap) && summary.densityMap.length === 3,
         intent
       };
     });
@@ -509,7 +511,37 @@ test.describe('pure logic modules', () => {
     expect(result.coreBias).toBeGreaterThan(0);
     expect(result.neighborCount).toBeGreaterThan(0);
     expect(result.neighborHasTags).toBeTruthy();
+    expect(result.hasDensityMap).toBeTruthy();
     expect(result.intent.coreBias).toBeGreaterThan(0);
+  });
+
+  test('generation context handles single-sector records without neighbors', async ({ page }) => {
+    await page.goto('/sector_generator.html');
+
+    const result = await page.evaluate(async () => {
+      const ctx = await import('/js/generation-context.js');
+      const context = ctx.createGenerationContext('seed-single', {
+        NNNN: {
+          config: { width: 4, height: 4 },
+          sectors: { '1-1': { planets: [] } },
+          coreSystemHexId: '1-1'
+        }
+      }, {
+        crossSectorContextEnabled: true,
+        boundaryContinuityStrength: 1
+      });
+      return {
+        neighbors: context.getNeighborSummaries('NNNN').length,
+        edgePressure: context.getEdgePressure('NNNN', 'north'),
+        coreBias: context.getCoreBias('NNNN'),
+        hasSummary: !!context.getSummary('NNNN')
+      };
+    });
+
+    expect(result.neighbors).toBe(0);
+    expect(result.edgePressure).toBe(0);
+    expect(result.coreBias).toBe(0);
+    expect(result.hasSummary).toBeTruthy();
   });
 
   test('cluster v2 keeps deterministic picks and improves center occupancy on fixed seed', async ({ page }) => {

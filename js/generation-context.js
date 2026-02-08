@@ -17,12 +17,35 @@ function clamp01(value) {
 }
 
 function makeCacheKey(layoutSeed, knownSectorRecords, settings) {
-    const keys = Object.keys(knownSectorRecords || {}).sort().join('|');
+    const signatures = Object.entries(knownSectorRecords || {})
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([sectorKey, record]) => {
+            const config = record && record.config ? record.config : {};
+            const width = Math.max(1, Number(config.width) || 8);
+            const height = Math.max(1, Number(config.height) || 10);
+            const systems = record && record.sectors ? record.sectors : {};
+            const systemKeys = Object.keys(systems).sort();
+            const checksum = systemKeys
+                .reduce((sum, key) => {
+                    const parsed = parseHexId(key);
+                    if (!parsed) return sum;
+                    return sum + ((parsed.col + 1) * 31) + ((parsed.row + 1) * 17);
+                }, 0);
+            return [
+                sectorKey,
+                width,
+                height,
+                record && record.coreSystemHexId ? record.coreSystemHexId : '',
+                systemKeys.length,
+                checksum
+            ].join(':');
+        })
+        .join('|');
     const flags = [
         settings && settings.crossSectorContextEnabled ? '1' : '0',
         settings && Number.isFinite(settings.boundaryContinuityStrength) ? settings.boundaryContinuityStrength : 0
     ].join(':');
-    return `${String(layoutSeed || '')}::${keys}::${flags}`;
+    return `${String(layoutSeed || '')}::${signatures}::${flags}`;
 }
 
 function getSystemTagsFromRecord(record) {
@@ -82,6 +105,33 @@ function computeEdgeOccupancyVectors(record) {
     };
 }
 
+function buildDensityMap(record, width, height) {
+    const sectors = record && record.sectors ? record.sectors : {};
+    const buckets = [
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0]
+    ];
+    const totals = [
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0]
+    ];
+    for (let col = 0; col < width; col++) {
+        for (let row = 0; row < height; row++) {
+            const xBand = Math.min(2, Math.floor((col / Math.max(1, width)) * 3));
+            const yBand = Math.min(2, Math.floor((row / Math.max(1, height)) * 3));
+            totals[yBand][xBand] += 1;
+            if (sectors[`${col}-${row}`]) {
+                buckets[yBand][xBand] += 1;
+            }
+        }
+    }
+    return buckets.map((row, rowIndex) => row.map((count, colIndex) => (
+        clamp01(count / Math.max(1, totals[rowIndex][colIndex]))
+    )));
+}
+
 function extractSectorSummary(record, sectorKey) {
     const config = record && record.config ? record.config : {};
     const width = Math.max(1, Number(config.width) || 8);
@@ -98,6 +148,7 @@ function extractSectorSummary(record, sectorKey) {
         systemCount,
         totalHexes,
         densityRatio: clamp01(systemCount / totalHexes),
+        densityMap: buildDensityMap(record, width, height),
         edgeOccupancy: computeEdgeOccupancyVectors(record),
         core: {
             hexId: record && typeof record.coreSystemHexId === 'string' ? record.coreSystemHexId : null,

@@ -29,7 +29,9 @@ This document breaks the procedural generation redesign into phased, step-by-ste
 - Removed: no functional removals in this phase.
 
 ### Phase 2 - Completed
-- Added: seed-scoped cross-sector context module (`js/generation-context.js`) with API for intent, edge pressure, core bias, and neighbor summaries.
+- Added: seed-scoped cross-sector context module (`js/generation-context.js`) with API for intent, edge pressure, core bias, neighbor summaries, and summary access.
+- Changed: sector summary extractor now includes a 3x3 `densityMap`, edge occupancy vectors, core metadata, and dominant tag signals.
+- Changed: context cache key now fingerprints sector record content (not only keys) to prevent stale context reuse.
 - Changed: orchestration now creates context deterministically when enabled.
 - Removed: no functional removals in this phase.
 
