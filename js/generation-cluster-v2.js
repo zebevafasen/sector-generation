@@ -70,8 +70,11 @@ function choosePrimaryAnchor(parsedCandidates, randomFn, width, height, jitter, 
 
 function chooseSecondaryAnchors(primaryAnchor, parsedCandidates, systemsToGenerate, randomFn, settings) {
     const threshold = Math.max(1, Number(settings.clusterSecondaryAnchorThreshold) || 11);
-    if (systemsToGenerate < threshold) return [];
-    const maxAdditional = systemsToGenerate >= (threshold * 2) ? 2 : 1;
+    const activationThreshold = Math.max(4, Math.min(threshold, 7));
+    if (systemsToGenerate < activationThreshold) return [];
+    const targetClusterSize = 5.5;
+    const desiredAnchorCount = clamp(Math.round(systemsToGenerate / targetClusterSize), 1, 5);
+    const maxAdditional = Math.max(0, desiredAnchorCount - 1);
     const anchors = [];
     for (let i = 0; i < maxAdditional; i++) {
         const scored = parsedCandidates
@@ -107,6 +110,66 @@ function computeCenterAffinity(item, width, height) {
     return 1 - (centerDistance / maxCenterDistance);
 }
 
+function pickNearestAnchorIndex(hexId, anchors) {
+    if (!anchors.length) return 0;
+    let bestIndex = 0;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    for (let i = 0; i < anchors.length; i++) {
+        const distance = hexDistanceById(hexId, anchors[i].hexId);
+        if (distance < bestDistance) {
+            bestDistance = distance;
+            bestIndex = i;
+        }
+    }
+    return bestIndex;
+}
+
+function buildAnchorClusterCounts(selectedHexIds, anchors) {
+    const counts = new Array(Math.max(1, anchors.length)).fill(0);
+    selectedHexIds.forEach((hexId) => {
+        const idx = pickNearestAnchorIndex(hexId, anchors);
+        counts[idx] = (counts[idx] || 0) + 1;
+    });
+    return counts;
+}
+
+function computeClusterSizeBias(item, anchors, anchorClusterCounts) {
+    const nearestAnchorIndex = pickNearestAnchorIndex(item.hexId, anchors);
+    const currentCount = Number(anchorClusterCounts[nearestAnchorIndex] || 0);
+    const target = 5.5;
+    if (currentCount < target) {
+        return 0.35 + ((target - currentCount) * 0.08);
+    }
+    const overflow = currentCount - target;
+    return -Math.min(1.1, overflow * 0.18);
+}
+
+function computeLocalCompactnessBias(item, selectedHexIds) {
+    if (!selectedHexIds.length) return 0;
+    const immediateNeighbors = countLocalNeighbors(selectedHexIds, item.hexId, 1);
+    const nearbyNeighbors = countLocalNeighbors(selectedHexIds, item.hexId, 2);
+    const compactBonus = (immediateNeighbors * 0.32) + (Math.max(0, nearbyNeighbors - immediateNeighbors) * 0.08);
+    return Math.min(1.35, compactBonus);
+}
+
+function computeLinearityPenalty(item, selectedHexIds) {
+    const nearCoords = selectedHexIds
+        .filter((otherHexId) => hexDistanceById(otherHexId, item.hexId) <= 2)
+        .map((hexId) => parseHexId(hexId))
+        .filter((coord) => !!coord);
+    if (nearCoords.length < 3) return 0;
+    const allCols = nearCoords.map((coord) => coord.col).concat(item.coord.col);
+    const allRows = nearCoords.map((coord) => coord.row).concat(item.coord.row);
+    const colSpan = Math.max(...allCols) - Math.min(...allCols);
+    const rowSpan = Math.max(...allRows) - Math.min(...allRows);
+    const majorSpan = Math.max(colSpan, rowSpan);
+    if (majorSpan <= 0) return 0;
+    const minorSpan = Math.min(colSpan, rowSpan);
+    const spreadRatio = minorSpan / majorSpan;
+    if (spreadRatio >= 0.35) return 0;
+    return (0.35 - spreadRatio) * 1.25;
+}
+
 function computeCandidateScore(item, anchors, selectedHexIds, randomFn, options) {
     const {
         width,
@@ -128,7 +191,10 @@ function computeCandidateScore(item, anchors, selectedHexIds, randomFn, options)
     if (localNeighbors >= (localNeighborCap + capRelaxation)) {
         return Number.NEGATIVE_INFINITY;
     }
-    const overpackPenalty = Math.max(0, localNeighbors - 2) * 0.35;
+    const overpackPenalty = Math.max(0, localNeighbors - 4) * 0.28;
+    const compactnessBias = computeLocalCompactnessBias(item, selectedHexIds);
+    const linearityPenalty = computeLinearityPenalty(item, selectedHexIds);
+    const clusterSizeBias = computeClusterSizeBias(item, anchors, options.anchorClusterCounts || []);
 
     const cachedMeta = options.candidateMetaByHex && options.candidateMetaByHex.get(item.hexId)
         ? options.candidateMetaByHex.get(item.hexId)
@@ -163,7 +229,10 @@ function computeCandidateScore(item, anchors, selectedHexIds, randomFn, options)
         + (centerAffinity * centerBiasStrength * homeCenterMultiplier)
         + boundaryBias
         + seamSmoothingBias
+        + compactnessBias
+        + clusterSizeBias
         - overpackPenalty
+        - linearityPenalty
         - edgePenalty
         + variance
     );
@@ -207,6 +276,7 @@ function stageBGrowSelection(parsedCandidates, systemsToGenerate, anchors, rando
         }
     });
     while (selectedHexIds.length < targetCount) {
+        const anchorClusterCounts = buildAnchorClusterCounts(selectedHexIds, anchors);
         const stageEdgeOccupancy = {
             north: edgeCounts.north / Math.max(1, edgeTotals.north),
             south: edgeCounts.south / Math.max(1, edgeTotals.south),
@@ -230,7 +300,8 @@ function stageBGrowSelection(parsedCandidates, systemsToGenerate, anchors, rando
                     localNeighborCap,
                     capRelaxation,
                     stageEdgeOccupancy,
-                    candidateMetaByHex
+                    candidateMetaByHex,
+                    anchorClusterCounts
                 })
             }))
             .filter((item) => Number.isFinite(item.score));
