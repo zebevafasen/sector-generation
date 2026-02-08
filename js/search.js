@@ -2,6 +2,7 @@ import { state } from './config.js';
 import { showStatusMessage } from './core.js';
 import { EVENTS } from './events.js';
 import { selectHex } from './render.js';
+import { getGlobalHexDisplayId } from './render-shared.js';
 import { countSystemBodies, isPlanetaryBody } from './body-classification.js';
 import { escapeHtml } from './info-panel-ui.js';
 
@@ -103,7 +104,7 @@ function renderResults(refs, matches) {
             ? 'w-full text-left rounded border border-sky-600 bg-sky-900/30 px-2 py-1.5'
             : 'w-full text-left rounded border border-slate-700 bg-slate-800/60 hover:border-sky-500 px-2 py-1.5';
         const safeName = escapeHtml(item.system.name || 'Unnamed System');
-        const safeHexId = escapeHtml(item.hexId);
+        const safeHexId = escapeHtml(getGlobalHexDisplayId(item.hexId));
         const safeStarClass = escapeHtml(item.system.starClass || '--');
         const safePopLabel = escapeHtml(popLabel);
         return `
@@ -167,7 +168,7 @@ export function setupSearchPanel() {
         if (!hexId) return;
         const group = document.querySelector(`.hex-group[data-id="${hexId}"]`);
         if (!group) {
-            showStatusMessage(`Unable to focus ${hexId}.`, 'warn');
+            showStatusMessage(`Unable to focus ${getGlobalHexDisplayId(hexId)}.`, 'warn');
             return;
         }
         selectHex(hexId, group);

@@ -29,6 +29,7 @@ import {
 } from './planetary-rules.js';
 import { autoSaveSectorState, buildSectorPayload } from './storage.js';
 import { readGenerationConfigFromUi } from './sector-config.js';
+import { getGlobalHexDisplayId } from './render-shared.js';
 import { ensureSystemStarFields } from './star-system.js';
 import { redrawGridAndReselect, redrawHexAndReselect, redrawHexAndSelectHex, refreshHexInfo, clearSelectionInfo } from './ui-sync.js';
 import { deepClone, isHexIdInBounds, parseHexId, romanize, shuffleArray, sortHexIds } from './utils.js';
@@ -855,7 +856,7 @@ export function addSystemAtHex(hexId) {
     sanitizePinnedHexes(config.width, config.height);
     refreshSectorSnapshot(config, config.width, config.height, 'Add System');
     updateSectorStatus(config.width * config.height, Object.keys(state.sectors).length);
-    showStatusMessage(`Added system at ${hexId}.`, 'success');
+    showStatusMessage(`Added system at ${getGlobalHexDisplayId(hexId)}.`, 'success');
 }
 
 export function deleteSelectedSystem() {
@@ -877,7 +878,7 @@ export function deleteSelectedSystem() {
     sanitizePinnedHexes(config.width, config.height);
     refreshSectorSnapshot(config, config.width, config.height, 'Delete System');
     updateSectorStatus(config.width * config.height, Object.keys(state.sectors).length);
-    showStatusMessage(`Deleted system ${selectedHexId}.`, 'success');
+    showStatusMessage(`Deleted system ${getGlobalHexDisplayId(selectedHexId)}.`, 'success');
 }
 
 export function addPoiAtHex(hexId) {
@@ -889,7 +890,7 @@ export function addPoiAtHex(hexId) {
     }
     if (!state.deepSpacePois) state.deepSpacePois = {};
     if (state.deepSpacePois[hexId]) {
-        showStatusMessage(`POI already exists at ${hexId}.`, 'info');
+        showStatusMessage(`POI already exists at ${getGlobalHexDisplayId(hexId)}.`, 'info');
         return;
     }
 
@@ -897,7 +898,7 @@ export function addPoiAtHex(hexId) {
 
     redrawHexAndSelectHex(hexId);
     refreshSectorSnapshot(config, config.width, config.height, 'Add POI');
-    showStatusMessage(`Added POI at ${hexId}.`, 'success');
+    showStatusMessage(`Added POI at ${getGlobalHexDisplayId(hexId)}.`, 'success');
 }
 
 export function deletePoiAtHex(hexId) {
@@ -913,7 +914,7 @@ export function deletePoiAtHex(hexId) {
 
     redrawHexAndSelectHex(hexId);
     refreshSectorSnapshot(config, config.width, config.height, 'Delete POI');
-    showStatusMessage(`Deleted POI at ${hexId}.`, 'success');
+    showStatusMessage(`Deleted POI at ${getGlobalHexDisplayId(hexId)}.`, 'success');
 }
 
 export function renamePoiAtHex(hexId) {
@@ -932,7 +933,7 @@ export function renamePoiAtHex(hexId) {
 
     redrawHexAndSelectHex(hexId);
     refreshSectorSnapshot(config, config.width, config.height, 'Rename POI');
-    showStatusMessage(`Renamed POI at ${hexId}.`, 'success');
+    showStatusMessage(`Renamed POI at ${getGlobalHexDisplayId(hexId)}.`, 'success');
 }
 
 export function addBodyToSelectedSystem(kind) {
@@ -1091,7 +1092,7 @@ export function rerollSelectedSystem() {
         state.deepSpacePois[selectedHexId] = createDeepSpacePoi();
         redrawHexAndSelectHex(selectedHexId);
         refreshSectorSnapshot(config, config.width, config.height, 'Reroll POI');
-        showStatusMessage(`Rerolled POI at ${selectedHexId}.`, 'success');
+        showStatusMessage(`Rerolled POI at ${getGlobalHexDisplayId(selectedHexId)}.`, 'success');
         return;
     }
     if (!state.sectors[selectedHexId]) {
@@ -1117,7 +1118,7 @@ export function rerollSelectedSystem() {
     redrawHexAndReselect(selectedHexId);
     sanitizePinnedHexes(config.width, config.height);
     refreshSectorSnapshot(config, config.width, config.height, 'Reroll System');
-    showStatusMessage(`Rerolled system ${selectedHexId} with seed ${seedUsed}.`, 'success');
+    showStatusMessage(`Rerolled system ${getGlobalHexDisplayId(selectedHexId)} with seed ${seedUsed}.`, 'success');
 }
 
 export function togglePinSelectedSystem() {
@@ -1136,10 +1137,10 @@ export function togglePinSelectedSystem() {
     const pinned = new Set(state.pinnedHexIds || []);
     if (pinned.has(selectedHexId)) {
         pinned.delete(selectedHexId);
-        showStatusMessage(`Unpinned ${isSystem ? 'system' : 'POI'} ${selectedHexId}.`, 'info');
+        showStatusMessage(`Unpinned ${isSystem ? 'system' : 'POI'} ${getGlobalHexDisplayId(selectedHexId)}.`, 'info');
     } else {
         pinned.add(selectedHexId);
-        showStatusMessage(`Pinned ${isSystem ? 'system' : 'POI'} ${selectedHexId}.`, 'success');
+        showStatusMessage(`Pinned ${isSystem ? 'system' : 'POI'} ${getGlobalHexDisplayId(selectedHexId)}.`, 'success');
     }
 
     state.pinnedHexIds = Array.from(pinned);

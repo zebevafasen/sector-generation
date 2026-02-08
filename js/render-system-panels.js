@@ -3,6 +3,7 @@ import { formatStarAgeValue, generateStarAge, getStarClassInfo } from './core.js
 import { EVENTS, emitEvent } from './events.js';
 import { reportSystemInvariantIssues } from './invariants.js';
 import { resetBodyDetailsPanel } from './render-body-details.js';
+import { getGlobalHexDisplayIdForSector } from './render-shared.js';
 import { ensureSystemStarFields, getPrimaryStar, getSystemStars, removeStarAtIndex, setPrimaryStarClass } from './star-system.js';
 import { hasLinkedBodiesToRename, renameBodiesForSystemNameChange } from './system-naming.js';
 import {
@@ -292,6 +293,9 @@ export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
     refs.emptyDetails.classList.remove('hidden');
     if (deepSpacePoi) {
         const poiStyle = getPoiTypeStyle(deepSpacePoi.kind);
+        const jumpLinkLabel = (deepSpacePoi.jumpGateLink && deepSpacePoi.jumpGateLink.sectorKey)
+            ? `Sector ${deepSpacePoi.jumpGateLink.sectorKey} | Hex ${getGlobalHexDisplayIdForSector(deepSpacePoi.jumpGateLink.sectorKey, deepSpacePoi.jumpGateLink.hexId || '')}`
+            : 'Unresolved';
         refs.emptyDetails.innerHTML = `
             <div class="space-y-2 text-left">
                 <div class="flex items-center justify-between gap-2">
@@ -312,7 +316,7 @@ export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
                 <p class="text-[11px] text-slate-400">Travel Intel: ${escapeHtml(deepSpacePoi.rewardHint || 'No additional intel.')}</p>
                 ${isActiveJumpGatePoi(deepSpacePoi) ? `
                 <div class="rounded border border-cyan-700/60 bg-cyan-950/20 px-2 py-2">
-                    <p class="text-[11px] text-cyan-200">Jump Link: ${escapeHtml((deepSpacePoi.jumpGateLink && deepSpacePoi.jumpGateLink.sectorKey) ? `${deepSpacePoi.jumpGateLink.sectorKey} / ${deepSpacePoi.jumpGateLink.hexId || '--'}` : 'Unresolved')}</p>
+                    <p class="text-[11px] text-cyan-200">Jump Link: ${escapeHtml(jumpLinkLabel)}</p>
                     <button type="button" id="travelJumpGateBtn" class="mt-2 w-full py-1.5 text-xs rounded bg-cyan-900/35 border border-cyan-700 text-cyan-200 hover:bg-cyan-800/40 hover:border-cyan-500 transition-colors">Go to Location</button>
                 </div>
                 ` : ''}
