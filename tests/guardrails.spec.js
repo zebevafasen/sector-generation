@@ -117,6 +117,34 @@ test('route planner can bridge long gaps using refueling-station POIs', async ({
     page.locator('#renamePoiBtn').click()
   ]);
   await expect(page.locator('#statusMessage')).toContainText('Renamed POI');
+  await expect(page.locator('#emptyDetails')).toContainText('Refueling Station 777');
+
+  const ensureRefuelingNavigationPoi = async () => {
+    const isRouteBridgeReady = async () => {
+      const payload = await page.evaluate(() => {
+        const raw = window.localStorage.getItem('hex-star-sector-gen:autosave');
+        return raw ? JSON.parse(raw) : null;
+      });
+      const poi = payload?.deepSpacePois?.['0-3'];
+      if (!poi) return false;
+      return String(poi.kind || '').toLowerCase() === 'navigation'
+        && /refueling station/i.test(String(poi.name || ''));
+    };
+    if (await isRouteBridgeReady()) return;
+
+    for (let attempt = 0; attempt < 20; attempt++) {
+      await page.locator('#rerollSelectedSystemBtn').click();
+      await expect(page.locator('#statusMessage')).toContainText('Rerolled POI');
+      await Promise.all([
+        page.waitForEvent('dialog').then((dialog) => dialog.accept('Refueling Station 777')),
+        page.locator('#renamePoiBtn').click()
+      ]);
+      await expect(page.locator('#statusMessage')).toContainText('Renamed POI');
+      if (await isRouteBridgeReady()) return;
+    }
+    throw new Error('Unable to configure a navigation refueling POI in 20 attempts.');
+  };
+  await ensureRefuelingNavigationPoi();
 
   await page.evaluate(() => {
     window.dispatchEvent(new CustomEvent('routeShortcutHex', { detail: { hexId: '0-0' } }));

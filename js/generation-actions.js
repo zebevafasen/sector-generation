@@ -47,7 +47,9 @@ export function addSystemAtHexAction(hexId, deps) {
         width: config.width,
         height: config.height,
         preferredHexId: state.coreSystemHexId,
-        preferredIsManual: state.coreSystemManual
+        preferredIsManual: state.coreSystemManual,
+        preferredIsAuto: !state.coreSystemManual && !!state.coreSystemHexId,
+        settings: config
     });
     state.coreSystemHexId = core.coreSystemHexId;
     state.coreSystemManual = core.coreSystemManual;
@@ -89,7 +91,11 @@ export function deleteSelectedSystemAction(deps) {
         width: config.width,
         height: config.height,
         preferredHexId: selectedHexId === state.coreSystemHexId ? null : state.coreSystemHexId,
-        preferredIsManual: selectedHexId === state.coreSystemHexId ? false : state.coreSystemManual
+        preferredIsManual: selectedHexId === state.coreSystemHexId ? false : state.coreSystemManual,
+        preferredIsAuto: selectedHexId === state.coreSystemHexId
+            ? false
+            : (!state.coreSystemManual && !!state.coreSystemHexId),
+        settings: config
     });
     state.coreSystemHexId = core.coreSystemHexId;
     state.coreSystemManual = core.coreSystemManual;

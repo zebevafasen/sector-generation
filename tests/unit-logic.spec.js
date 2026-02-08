@@ -446,11 +446,28 @@ test.describe('pure logic modules', () => {
         preferredHexId: '9-9',
         preferredIsManual: true
       });
+      const resolvedAutoPreferred = core.resolveCoreSystemHexId({
+        sectors,
+        width: 4,
+        height: 4,
+        preferredHexId: '3-3',
+        preferredIsAuto: true
+      });
+      const resolvedIgnoredAutoPreferred = core.resolveCoreSystemHexId({
+        sectors,
+        width: 4,
+        height: 4,
+        preferredHexId: '3-3',
+        preferredIsManual: false,
+        preferredIsAuto: false
+      });
 
       return {
         picked,
         resolvedPreferred,
-        resolvedInvalidPreferred
+        resolvedInvalidPreferred,
+        resolvedAutoPreferred,
+        resolvedIgnoredAutoPreferred
       };
     });
 
@@ -460,6 +477,14 @@ test.describe('pure logic modules', () => {
       coreSystemManual: true
     });
     expect(result.resolvedInvalidPreferred).toEqual({
+      coreSystemHexId: '2-2',
+      coreSystemManual: false
+    });
+    expect(result.resolvedAutoPreferred).toEqual({
+      coreSystemHexId: '3-3',
+      coreSystemManual: false
+    });
+    expect(result.resolvedIgnoredAutoPreferred).toEqual({
       coreSystemHexId: '2-2',
       coreSystemManual: false
     });

@@ -156,13 +156,14 @@ export function resolveCoreSystemHexId({
     height,
     preferredHexId = null,
     preferredIsManual = false,
+    preferredIsAuto = false,
     settings = null,
     generationContext = null,
     sectorKey = null,
     debugScoring = false
 }) {
     const hasPreferred = !!(preferredHexId && sectors && sectors[preferredHexId]);
-    if (hasPreferred) {
+    if (hasPreferred && (preferredIsManual || preferredIsAuto)) {
         return {
             coreSystemHexId: preferredHexId,
             coreSystemManual: !!preferredIsManual

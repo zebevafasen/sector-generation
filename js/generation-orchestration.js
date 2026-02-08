@@ -35,8 +35,57 @@ export function composeContentSeed(layoutSeed, iteration) {
     return `${layoutSeed}::content:${iteration}`;
 }
 
+function parseHexCoordinate(hexId) {
+    const [colRaw, rowRaw] = String(hexId || '').split('-');
+    const col = Number(colRaw);
+    const row = Number(rowRaw);
+    if (!Number.isInteger(col) || !Number.isInteger(row)) return null;
+    return { col, row };
+}
+
+function hexDistanceSimple(hexA, hexB) {
+    const a = parseHexCoordinate(hexA);
+    const b = parseHexCoordinate(hexB);
+    if (!a || !b) return Number.POSITIVE_INFINITY;
+    return Math.abs(a.col - b.col) + Math.abs(a.row - b.row);
+}
+
+function compareHexIds(hexA, hexB) {
+    const a = parseHexCoordinate(hexA);
+    const b = parseHexCoordinate(hexB);
+    if (!a || !b) return String(hexA).localeCompare(String(hexB));
+    if (a.col !== b.col) return a.col - b.col;
+    if (a.row !== b.row) return a.row - b.row;
+    return String(hexA).localeCompare(String(hexB));
+}
+
+function chooseCoreAnchorHexId(coordHexIds, width, height) {
+    const centerX = (Math.max(1, width) - 1) / 2;
+    const centerY = (Math.max(1, height) - 1) / 2;
+    const scored = coordHexIds
+        .map((hexId) => {
+            const parsed = parseHexCoordinate(hexId);
+            if (!parsed) return { hexId, distance: Number.POSITIVE_INFINITY };
+            const distance = Math.hypot(parsed.col - centerX, parsed.row - centerY);
+            return { hexId, distance };
+        })
+        .sort((a, b) => a.distance - b.distance || compareHexIds(a.hexId, b.hexId));
+    return scored.length ? scored[0].hexId : null;
+}
+
+function sortCoordsByAnchorDistance(coords, anchorHexId) {
+    if (!anchorHexId) return coords;
+    return [...coords].sort((a, b) => {
+        const distanceA = hexDistanceSimple(a, anchorHexId);
+        const distanceB = hexDistanceSimple(b, anchorHexId);
+        if (distanceA !== distanceB) return distanceA - distanceB;
+        return compareHexIds(a, b);
+    });
+}
+
 export function buildSectorFromConfigAction(config, fixedSystems = {}, options = {}, deps) {
     const {
+        state,
         normalizeGenerationConfig,
         isHexIdInBounds,
         computeSystemCount,
@@ -47,6 +96,7 @@ export function buildSectorFromConfigAction(config, fixedSystems = {}, options =
         selectClusteredSystemCoordsV2,
         createGenerationContext,
         generateSystemData,
+        computeCoreSystemScore,
         getActiveJumpGateSectorWeightMultiplier,
         generateDeepSpacePois,
         resolveCoreSystemHexId,
@@ -117,19 +167,41 @@ export function buildSectorFromConfigAction(config, fixedSystems = {}, options =
         generatedCoords = candidateCoords.slice(0, systemsToGenerate);
     }
 
-    generatedCoords.forEach(hexId => {
-        nextSectors[hexId] = generateSystemData(normalized, {
+    const coreAnchorHexId = chooseCoreAnchorHexId(generatedCoords, width, height);
+    const orderedGeneratedCoords = sortCoordsByAnchorDistance(generatedCoords, coreAnchorHexId);
+
+    let provisionalCoreHexId = null;
+    let provisionalCoreScore = Number.NEGATIVE_INFINITY;
+    orderedGeneratedCoords.forEach(hexId => {
+        const generatedSystem = generateSystemData(normalized, {
             coordId: hexId,
             usedNames,
             sectorsByCoord: nextSectors
         });
+        nextSectors[hexId] = generatedSystem;
+        if (!options.preferredCoreSystemManual) {
+            const score = computeCoreSystemScore(generatedSystem, hexId, width, height, {
+                settings: normalized,
+                generationContext,
+                sectorKey
+            });
+            const shouldSelect = score > provisionalCoreScore
+                || (score === provisionalCoreScore && compareHexIds(hexId, provisionalCoreHexId || '') < 0);
+            if (shouldSelect) {
+                provisionalCoreHexId = hexId;
+                provisionalCoreScore = score;
+            }
+        }
     });
     const core = resolveCoreSystemHexId({
         sectors: nextSectors,
         width,
         height,
-        preferredHexId: options.preferredCoreSystemHexId || null,
+        preferredHexId: options.preferredCoreSystemManual
+            ? (options.preferredCoreSystemHexId || null)
+            : provisionalCoreHexId,
         preferredIsManual: !!options.preferredCoreSystemManual,
+        preferredIsAuto: !options.preferredCoreSystemManual && !!provisionalCoreHexId,
         settings: normalized,
         generationContext,
         sectorKey
