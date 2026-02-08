@@ -68,3 +68,29 @@ test('save/load uses active size mode dimensions and ignores stale custom inputs
   await expect(page.locator('#statusTotalHexes')).toContainText('80 Hexes');
   await expect(page.locator('.hex-group')).toHaveCount(80);
 });
+
+test('load local restores expanded view rendering without extra sector clicks', async ({ page }) => {
+  await page.goto('/sector_generator.html');
+  await page.locator('#generateSectorBtn').click();
+
+  await page.evaluate(() => {
+    const currentLabel = document.getElementById('currentSectorLabel');
+    const sourceSectorKey = String(currentLabel?.textContent || '').replace('Current:', '').trim();
+    window.dispatchEvent(new CustomEvent('requestMoveSectorEdge', {
+      detail: { sourceSectorKey, direction: 'east' }
+    }));
+  });
+  await page.locator('#toggleExpandedSectorViewBtn').click();
+  await expect(page.locator('#toggleExpandedSectorViewBtn')).toContainText('Expanded View: On');
+  await expect(page.locator('.sector-layer')).toHaveCount(2);
+
+  await page.locator('#saveSectorLocalBtn').click();
+  await expect(page.locator('#statusMessage')).toContainText('saved', { ignoreCase: true });
+
+  await page.locator('#toggleExpandedSectorViewBtn').click();
+  await expect(page.locator('#toggleExpandedSectorViewBtn')).toContainText('Expanded View: Off');
+
+  await page.locator('#loadSectorLocalBtn').click();
+  await expect(page.locator('#toggleExpandedSectorViewBtn')).toContainText('Expanded View: On');
+  await expect(page.locator('.sector-layer')).toHaveCount(2);
+});

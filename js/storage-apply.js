@@ -112,21 +112,6 @@ export function createStorageApplyService(deps) {
             starDistribution: nextPayload.starDistribution === 'clusters' ? 'clusters' : 'standard',
             realisticPlanetWeights: !!nextPayload.realisticPlanetWeights
         };
-        state.selectedHexId = null;
-        clearInfoPanel();
-        drawGrid(width, height);
-        if (nextPayload.selectedHexId && (state.sectors[nextPayload.selectedHexId] || state.deepSpacePois[nextPayload.selectedHexId])) {
-            const group = findHexGroup(nextPayload.selectedHexId);
-            if (group) selectHex(nextPayload.selectedHexId, group);
-        }
-
-        const totalHexes = nextPayload.stats && Number.isFinite(nextPayload.stats.totalHexes) ? nextPayload.stats.totalHexes : width * height;
-        const systemCount = nextPayload.stats && Number.isFinite(nextPayload.stats.totalSystems) ? nextPayload.stats.totalSystems : Object.keys(state.sectors).length;
-        updateStatusLabels(refs, totalHexes, systemCount);
-        state.lastSectorSnapshot = buildSectorPayload({ width, height, totalHexes, systemCount });
-        if (nextPayload.generatedAt) {
-            state.lastSectorSnapshot.generatedAt = nextPayload.generatedAt;
-        }
         if (nextPayload.multiSector && typeof nextPayload.multiSector === 'object') {
             state.multiSector = nextPayload.multiSector;
             if (!state.multiSector.jumpGateRegistry || typeof state.multiSector.jumpGateRegistry !== 'object') {
@@ -146,6 +131,21 @@ export function createStorageApplyService(deps) {
                 jumpGateRegistry: {},
                 expandedView: false
             };
+        }
+        state.selectedHexId = null;
+        clearInfoPanel();
+        drawGrid(width, height);
+        if (nextPayload.selectedHexId && (state.sectors[nextPayload.selectedHexId] || state.deepSpacePois[nextPayload.selectedHexId])) {
+            const group = findHexGroup(nextPayload.selectedHexId);
+            if (group) selectHex(nextPayload.selectedHexId, group);
+        }
+
+        const totalHexes = nextPayload.stats && Number.isFinite(nextPayload.stats.totalHexes) ? nextPayload.stats.totalHexes : width * height;
+        const systemCount = nextPayload.stats && Number.isFinite(nextPayload.stats.totalSystems) ? nextPayload.stats.totalSystems : Object.keys(state.sectors).length;
+        updateStatusLabels(refs, totalHexes, systemCount);
+        state.lastSectorSnapshot = buildSectorPayload({ width, height, totalHexes, systemCount });
+        if (nextPayload.generatedAt) {
+            state.lastSectorSnapshot.generatedAt = nextPayload.generatedAt;
         }
         autoSaveSectorState();
         emitEvent(EVENTS.SECTOR_DATA_CHANGED, { label: 'Load Sector' });
