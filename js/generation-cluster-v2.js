@@ -72,7 +72,7 @@ function chooseSecondaryAnchors(primaryAnchor, parsedCandidates, systemsToGenera
     const threshold = Math.max(1, Number(settings.clusterSecondaryAnchorThreshold) || 11);
     const activationThreshold = Math.max(4, Math.min(threshold, 7));
     if (systemsToGenerate < activationThreshold) return [];
-    const targetClusterSize = 5.5;
+    const targetClusterSize = 4;
     const desiredAnchorCount = clamp(Math.round(systemsToGenerate / targetClusterSize), 1, 5);
     const maxAdditional = Math.max(0, desiredAnchorCount - 1);
     const anchors = [];
@@ -136,7 +136,7 @@ function buildAnchorClusterCounts(selectedHexIds, anchors) {
 function computeClusterSizeBias(item, anchors, anchorClusterCounts) {
     const nearestAnchorIndex = pickNearestAnchorIndex(item.hexId, anchors);
     const currentCount = Number(anchorClusterCounts[nearestAnchorIndex] || 0);
-    const target = 5.5;
+    const target = 4;
     if (currentCount < target) {
         return 0.35 + ((target - currentCount) * 0.08);
     }
