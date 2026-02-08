@@ -478,6 +478,8 @@ test('inactive jump-gates stay linked and activation in edit mode synchronizes b
   await expect(page.locator('#activateJumpGateBtn')).toBeVisible();
   await page.locator('#activateJumpGateBtn').click();
   await expect(page.locator('#statusMessage')).toContainText('activated');
+  await expect(page.locator('#activateJumpGateBtn')).toHaveCount(0);
+  await expect(page.locator('#travelJumpGateBtn')).toBeVisible();
 
   const synced = await page.evaluate(() => {
     const raw = window.localStorage.getItem('hex-star-sector-gen:autosave');
@@ -489,6 +491,10 @@ test('inactive jump-gates stay linked and activation in edit mode synchronizes b
     const target = payload.multiSector?.sectorsByKey?.[pair.b.sectorKey]?.deepSpacePois?.[pair.b.hexId];
     if (!source || !target) return null;
     return {
+      sourceName: source.name,
+      targetName: target.name,
+      sourceSummary: source.summary,
+      targetSummary: target.summary,
       sourceState: source.jumpGateState,
       targetState: target.jumpGateState,
       pairState: pair.state,
@@ -501,6 +507,10 @@ test('inactive jump-gates stay linked and activation in edit mode synchronizes b
   expect(synced.sourceState).toBe('active');
   expect(synced.targetState).toBe('active');
   expect(synced.pairState).toBe('active');
+  expect(String(synced.sourceName || '')).not.toMatch(/inactive/i);
+  expect(String(synced.targetName || '')).not.toMatch(/inactive/i);
+  expect(String(synced.sourceSummary || '')).toMatch(/functioning gate nexus/i);
+  expect(String(synced.targetSummary || '')).toMatch(/functioning gate nexus/i);
   expect(synced.sourceLink).toBeTruthy();
   expect(synced.targetLink).toBeTruthy();
 });

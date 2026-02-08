@@ -1,5 +1,6 @@
 import { HOME_SECTOR_KEY, makeSectorKeyFromCoords, parseSectorKeyToCoords } from './sector-address.js';
 import { parseHexId, sortHexIds, xmur3, mulberry32 } from './utils.js';
+import { DEEP_SPACE_POI_TEMPLATES } from './generation-data.js';
 import {
     isActiveJumpGatePoi,
     isInactiveJumpGatePoi,
@@ -58,14 +59,47 @@ function getCanonicalJumpGateProfile(sourcePoi = null, targetPoi = null) {
     };
 }
 
+function getActiveJumpGateDefaults() {
+    const template = (DEEP_SPACE_POI_TEMPLATES || []).find((item) =>
+        item
+        && item.poiCategory === JUMP_GATE_POI_CATEGORY
+        && item.jumpGateState === 'active'
+    );
+    if (!template) {
+        return {
+            kind: 'Navigation',
+            summary: 'A synchronized jump-gate endpoint tied to a linked remote sector.',
+            risk: 'Low',
+            rewardHint: 'Enables near-instant transit to its paired gate.'
+        };
+    }
+    return {
+        kind: typeof template.kind === 'string' && template.kind.trim() ? template.kind.trim() : 'Navigation',
+        summary: typeof template.summary === 'string' && template.summary.trim()
+            ? template.summary.trim()
+            : 'A synchronized jump-gate endpoint tied to a linked remote sector.',
+        risk: typeof template.risk === 'string' && template.risk.trim() ? template.risk.trim() : 'Low',
+        rewardHint: typeof template.rewardHint === 'string' && template.rewardHint.trim()
+            ? template.rewardHint.trim()
+            : 'Enables near-instant transit to its paired gate.'
+    };
+}
+
+function normalizeActivatedJumpGateName(value) {
+    const text = String(value || '').trim();
+    if (!text) return '';
+    const withoutInactive = text
+        .replace(/\binactive\b/ig, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+    return withoutInactive;
+}
+
 function getPairedJumpGateNames(pairId, sourcePoi = null, targetPoi = null) {
     const serial = (xmur3(pairId)() % 900) + 100;
     const fallbackA = `Jump-Gate ${serial}A`;
     const fallbackB = `Jump-Gate ${serial}B`;
-    const normalize = (value) => {
-        const text = typeof value === 'string' ? value.trim() : '';
-        return text;
-    };
+    const normalize = (value) => normalizeActivatedJumpGateName(value);
 
     let aName = normalize(sourcePoi && sourcePoi.name) || fallbackA;
     let bName = normalize(targetPoi && targetPoi.name) || fallbackB;
@@ -379,6 +413,36 @@ export function createJumpGateService(state, ensureState) {
         ensureInboundJumpGatesForRecord(sectorKey, record);
         if (pair && pair.b && pair.b.sectorKey && state.multiSector.sectorsByKey[pair.b.sectorKey]) {
             ensureInboundJumpGatesForRecord(pair.b.sectorKey, state.multiSector.sectorsByKey[pair.b.sectorKey]);
+        }
+
+        // Promotion from inactive -> active should also refresh gate intel/name on both endpoints.
+        if (pair && pair.a && pair.b) {
+            const defaults = getActiveJumpGateDefaults();
+            const aRecord = state.multiSector.sectorsByKey[pair.a.sectorKey];
+            const bRecord = state.multiSector.sectorsByKey[pair.b.sectorKey];
+            const aPoi = aRecord && aRecord.deepSpacePois ? aRecord.deepSpacePois[pair.a.hexId] : null;
+            const bPoi = bRecord && bRecord.deepSpacePois ? bRecord.deepSpacePois[pair.b.hexId] : null;
+            if (aPoi) {
+                aPoi.poiCategory = JUMP_GATE_POI_CATEGORY;
+                aPoi.jumpGateState = 'active';
+                aPoi.kind = defaults.kind;
+                aPoi.summary = defaults.summary;
+                aPoi.risk = defaults.risk;
+                aPoi.rewardHint = defaults.rewardHint;
+                aPoi.name = normalizeActivatedJumpGateName(aPoi.name) || aPoi.name;
+            }
+            if (bPoi) {
+                bPoi.poiCategory = JUMP_GATE_POI_CATEGORY;
+                bPoi.jumpGateState = 'active';
+                bPoi.kind = defaults.kind;
+                bPoi.summary = defaults.summary;
+                bPoi.risk = defaults.risk;
+                bPoi.rewardHint = defaults.rewardHint;
+                bPoi.name = normalizeActivatedJumpGateName(bPoi.name) || bPoi.name;
+            }
+            const names = getPairedJumpGateNames(pairId, aPoi, bPoi);
+            if (aPoi) aPoi.name = names.aName;
+            if (bPoi) bPoi.name = names.bName;
         }
         return true;
     }
