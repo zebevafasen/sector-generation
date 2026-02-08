@@ -1,4 +1,4 @@
-import { HEX_HEIGHT, HEX_WIDTH, state } from './config.js';
+import { HEX_HEIGHT, HEX_WIDTH, MAX_GRID_DIMENSION, MIN_GRID_DIMENSION, state } from './config.js';
 import { HOME_SECTOR_KEY } from './sector-address.js';
 
 export function getCurrentGridDimensions() {
@@ -16,6 +16,8 @@ export function getCurrentGridDimensions() {
     }
     if (!Number.isFinite(width) || width < 1) width = 8;
     if (!Number.isFinite(height) || height < 1) height = 10;
+    width = Math.max(MIN_GRID_DIMENSION, Math.min(MAX_GRID_DIMENSION, width));
+    height = Math.max(MIN_GRID_DIMENSION, Math.min(MAX_GRID_DIMENSION, height));
 
     return { width, height };
 }

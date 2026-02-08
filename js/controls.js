@@ -1,4 +1,4 @@
-import { state } from './config.js';
+import { MAX_GRID_DIMENSION, MIN_GRID_DIMENSION, state } from './config.js';
 import { hideFieldInfoTooltip, hideStarClassInfo, showFieldInfoTooltip, showStarClassInfo } from './core.js';
 import { DENSITY_PRESET_LABELS, getDensityRatioForPreset, normalizeDensityPresetKey } from './generation-data.js';
 
@@ -61,8 +61,14 @@ export function syncDensityPresetForProfile(profileKey = null) {
 
 export function syncManualDensityLimits() {
     const refs = getControlsRefs();
-    const width = Math.max(1, parseInt(refs.gridWidth?.value || '1', 10) || 1);
-    const height = Math.max(1, parseInt(refs.gridHeight?.value || '1', 10) || 1);
+    let width = parseInt(refs.gridWidth?.value || String(MIN_GRID_DIMENSION), 10);
+    let height = parseInt(refs.gridHeight?.value || String(MIN_GRID_DIMENSION), 10);
+    width = Number.isFinite(width) ? width : MIN_GRID_DIMENSION;
+    height = Number.isFinite(height) ? height : MIN_GRID_DIMENSION;
+    width = Math.max(MIN_GRID_DIMENSION, Math.min(MAX_GRID_DIMENSION, width));
+    height = Math.max(MIN_GRID_DIMENSION, Math.min(MAX_GRID_DIMENSION, height));
+    if (refs.gridWidth) refs.gridWidth.value = String(width);
+    if (refs.gridHeight) refs.gridHeight.value = String(height);
     const totalHexes = width * height;
     const minInput = refs.manualMin;
     const maxInput = refs.manualMax;

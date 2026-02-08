@@ -1,5 +1,6 @@
 import { normalizeDensityPresetKey } from './generation-data.js';
 import { JUMP_GATE_POI_CATEGORY, normalizeJumpGateState, normalizePoiCategory } from './jump-gate-model.js';
+import { MAX_GRID_DIMENSION, MIN_GRID_DIMENSION } from './config.js';
 import { HOME_SECTOR_KEY, isSectorKey } from './sector-address.js';
 import { isHexCoordInBounds, parseHexId } from './utils.js';
 
@@ -10,6 +11,11 @@ function isPlainObject(value) {
 function toPositiveInt(value, fallback) {
     const parsed = Number.parseInt(String(value), 10);
     return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function toBoundedPositiveInt(value, fallback) {
+    const parsed = toPositiveInt(value, fallback);
+    return Math.max(MIN_GRID_DIMENSION, Math.min(MAX_GRID_DIMENSION, parsed));
 }
 
 function toNonNegativeInt(value, fallback = 0) {
@@ -198,8 +204,8 @@ export function validateSectorPayload(rawPayload) {
         return { ok: false, error: 'Missing dimensions.' };
     }
 
-    const width = toPositiveInt(rawPayload.dimensions.width, 8);
-    const height = toPositiveInt(rawPayload.dimensions.height, 10);
+    const width = toBoundedPositiveInt(rawPayload.dimensions.width, 8);
+    const height = toBoundedPositiveInt(rawPayload.dimensions.height, 10);
     const { sectors, dropped } = sanitizeSectors(rawPayload.sectors, width, height);
     if (!sectors) {
         return { ok: false, error: 'Missing or invalid sectors object.' };

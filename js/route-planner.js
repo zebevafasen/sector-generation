@@ -1,4 +1,4 @@
-import { state } from './config.js';
+import { MAX_GRID_DIMENSION, MIN_GRID_DIMENSION, state } from './config.js';
 import { showStatusMessage } from './core.js';
 import { EVENTS } from './events.js';
 import { refreshRouteOverlay } from './render.js';
@@ -30,6 +30,8 @@ function getGridDimensions() {
     if (!Number.isFinite(height) || height < 1) height = parseInt(document.getElementById('gridHeight')?.value || '10', 10);
     if (!Number.isFinite(width) || width < 1) width = 8;
     if (!Number.isFinite(height) || height < 1) height = 10;
+    width = Math.max(MIN_GRID_DIMENSION, Math.min(MAX_GRID_DIMENSION, width));
+    height = Math.max(MIN_GRID_DIMENSION, Math.min(MAX_GRID_DIMENSION, height));
     return { width, height };
 }
 

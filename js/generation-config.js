@@ -1,4 +1,4 @@
-import { GRID_PRESETS, state } from './config.js';
+import { GRID_PRESETS, MAX_GRID_DIMENSION, MIN_GRID_DIMENSION, state } from './config.js';
 import { GENERATION_PROFILES, getDensityRatioForPreset, normalizeDensityPresetKey } from './generation-data.js';
 import { rand } from './core.js';
 import { readGenerationConfigFromUi } from './sector-config.js';
@@ -16,6 +16,10 @@ export function normalizeGenerationConfig(config) {
     }
     if (!Number.isFinite(width) || width < 1) width = GRID_PRESETS.standard.width;
     if (!Number.isFinite(height) || height < 1) height = GRID_PRESETS.standard.height;
+    if (sizeMode === 'custom') {
+        width = Math.max(MIN_GRID_DIMENSION, Math.min(MAX_GRID_DIMENSION, width));
+        height = Math.max(MIN_GRID_DIMENSION, Math.min(MAX_GRID_DIMENSION, height));
+    }
 
     const densityMode = source.densityMode === 'manual' ? 'manual' : 'preset';
     const densityPreset = normalizeDensityPresetKey(source.densityPreset);

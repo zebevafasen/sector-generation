@@ -1,4 +1,4 @@
-import { GRID_PRESETS } from './config.js';
+import { GRID_PRESETS, MAX_GRID_DIMENSION, MIN_GRID_DIMENSION } from './config.js';
 import { normalizeDensityPresetKey } from './generation-data.js';
 
 const refsCache = {};
@@ -31,12 +31,18 @@ export function readGenerationConfigFromUi(defaults = {}) {
     const height = sizeMode === 'preset'
         ? GRID_PRESETS[safePreset].height
         : heightFromInput;
+    const clampedWidth = sizeMode === 'preset'
+        ? width
+        : Math.max(MIN_GRID_DIMENSION, Math.min(MAX_GRID_DIMENSION, width));
+    const clampedHeight = sizeMode === 'preset'
+        ? height
+        : Math.max(MIN_GRID_DIMENSION, Math.min(MAX_GRID_DIMENSION, height));
 
     return {
         sizeMode,
         sizePreset: safePreset,
-        width,
-        height,
+        width: clampedWidth,
+        height: clampedHeight,
         densityMode: defaults.densityMode || 'preset',
         densityPreset: normalizeDensityPresetKey(
             refs.densityPresetSelect ? refs.densityPresetSelect.value : (defaults.densityPreset || 'standard')
