@@ -275,17 +275,20 @@
         <div id="rightSidebarContent" class="flex-1 overflow-y-auto p-4">
             <div id="infoPanel" class="opacity-50 pointer-events-none transition-opacity duration-300">
                 <div class="flex justify-between items-baseline mb-4">
-                    <h2 class="text-xl font-bold text-white" id="infoHexId">--</h2>
+                    <div class="inline-flex items-center gap-2">
+                        <h2 class="text-xl font-bold text-white" id="infoHexId">--</h2>
+                        <span id="infoHexCoreBadge" class="hidden core-system-name-badge" title="Core System" aria-label="Core System">◆</span>
+                    </div>
                     <span class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-600" id="infoType">Empty Space</span>
                 </div>
                 
-                <div class="grid grid-cols-3 gap-2 mb-2">
-                    <button id="pinSelectedSystemBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-amber-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Pin system" aria-label="Pin system">📌</button>
-                    <button id="rerollSelectedSystemBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Reroll system" aria-label="Reroll system">🎲</button>
-                    <button id="setCoreSystemBtn" class="py-1.5 text-xs rounded bg-slate-800 border border-slate-700 text-slate-200 hover:border-amber-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Set core system" aria-label="Set core system">★</button>
+                <div class="grid grid-cols-3 gap-1.5 mb-2">
+                    <button id="pinSelectedSystemBtn" class="w-8 h-8 inline-flex items-center justify-center text-sm rounded bg-slate-800 border border-slate-700 hover:border-amber-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Pin system" aria-label="Pin system">📌</button>
+                    <button id="rerollSelectedSystemBtn" class="w-8 h-8 inline-flex items-center justify-center text-sm rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Reroll system" aria-label="Reroll system">🎲</button>
+                    <button id="setCoreSystemBtn" class="w-8 h-8 inline-flex items-center justify-center text-sm rounded bg-slate-800 border border-slate-700 text-slate-200 hover:border-amber-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Set core system" aria-label="Set core system">★</button>
                 </div>
                 <p id="selectedSystemPinState" class="text-[11px] text-slate-500 mb-3">Pinned: No</p>
-                <p id="selectedSystemCoreState" class="text-[11px] text-slate-500 mb-3">Core: --</p>
+                <p id="selectedSystemCoreState" class="hidden text-[11px] text-slate-500 mb-3">Core: --</p>
 
                 <div id="systemDetails" class="hidden space-y-4">
                     <div id="editModeControls" class="hidden grid grid-cols-2 gap-2">
@@ -305,7 +308,7 @@
                                     <div id="infoStarVisual" class="w-10 h-10 rounded-full shadow-lg"></div>
                                     <div class="flex-1">
                                         <div class="flex items-center justify-between gap-2">
-                                            <h3 id="infoSystemName" class="font-bold text-sky-300">System Name</h3>
+                                            <h3 id="infoSystemName" class="font-bold text-sky-300 truncate">System Name</h3>
                                             <div class="inline-flex items-center gap-1">
                                                 <button id="deletePrimaryStarBtn" class="hidden w-6 h-6 inline-flex items-center justify-center text-xs rounded bg-rose-900/35 border border-rose-700 text-rose-200 hover:bg-rose-800/40 hover:border-rose-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Delete primary star" aria-label="Delete primary star">🗑</button>
                                                 <button id="renameSystemBtn" class="w-6 h-6 inline-flex items-center justify-center text-xs rounded bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:border-sky-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Rename system" aria-label="Rename system">✎</button>

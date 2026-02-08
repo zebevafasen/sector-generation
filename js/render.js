@@ -542,10 +542,14 @@ export function clearInfoPanel() {
         refs.setCoreSystemBtn.disabled = true;
         refs.setCoreSystemBtn.title = 'Set core system';
         refs.setCoreSystemBtn.setAttribute('aria-label', 'Set core system');
-        refs.setCoreSystemBtn.className = 'py-1.5 text-xs rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-slate-900/50 border-slate-700 text-slate-500';
+        refs.setCoreSystemBtn.className = 'w-8 h-8 inline-flex items-center justify-center text-sm rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-slate-900/50 border-slate-700 text-slate-500';
+    }
+    if (refs.hexCoreBadge) {
+        refs.hexCoreBadge.classList.add('hidden');
+        refs.hexCoreBadge.title = '';
+        refs.hexCoreBadge.setAttribute('aria-label', '');
     }
     if (refs.selectedSystemPinState) refs.selectedSystemPinState.innerText = 'Pinned: --';
-    if (refs.selectedSystemCoreState) refs.selectedSystemCoreState.innerText = 'Core: --';
 
     resetBodyDetailsPanel();
 }

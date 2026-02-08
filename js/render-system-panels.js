@@ -120,12 +120,16 @@ export function configureSystemHeaderAndStar({ refs, system, id, preselectedBody
         refs.setCoreSystemBtn.setAttribute('aria-label', isCore ? 'Clear core system' : 'Set core system');
         refs.setCoreSystemBtn.className = state.editMode
             ? (isCore
-                ? 'py-1.5 text-xs rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-amber-900/35 border-amber-600 text-amber-200 hover:bg-amber-800/45 hover:border-amber-400'
-                : 'py-1.5 text-xs rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-slate-800 border-slate-700 text-slate-200 hover:border-amber-400')
-            : 'py-1.5 text-xs rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-slate-900/50 border-slate-700 text-slate-500';
+                ? 'w-8 h-8 inline-flex items-center justify-center text-sm rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-amber-900/35 border-amber-600 text-amber-200 hover:bg-amber-800/45 hover:border-amber-400'
+                : 'w-8 h-8 inline-flex items-center justify-center text-sm rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-slate-800 border-slate-700 text-slate-200 hover:border-amber-400')
+            : 'w-8 h-8 inline-flex items-center justify-center text-sm rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-slate-900/50 border-slate-700 text-slate-500';
+    }
+    if (refs.hexCoreBadge) {
+        refs.hexCoreBadge.classList.toggle('hidden', !isCore);
+        refs.hexCoreBadge.title = isCore ? 'Core System' : '';
+        refs.hexCoreBadge.setAttribute('aria-label', isCore ? 'Core System' : '');
     }
     if (refs.selectedSystemPinState) refs.selectedSystemPinState.innerText = `Pinned: ${isPinned ? 'Yes' : 'No'}`;
-    if (refs.selectedSystemCoreState) refs.selectedSystemCoreState.innerText = `Core: ${isCore ? 'Yes' : 'No'}`;
 }
 
 export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
@@ -301,9 +305,13 @@ export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
         refs.setCoreSystemBtn.disabled = true;
         refs.setCoreSystemBtn.title = 'Set core system';
         refs.setCoreSystemBtn.setAttribute('aria-label', 'Set core system');
-        refs.setCoreSystemBtn.className = 'py-1.5 text-xs rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-slate-900/50 border-slate-700 text-slate-500';
+        refs.setCoreSystemBtn.className = 'w-8 h-8 inline-flex items-center justify-center text-sm rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-slate-900/50 border-slate-700 text-slate-500';
+    }
+    if (refs.hexCoreBadge) {
+        refs.hexCoreBadge.classList.add('hidden');
+        refs.hexCoreBadge.title = '';
+        refs.hexCoreBadge.setAttribute('aria-label', '');
     }
     if (refs.selectedSystemPinState) refs.selectedSystemPinState.innerText = canPinOrRerollPoi ? `Pinned: ${isPinned ? 'Yes' : 'No'}` : 'Pinned: --';
-    if (refs.selectedSystemCoreState) refs.selectedSystemCoreState.innerText = 'Core: --';
     resetBodyDetailsPanel();
 }
