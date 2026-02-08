@@ -357,6 +357,29 @@ export function travelSelectedJumpGate() {
     showStatusMessage(`Jumped to sector ${targetSectorKey} at ${getGlobalHexDisplayIdForSector(targetSectorKey, targetHexId)}.`, 'success');
 }
 
+export function activateSelectedJumpGate() {
+    ensureState();
+    saveCurrentSectorRecord();
+    const sectorKey = state.multiSector.currentKey || HOME_SECTOR_KEY;
+    const hexId = state.selectedHexId;
+    if (!hexId) {
+        showStatusMessage('Select an inactive jump-gate first.', 'warn');
+        return;
+    }
+    const activated = jumpGateService.activateJumpGateAt(sectorKey, hexId);
+    if (!activated) {
+        showStatusMessage('Selected POI is not an inactive jump-gate.', 'warn');
+        return;
+    }
+
+    const currentRecord = state.multiSector.sectorsByKey[sectorKey];
+    if (currentRecord) {
+        state.deepSpacePois = deepClone(currentRecord.deepSpacePois || {});
+    }
+    emitEvent(EVENTS.SECTOR_DATA_CHANGED, { label: 'Activate Jump Gate' });
+    showStatusMessage('Jump-gate activated and linked endpoint synchronized.', 'success');
+}
+
 export function setupMultiSectorLinks() {
     const refs = getRefs();
     if (!refs.northBtn || !refs.southBtn || !refs.westBtn || !refs.eastBtn || !refs.homeBtn || !refs.expandedViewBtn) return;

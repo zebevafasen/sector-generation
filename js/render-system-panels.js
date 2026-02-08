@@ -1,6 +1,6 @@
 import { state } from './config.js';
 import { EVENTS, emitEvent } from './events.js';
-import { isActiveJumpGatePoi, isJumpGatePoi } from './jump-gate-model.js';
+import { isActiveJumpGatePoi, isInactiveJumpGatePoi, isJumpGatePoi } from './jump-gate-model.js';
 import { resetBodyDetailsPanel } from './render-body-details.js';
 import { getGlobalHexDisplayIdForSector } from './render-shared.js';
 import { ensureSystemStarFields, getPrimaryStar, getSystemStars } from './star-system.js';
@@ -121,9 +121,26 @@ export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
     if (deepSpacePoi) {
         const poiStyle = getPoiTypeStyle(deepSpacePoi.kind, deepSpacePoi);
         const poiTypeLabel = formatPoiTypeLabel(deepSpacePoi);
+        const isActiveGate = isActiveJumpGatePoi(deepSpacePoi);
+        const isInactiveGate = isInactiveJumpGatePoi(deepSpacePoi);
         const jumpLinkLabel = (deepSpacePoi.jumpGateLink && deepSpacePoi.jumpGateLink.sectorKey)
             ? getGlobalHexDisplayIdForSector(deepSpacePoi.jumpGateLink.sectorKey, deepSpacePoi.jumpGateLink.hexId || '')
             : 'Unresolved';
+        const jumpGateActionsMarkup = isActiveGate
+            ? `
+                <div class="rounded border border-cyan-700/60 bg-cyan-950/20 px-2 py-2">
+                    <p class="text-[11px] text-cyan-200">Jump Link: ${escapeHtml(jumpLinkLabel)}</p>
+                    <button type="button" id="travelJumpGateBtn" class="mt-2 w-full py-1.5 text-xs rounded bg-cyan-900/35 border border-cyan-700 text-cyan-200 hover:bg-cyan-800/40 hover:border-cyan-500 transition-colors">Go to Location</button>
+                </div>
+                `
+                : (isInactiveGate && state.editMode
+                ? `
+                <div class="rounded border border-amber-700/60 bg-amber-950/20 px-2 py-2">
+                    <p class="text-[11px] text-amber-200">Gate State: Inactive</p>
+                    <button type="button" id="activateJumpGateBtn" class="mt-2 w-full py-1.5 text-xs rounded bg-amber-900/35 border border-amber-700 text-amber-200 hover:bg-amber-800/40 hover:border-amber-500 transition-colors">Activate Gate</button>
+                </div>
+                `
+                : '');
         refs.emptyDetails.innerHTML = `
             <div class="space-y-2 text-left">
                 <div class="flex items-center justify-between gap-2">
@@ -142,12 +159,7 @@ export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
                     </div>
                 </div>
                 <p class="text-[11px] text-slate-400">Travel Intel: ${escapeHtml(deepSpacePoi.rewardHint || 'No additional intel.')}</p>
-                ${isActiveJumpGatePoi(deepSpacePoi) ? `
-                <div class="rounded border border-cyan-700/60 bg-cyan-950/20 px-2 py-2">
-                    <p class="text-[11px] text-cyan-200">Jump Link: ${escapeHtml(jumpLinkLabel)}</p>
-                    <button type="button" id="travelJumpGateBtn" class="mt-2 w-full py-1.5 text-xs rounded bg-cyan-900/35 border border-cyan-700 text-cyan-200 hover:bg-cyan-800/40 hover:border-cyan-500 transition-colors">Go to Location</button>
-                </div>
-                ` : ''}
+                ${jumpGateActionsMarkup}
             </div>
         `;
         refs.typeLabel.innerText = 'Deep-Space POI';
@@ -226,6 +238,12 @@ export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
                 travelBtn.classList.add('opacity-50', 'cursor-not-allowed');
             }
             travelBtn.onclick = hasLink ? () => emitEvent(EVENTS.REQUEST_TRAVEL_JUMP_GATE, { hexId: id }) : null;
+        }
+    }
+    if (id && !!deepSpacePoi && isInactiveJumpGatePoi(deepSpacePoi) && state.editMode) {
+        const activateBtn = refs.emptyDetails.querySelector('#activateJumpGateBtn');
+        if (activateBtn) {
+            activateBtn.onclick = () => emitEvent(EVENTS.REQUEST_ACTIVATE_JUMP_GATE, { hexId: id });
         }
     }
     setButtonAction(refs.renameSystemBtn, false);

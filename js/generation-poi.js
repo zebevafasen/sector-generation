@@ -12,21 +12,47 @@ function parseSectorKey(sectorKey) {
     return parseSectorKeyToCoords(sectorKey || HOME_SECTOR_KEY);
 }
 
-export function getActiveJumpGateSectorWeightMultiplier(sectorKey, knownSectorRecords = {}) {
-    if (!knownSectorRecords || typeof knownSectorRecords !== 'object') return 1;
+function getNearbyActiveJumpGateStats(sectorKey, knownSectorRecords = {}) {
     const center = parseSectorKey(sectorKey);
-    let nearbyActiveCount = 0;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    let adjacentCount = 0;
+    let withinTwoCount = 0;
+    let withinThreeCount = 0;
     Object.entries(knownSectorRecords).forEach(([otherKey, record]) => {
         if (!record || !record.deepSpacePois || otherKey === sectorKey) return;
         const other = parseSectorKey(otherKey);
         const dx = Math.abs(other.x - center.x);
         const dy = Math.abs(other.y - center.y);
-        if (Math.max(dx, dy) > 2) return;
+        const distance = Math.max(dx, dy);
+        if (!Number.isFinite(distance)) return;
         const activeInSector = Object.values(record.deepSpacePois).some(isActiveJumpGatePoi);
-        if (activeInSector) nearbyActiveCount++;
+        if (!activeInSector) return;
+        nearestDistance = Math.min(nearestDistance, distance);
+        if (distance <= 1) adjacentCount++;
+        if (distance <= 2) withinTwoCount++;
+        if (distance <= 3) withinThreeCount++;
     });
-    if (nearbyActiveCount <= 0) return 1;
-    return Math.max(0.22, 1 - (nearbyActiveCount * 0.24));
+    return {
+        nearestDistance,
+        adjacentCount,
+        withinTwoCount,
+        withinThreeCount
+    };
+}
+
+function canSpawnActiveJumpGateInSector(sectorKey, knownSectorRecords = {}) {
+    const stats = getNearbyActiveJumpGateStats(sectorKey, knownSectorRecords);
+    // Minimum separation requirement: nearest active gate must be >= 2 sectors away.
+    return !Number.isFinite(stats.nearestDistance) || stats.nearestDistance >= 2;
+}
+
+export function getActiveJumpGateSectorWeightMultiplier(sectorKey, knownSectorRecords = {}) {
+    if (!knownSectorRecords || typeof knownSectorRecords !== 'object') return 1;
+    const stats = getNearbyActiveJumpGateStats(sectorKey, knownSectorRecords);
+    if (stats.adjacentCount > 0) return 0;
+    if (stats.withinTwoCount > 0) return 0.35;
+    if (stats.withinThreeCount > 0) return 0.65;
+    return 1;
 }
 
 function getJumpGateEdgeWeightMultiplier(edgeDistance) {
@@ -104,13 +130,30 @@ export function isJumpGatePoi(poi) {
 
 export function generateDeepSpacePois(width, height, sectors, options = {}) {
     const randomFn = options.randomFn || Math.random;
+    const sectorKey = typeof options.sectorKey === 'string' && options.sectorKey.trim()
+        ? options.sectorKey.trim().toUpperCase()
+        : HOME_SECTOR_KEY;
+    const knownSectorRecords = options.knownSectorRecords && typeof options.knownSectorRecords === 'object'
+        ? options.knownSectorRecords
+        : {};
     const pois = {};
     const activeJumpGateWeightMultiplier = Number.isFinite(options.activeJumpGateWeightMultiplier)
         ? Math.max(0.01, options.activeJumpGateWeightMultiplier)
         : 1;
     const jumpGateHexes = [];
-    const maxJumpGatesPerSector = 2;
+    const maxJumpGatesPerSector = 1;
     const minJumpGateSeparation = 4;
+    const canSpawnActiveJumpGate = canSpawnActiveJumpGateInSector(sectorKey, knownSectorRecords);
+    let edgeSlotCount = 0;
+    for (let c = 0; c < width; c++) {
+        for (let r = 0; r < height; r++) {
+            const hexId = `${c}-${r}`;
+            if (sectors[hexId]) continue;
+            const edgeDistance = Math.min(c, r, (width - 1) - c, (height - 1) - r);
+            if (edgeDistance <= 2) edgeSlotCount++;
+        }
+    }
+    const canSpawnJumpGateAtAll = edgeSlotCount > 0;
 
     for (let c = 0; c < width; c++) {
         for (let r = 0; r < height; r++) {
@@ -124,13 +167,23 @@ export function generateDeepSpacePois(width, height, sectors, options = {}) {
             const spawnChance = baseChance + nearbyBoost + remoteBoost;
             if (randomFn() > spawnChance) continue;
             const edgeDistance = Math.min(c, r, (width - 1) - c, (height - 1) - r);
-            let poi = createDeepSpacePoi({ edgeDistance, activeJumpGateWeightMultiplier, randomFn });
+            const canRollJumpGateAtHex = canSpawnJumpGateAtAll
+                && jumpGateHexes.length < maxJumpGatesPerSector
+                && edgeDistance <= 2;
+            let poi = createDeepSpacePoi({
+                edgeDistance,
+                allowJumpGates: canRollJumpGateAtHex,
+                activeJumpGateWeightMultiplier,
+                randomFn
+            });
             if (isJumpGatePoi(poi)) {
                 const isAtGateCap = jumpGateHexes.length >= maxJumpGatesPerSector;
                 const isTooCloseToOtherGate = jumpGateHexes.some((otherHexId) =>
                     hexDistanceById(otherHexId, hexId) < minJumpGateSeparation
                 );
-                if (isAtGateCap || isTooCloseToOtherGate) {
+                const isOutsideEdgeWindow = edgeDistance > 2;
+                const isBlockedActiveGate = poi.jumpGateState === 'active' && !canSpawnActiveJumpGate;
+                if (isAtGateCap || isTooCloseToOtherGate || isOutsideEdgeWindow || isBlockedActiveGate) {
                     poi = createDeepSpacePoi({ edgeDistance, allowJumpGates: false, activeJumpGateWeightMultiplier, randomFn });
                 }
             }

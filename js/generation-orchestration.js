@@ -100,7 +100,12 @@ export function buildSectorFromConfigAction(config, fixedSystems = {}, options =
         options.sectorKey || homeSectorKey,
         options.knownSectorRecords || {}
     );
-    const deepSpacePois = generateDeepSpacePois(width, height, nextSectors, { activeJumpGateWeightMultiplier, randomFn: rand });
+    const deepSpacePois = generateDeepSpacePois(width, height, nextSectors, {
+        activeJumpGateWeightMultiplier,
+        randomFn: rand,
+        sectorKey: options.sectorKey || homeSectorKey,
+        knownSectorRecords: options.knownSectorRecords || {}
+    });
 
     return {
         config: normalized,
