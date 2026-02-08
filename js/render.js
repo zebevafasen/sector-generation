@@ -118,8 +118,9 @@ function createHexGroup(svg, col, row, sectorKey, sectorRecord = null) {
 
     const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     text.setAttribute('x', x);
-    text.setAttribute('y', y + HEX_SIZE * 0.45);
+    text.setAttribute('y', y + HEX_SIZE * 0.72);
     text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('dominant-baseline', 'middle');
     text.setAttribute('class', 'hex-text');
     text.textContent = formatLocalHexDisplayId(hexId);
     g.appendChild(text);
