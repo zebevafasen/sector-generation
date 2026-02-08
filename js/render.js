@@ -278,7 +278,10 @@ export function drawGrid(cols, rows, options = {}) {
 
             layer.addEventListener('click', (event) => {
                 const target = event.target instanceof Element ? event.target : null;
-                if (target && target.closest('.hex-group')) return;
+                const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
+                const isHexClick = path.some((node) => node instanceof Element && node.classList && node.classList.contains('hex-group'))
+                    || (target && target.closest('.hex-group'));
+                if (isHexClick) return;
                 event.stopPropagation();
                 if (!state.multiSector) return;
                 if (state.multiSector.selectedSectorKey === entry.sectorKey) return;

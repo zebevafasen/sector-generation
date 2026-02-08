@@ -67,7 +67,9 @@ export function setupPanZoomAction(deps) {
     });
     container.addEventListener('click', (e) => {
         if (state.viewState.dragDistance > 5) return;
-        const isHexClick = e.target instanceof Element && !!e.target.closest('.hex-group');
+        const path = typeof e.composedPath === 'function' ? e.composedPath() : [];
+        const isHexClick = path.some((node) => node instanceof Element && node.classList && node.classList.contains('hex-group'))
+            || (e.target instanceof Element && !!e.target.closest('.hex-group'));
         if (isHexClick) return;
         document.querySelectorAll('.hex.selected').forEach(el => el.classList.remove('selected'));
         state.selectedHexId = null;
@@ -105,6 +107,8 @@ export function refreshRouteOverlayAction(deps) {
 export function handleHexClickAction(e, id, groupElement, deps) {
     const { state, isExpandedSectorViewEnabled, getCurrentSectorKey, emitEvent, events, selectHex } = deps;
     if (state.viewState.dragDistance > 5) return;
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
     const normalizedSectorKey = String((groupElement && groupElement.getAttribute ? groupElement.getAttribute('data-sector-key') : '') || '').trim().toUpperCase();
     const currentSectorKey = getCurrentSectorKey();
     if (isExpandedSectorViewEnabled() && normalizedSectorKey && normalizedSectorKey !== currentSectorKey) {
@@ -129,8 +133,20 @@ export function selectHexAction(id, groupElement, deps) {
     if (poly) poly.classList.add('selected');
     state.selectedHexId = id;
     state.selectedBodyIndex = null;
-    const sectorKey = groupElement && groupElement.getAttribute ? groupElement.getAttribute('data-sector-key') : null;
-    if (sectorKey && state.multiSector) state.multiSector.selectedSectorKey = sectorKey;
+    const rawSectorKey = groupElement && groupElement.getAttribute ? groupElement.getAttribute('data-sector-key') : null;
+    const sectorKey = String(rawSectorKey || '').trim().toUpperCase();
+    if (sectorKey && state.multiSector) {
+        state.multiSector.selectedSectorKey = sectorKey;
+        if (state.multiSector.expandedView) {
+            document.querySelectorAll('.sector-layer').forEach((layer) => {
+                const layerKey = String(layer.getAttribute('data-sector-key') || '').trim().toUpperCase();
+                const isActive = layerKey === sectorKey;
+                layer.classList.toggle('current-sector-layer', isActive);
+                const frame = layer.querySelector('.sector-frame');
+                if (frame) frame.classList.toggle('sector-frame-selected', isActive);
+            });
+        }
+    }
     updateInfoPanel(id);
     emitEvent(events.HEX_SELECTED, { hexId: id });
 }
