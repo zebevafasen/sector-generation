@@ -147,6 +147,22 @@
                 </div>
             </details>
 
+            <details id="factionsSection" open class="sidebar-section">
+                <summary><h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wide">Factions</h2></summary>
+                <div class="mt-2 space-y-3">
+                    <div class="grid grid-cols-2 gap-2">
+                        <select id="factionOverlayModeSelect" class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs focus:border-sky-500 focus:outline-none">
+                            <option value="off">Overlay: Off</option>
+                            <option value="ownership" selected>Overlay: Ownership</option>
+                            <option value="contested">Overlay: Contested</option>
+                        </select>
+                        <button id="advanceFactionTurnBtn" class="py-1.5 text-xs rounded bg-indigo-800/80 border border-indigo-600 text-indigo-100 hover:bg-indigo-700/85 transition-colors">Advance Turn</button>
+                    </div>
+                    <p id="factionTurnLabel" class="text-[11px] text-slate-500">Turn: 0</p>
+                    <ul id="factionList" class="space-y-1.5 max-h-44 overflow-y-auto pr-1"></ul>
+                </div>
+            </details>
+
             <button id="generateSectorBtn" class="w-full py-2 bg-sky-600 hover:bg-sky-500 text-white rounded shadow-lg shadow-sky-900/50 font-semibold transition-all active:scale-95">
                 GENERATE SECTOR
             </button>
@@ -256,6 +272,11 @@
                         <select id="searchPlanetTypeSelect" class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs focus:border-sky-500 focus:outline-none">
                             <option value="">Any Planet Type</option>
                         </select>
+                        <select id="searchFactionSelect" class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs focus:border-sky-500 focus:outline-none">
+                            <option value="">Any Faction Owner</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
                         <select id="searchResultLimitSelect" class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs focus:border-sky-500 focus:outline-none">
                             <option value="25">Show Top 25</option>
                             <option value="50">Show Top 50</option>
@@ -315,6 +336,10 @@
                         <label class="flex items-center gap-1.5 text-[11px] text-slate-400">
                             <input type="checkbox" id="searchMultiStarOnlyToggle" class="accent-sky-500 bg-slate-800 border-slate-600 rounded">
                             Multi-star
+                        </label>
+                        <label class="flex items-center gap-1.5 text-[11px] text-slate-400">
+                            <input type="checkbox" id="searchContestedOnlyToggle" class="accent-sky-500 bg-slate-800 border-slate-600 rounded">
+                            Contested
                         </label>
                     </div>
                     <div class="flex gap-2">
@@ -402,6 +427,14 @@
                             <span class="block text-slate-500">Population</span>
                             <span id="infoPop" class="text-lg font-mono text-white">0</span>
                         </div>
+                    </div>
+                    <div id="infoFactionCard" class="hidden bg-slate-800/60 border border-slate-700 rounded p-3 text-xs space-y-1">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-slate-500 uppercase tracking-wide">Faction Control</span>
+                            <span id="infoFactionControlStrength" class="text-[11px] text-slate-400">--</span>
+                        </div>
+                        <div id="infoFactionOwner" class="text-sm text-slate-200">Unclaimed</div>
+                        <div id="infoFactionContested" class="text-[11px] text-slate-500">Contested: No</div>
                     </div>
 
                     <!-- Bodies List -->

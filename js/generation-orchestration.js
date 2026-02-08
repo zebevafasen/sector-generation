@@ -1,5 +1,6 @@
 import { rebuildGenerationContextSummaries } from './generation-context-summary.js';
 import { resolveGenerationRolloutFlags } from './generation-rollout.js';
+import { createFactionStateForSector } from './factions.js';
 
 export function refreshSectorSnapshotAction(config, width, height, changeLabel = 'Update Sector', deps) {
     const {
@@ -342,6 +343,10 @@ export function buildSectorFromConfigAction(config, fixedSystems = {}, options =
         systemCount: Object.keys(nextSectors).length,
         sectors: nextSectors,
         deepSpacePois,
+        factionState: createFactionStateForSector(nextSectors, {
+            coreSystemHexId: core.coreSystemHexId || null,
+            sectorKey
+        }),
         coreSystemHexId: core.coreSystemHexId,
         coreSystemManual: core.coreSystemManual
     };
@@ -401,7 +406,9 @@ export function generateSectorAction(deps) {
     state.pinnedHexIds = [];
     state.coreSystemHexId = built.coreSystemHexId || null;
     state.coreSystemManual = !!built.coreSystemManual;
+    state.factionState = built.factionState || null;
     state.selectedHexId = null;
+    state.factionOverlayMode = 'ownership';
     state.multiSector = {
         currentKey: homeSectorKey,
         selectedSectorKey: homeSectorKey,
@@ -413,6 +420,7 @@ export function generateSectorAction(deps) {
                 config: deepClone(config),
                 sectors: deepClone(built.sectors),
                 deepSpacePois: deepClone(built.deepSpacePois),
+                factionState: deepClone(built.factionState),
                 pinnedHexIds: [],
                 coreSystemHexId: built.coreSystemHexId || null,
                 coreSystemManual: !!built.coreSystemManual,
@@ -468,6 +476,7 @@ export function createSectorRecordAction(options = {}, deps) {
         config,
         sectors: deepClone(built.sectors),
         deepSpacePois: deepClone(built.deepSpacePois),
+        factionState: deepClone(built.factionState),
         pinnedHexIds: [],
         coreSystemHexId: built.coreSystemHexId || null,
         coreSystemManual: !!built.coreSystemManual,

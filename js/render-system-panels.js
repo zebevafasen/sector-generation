@@ -4,6 +4,7 @@ import { isActiveJumpGatePoi, isInactiveJumpGatePoi, isJumpGatePoi } from './jum
 import { resetBodyDetailsPanel } from './render-body-details.js';
 import { getGlobalHexDisplayIdForSector } from './render-shared.js';
 import { getSectorDisplayName } from './sector-naming.js';
+import { applyFactionSystemCard, clearFactionSystemCard } from './factions-info-panel.js';
 import { ensureSystemStarFields, getPrimaryStar, getSystemStars } from './star-system.js';
 import { applySystemHeaderDisplay } from './render-system-header-display.js';
 import { bindSystemHeaderEditControls } from './render-system-header-edit.js';
@@ -133,6 +134,7 @@ export function configureSystemHeaderAndStar({ refs, system, id, preselectedBody
         refs.hexCoreBadge.setAttribute('aria-label', isCore ? 'Core System' : '');
     }
     if (refs.selectedSystemPinState) refs.selectedSystemPinState.innerText = `Pinned: ${isPinned ? 'Yes' : 'No'}`;
+    applyFactionSystemCard(refs, id);
 }
 
 export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
@@ -319,5 +321,6 @@ export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
         refs.hexCoreBadge.setAttribute('aria-label', '');
     }
     if (refs.selectedSystemPinState) refs.selectedSystemPinState.innerText = canPinOrRerollPoi ? `Pinned: ${isPinned ? 'Yes' : 'No'}` : 'Pinned: --';
+    clearFactionSystemCard(refs);
     resetBodyDetailsPanel();
 }

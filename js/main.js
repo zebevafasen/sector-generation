@@ -9,6 +9,7 @@ import { loadAppData } from './data-loader.js';
 import { generateSector, setEditMode } from './generation.js';
 import { captureHistorySnapshot, setupHistory } from './history.js';
 import { setupMultiSectorLinks } from './multi-sector.js';
+import { setupFactionsUi } from './factions-ui.js';
 import { setupSearchPanel } from './search.js';
 import { setupRoutePlanner } from './route-planner.js';
 import { handleImportFile, restoreCachedSectorState } from './storage.js';
@@ -24,6 +25,7 @@ function initializeModules() {
     bindUiEvents({ updateEditModeUi, updateInfoPanel });
     setupHistory();
     setupMultiSectorLinks();
+    setupFactionsUi();
     setupSearchPanel();
     setupRoutePlanner();
 }

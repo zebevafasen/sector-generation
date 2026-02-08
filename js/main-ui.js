@@ -8,6 +8,7 @@ const PERSISTED_DETAILS_SECTION_IDS = [
     'stellarDensitySection',
     'seedDataSection',
     'ioControlsSection',
+    'factionsSection',
     'infoStarDetails'
 ];
 

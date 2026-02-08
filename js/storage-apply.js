@@ -2,6 +2,7 @@ import { state } from './config.js';
 import { setSeed, showStatusMessage } from './core.js';
 import { setDensityMode, setSizeMode, syncDensityPresetForProfile } from './controls.js';
 import { EVENTS, emitEvent } from './events.js';
+import { createFactionStateForSector, normalizeFactionState } from './factions.js';
 import { normalizeDensityPresetKey } from './generation-data.js';
 import { HOME_SECTOR_KEY } from './sector-address.js';
 import { clearInfoPanel, drawGrid, findHexGroup, selectHex } from './render.js';
@@ -104,6 +105,14 @@ export function createStorageApplyService(deps) {
             ? nextPayload.coreSystemHexId
             : null;
         state.coreSystemManual = !!(state.coreSystemHexId && nextPayload.coreSystemManual);
+        state.factionState = normalizeFactionState(nextPayload.factionState)
+            || createFactionStateForSector(state.sectors || {}, {
+                coreSystemHexId: state.coreSystemHexId || null,
+                sectorKey: state.multiSector?.currentKey || HOME_SECTOR_KEY
+            });
+        state.factionOverlayMode = nextPayload.factionOverlayMode === 'off' || nextPayload.factionOverlayMode === 'contested'
+            ? nextPayload.factionOverlayMode
+            : 'ownership';
         state.sectorConfigSnapshot = nextPayload.sectorConfigSnapshot || {
             sizeMode: nextPayload.sizeMode || state.sizeMode,
             sizePreset: nextPayload.sizePreset || 'standard',
@@ -143,6 +152,18 @@ export function createStorageApplyService(deps) {
             }
             if (typeof state.multiSector.expandedView !== 'boolean') {
                 state.multiSector.expandedView = false;
+            }
+            Object.entries(state.multiSector.sectorsByKey || {}).forEach(([sectorKey, record]) => {
+                if (!record || typeof record !== 'object') return;
+                record.factionState = normalizeFactionState(record.factionState)
+                    || createFactionStateForSector(record.sectors || {}, {
+                        coreSystemHexId: record.coreSystemHexId || null,
+                        sectorKey
+                    });
+            });
+            const currentRecord = state.multiSector.sectorsByKey[state.multiSector.currentKey || HOME_SECTOR_KEY];
+            if (currentRecord && currentRecord.factionState) {
+                state.factionState = currentRecord.factionState;
             }
             rebuildGenerationContextSummaries({
                 layoutSeed: state.layoutSeed || state.currentSeed || '',

@@ -14,7 +14,8 @@ export const EVENTS = {
     REQUEST_MOVE_SECTOR_EDGE: 'requestMoveSectorEdge',
     REQUEST_DELETE_SELECTED_BODY: 'requestDeleteSelectedBody',
     REQUEST_REROLL_SELECTED_PLANET: 'requestRerollSelectedPlanet',
-    EDIT_MODE_CHANGED: 'editModeChanged'
+    EDIT_MODE_CHANGED: 'editModeChanged',
+    FACTION_STATE_CHANGED: 'factionStateChanged'
 };
 
 export function emitEvent(name, detail) {

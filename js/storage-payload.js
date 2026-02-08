@@ -216,6 +216,8 @@ export function buildSectorPayload(meta = {}) {
             scale: Number.isFinite(state.viewState && state.viewState.scale) ? state.viewState.scale : 1
         },
         multiSector: state.multiSector || null,
+        factionState: state.factionState || null,
+        factionOverlayMode: typeof state.factionOverlayMode === 'string' ? state.factionOverlayMode : 'ownership',
         dimensions: { width, height },
         stats: { totalHexes, totalSystems },
         deepSpacePois: JSON.parse(JSON.stringify(state.deepSpacePois || {})),

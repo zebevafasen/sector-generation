@@ -161,6 +161,8 @@ export const state = {
     densityMode: 'preset',
     sectors: {},
     deepSpacePois: {},
+    factionState: null,
+    factionOverlayMode: 'ownership',
     selectedHexId: null,
     selectedBodyIndex: null,
     selectedSystemData: null,

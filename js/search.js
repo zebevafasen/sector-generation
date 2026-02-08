@@ -4,6 +4,7 @@ import { EVENTS } from './events.js';
 import { findHexGroup, selectHex } from './render.js';
 import { getGlobalHexDisplayId } from './render-shared.js';
 import { countSystemBodies, isPlanetaryBody } from './body-classification.js';
+import { getFactionById, getFactionControlForHex } from './factions.js';
 import { escapeHtml } from './info-panel-ui.js';
 import { getSystemStars } from './star-system.js';
 import { getKnownPlanetTags } from './tooltip-data.js';
@@ -19,6 +20,7 @@ function getSearchRefs() {
         starClassSelect: document.getElementById('searchStarClassSelect'),
         tagSelect: document.getElementById('searchTagSelect'),
         planetTypeSelect: document.getElementById('searchPlanetTypeSelect'),
+        factionSelect: document.getElementById('searchFactionSelect'),
         resultLimitSelect: document.getElementById('searchResultLimitSelect'),
         minPopInput: document.getElementById('searchMinPopInput'),
         maxPopInput: document.getElementById('searchMaxPopInput'),
@@ -28,6 +30,7 @@ function getSearchRefs() {
         coreOnlyToggle: document.getElementById('searchCoreOnlyToggle'),
         pinnedOnlyToggle: document.getElementById('searchPinnedOnlyToggle'),
         multiStarOnlyToggle: document.getElementById('searchMultiStarOnlyToggle'),
+        contestedOnlyToggle: document.getElementById('searchContestedOnlyToggle'),
         applyBtn: document.getElementById('searchApplyBtn'),
         clearBtn: document.getElementById('searchClearBtn'),
         resultsCount: document.getElementById('searchResultsCount'),
@@ -94,10 +97,12 @@ function readFilters(refs) {
         starClass: refs.starClassSelect?.value || '',
         tag: refs.tagSelect?.value || '',
         planetType: refs.planetTypeSelect?.value || '',
+        factionOwnerId: refs.factionSelect?.value || '',
         inhabitedOnly: !!(refs.inhabitedOnlyToggle && refs.inhabitedOnlyToggle.checked),
         coreOnly: !!(refs.coreOnlyToggle && refs.coreOnlyToggle.checked),
         pinnedOnly: !!(refs.pinnedOnlyToggle && refs.pinnedOnlyToggle.checked),
         multiStarOnly: !!(refs.multiStarOnlyToggle && refs.multiStarOnlyToggle.checked),
+        contestedOnly: !!(refs.contestedOnlyToggle && refs.contestedOnlyToggle.checked),
         minPop: Number.isFinite(minPop) ? minPop : null,
         maxPop: Number.isFinite(maxPop) ? maxPop : null,
         minPlanets: Number.isFinite(minPlanets) ? minPlanets : null,
@@ -119,6 +124,12 @@ function buildSearchEntries() {
         const tags = new Set();
         const bodyNames = [];
         const bodyTypes = new Set();
+        const factionControl = getFactionControlForHex(state.factionState, hexId);
+        const ownerFactionId = factionControl && factionControl.ownerFactionId ? factionControl.ownerFactionId : null;
+        const ownerFaction = ownerFactionId ? getFactionById(state.factionState, ownerFactionId) : null;
+        const contestedFactionIds = factionControl && Array.isArray(factionControl.contestedFactionIds)
+            ? factionControl.contestedFactionIds
+            : [];
         (system.planets || []).forEach((body) => {
             if (!body) return;
             bodyNames.push(String(body.name || ''));
@@ -142,6 +153,10 @@ function buildSearchEntries() {
             isPinned: !!(state.pinnedHexIds && state.pinnedHexIds.includes(hexId)),
             isCore: state.coreSystemHexId === hexId,
             isMultiStar: starClasses.length > 1,
+            ownerFactionId,
+            ownerFactionName: ownerFaction ? ownerFaction.name : null,
+            contestedFactionIds,
+            isContested: contestedFactionIds.length > 0,
             starClasses,
             tags: Array.from(tags),
             bodyTypes: Array.from(bodyTypes),
@@ -153,7 +168,13 @@ function buildSearchEntries() {
                 starClasses.join(' '),
                 Array.from(tags).join(' '),
                 Array.from(bodyTypes).join(' '),
-                bodyNames.join(' ')
+                bodyNames.join(' '),
+                ownerFaction ? ownerFaction.name : '',
+                contestedFactionIds
+                    .map((factionId) => getFactionById(state.factionState, factionId))
+                    .filter(Boolean)
+                    .map((faction) => faction.name)
+                    .join(' ')
             ].join(' '))
         });
     });
@@ -227,9 +248,11 @@ function isSystemOnlyFilterActive(filters) {
         filters.starClass
         || filters.tag
         || filters.planetType
+        || filters.factionOwnerId
         || filters.inhabitedOnly
         || filters.coreOnly
         || filters.multiStarOnly
+        || filters.contestedOnly
         || filters.minPop != null
         || filters.maxPop != null
         || filters.minPlanets != null
@@ -324,6 +347,8 @@ function findMatches(filters) {
             if (filters.inhabitedOnly && !entry.isInhabited) return false;
             if (filters.coreOnly && !entry.isCore) return false;
             if (filters.multiStarOnly && !entry.isMultiStar) return false;
+            if (filters.contestedOnly && !entry.isContested) return false;
+            if (filters.factionOwnerId && entry.ownerFactionId !== filters.factionOwnerId) return false;
             if (!systemHasTag(entry.system, filters.tag)) return false;
             if (!systemHasPlanetType(entry.system, filters.planetType)) return false;
             if (filters.minPop != null && entry.totalPop < filters.minPop) return false;
@@ -388,6 +413,8 @@ function renderResults(refs, matches, filters) {
         if (item.isPinned) flagParts.push('Pinned');
         if (item.isInhabited) flagParts.push('Inhabited');
         if (item.isMultiStar) flagParts.push('Multi-star');
+        if (item.ownerFactionName) flagParts.push(item.ownerFactionName);
+        if (item.isContested) flagParts.push('Contested');
         const flagLabel = flagParts.length ? ` - ${escapeHtml(flagParts.join(' / '))}` : '';
         return `
             <li>
@@ -430,6 +457,7 @@ function clearFilters(refs) {
     if (refs.starClassSelect) refs.starClassSelect.value = '';
     if (refs.tagSelect) refs.tagSelect.value = '';
     if (refs.planetTypeSelect) refs.planetTypeSelect.value = '';
+    if (refs.factionSelect) refs.factionSelect.value = '';
     if (refs.resultLimitSelect) refs.resultLimitSelect.value = '50';
     if (refs.minPopInput) refs.minPopInput.value = '';
     if (refs.maxPopInput) refs.maxPopInput.value = '';
@@ -439,6 +467,7 @@ function clearFilters(refs) {
     if (refs.coreOnlyToggle) refs.coreOnlyToggle.checked = false;
     if (refs.pinnedOnlyToggle) refs.pinnedOnlyToggle.checked = false;
     if (refs.multiStarOnlyToggle) refs.multiStarOnlyToggle.checked = false;
+    if (refs.contestedOnlyToggle) refs.contestedOnlyToggle.checked = false;
     runSearch(refs);
 }
 
@@ -455,6 +484,14 @@ function populateSearchOptions(refs) {
         '<option value="">Any Planet Type</option>',
         ...PLANET_TYPES.map((planetType) => `<option value="${escapeHtml(planetType)}">${escapeHtml(planetType)}</option>`)
     ].join('');
+
+    if (refs.factionSelect) {
+        const factions = Array.isArray(state.factionState && state.factionState.factions) ? state.factionState.factions : [];
+        refs.factionSelect.innerHTML = [
+            '<option value="">Any Faction Owner</option>',
+            ...factions.map((faction) => `<option value="${escapeHtml(faction.id)}">${escapeHtml(faction.name)}</option>`)
+        ].join('');
+    }
 }
 
 function openSearchPanelAndFocusInput(refs) {
@@ -518,6 +555,7 @@ export function setupSearchPanel() {
         refs.starClassSelect,
         refs.tagSelect,
         refs.planetTypeSelect,
+        refs.factionSelect,
         refs.resultLimitSelect,
         refs.minPopInput,
         refs.maxPopInput,
@@ -527,6 +565,8 @@ export function setupSearchPanel() {
         refs.coreOnlyToggle,
         refs.pinnedOnlyToggle,
         refs.multiStarOnlyToggle
+        ,
+        refs.contestedOnlyToggle
     ];
     liveFilterElements.forEach((el) => {
         if (!el) return;
@@ -549,9 +589,14 @@ export function setupSearchPanel() {
     });
 
     window.addEventListener(EVENTS.SECTOR_DATA_CHANGED, () => {
+        populateSearchOptions(refs);
         lastMatches = runSearch(refs);
     });
     window.addEventListener(EVENTS.HEX_SELECTED, () => {
+        lastMatches = runSearch(refs);
+    });
+    window.addEventListener(EVENTS.FACTION_STATE_CHANGED, () => {
+        populateSearchOptions(refs);
         lastMatches = runSearch(refs);
     });
     lastMatches = runSearch(refs);

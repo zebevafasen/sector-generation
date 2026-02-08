@@ -13,6 +13,7 @@ import { createJumpGateService } from './multi-sector-jump-gates.js';
 import { createCorridorService } from './multi-sector-corridors.js';
 import { createNavigationService } from './multi-sector-navigation.js';
 import { rebuildGenerationContextSummaries } from './generation-context-summary.js';
+import { createFactionStateForSector, normalizeFactionState, recalculateFactionTerritory } from './factions.js';
 
 const DIRECTIONS = {
     north: { dx: 0, dy: -1 },
@@ -110,6 +111,14 @@ function ensureState() {
 function saveCurrentSectorRecord() {
     ensureState();
     const key = state.multiSector.currentKey || HOME_SECTOR_KEY;
+    if (state.factionState && Array.isArray(state.factionState.factions)) {
+        state.factionState = recalculateFactionTerritory(state.factionState, state.sectors || {});
+    } else {
+        state.factionState = createFactionStateForSector(state.sectors || {}, {
+            coreSystemHexId: state.coreSystemHexId || null,
+            sectorKey: key
+        });
+    }
     const config = getCurrentConfig();
     const totalHexes = config.width * config.height;
     const nextRecord = {
@@ -117,6 +126,10 @@ function saveCurrentSectorRecord() {
         config,
         sectors: deepClone(state.sectors || {}),
         deepSpacePois: deepClone(state.deepSpacePois || {}),
+        factionState: deepClone(state.factionState || createFactionStateForSector(state.sectors || {}, {
+            coreSystemHexId: state.coreSystemHexId || null,
+            sectorKey: key
+        })),
         pinnedHexIds: deepClone(state.pinnedHexIds || []),
         coreSystemHexId: typeof state.coreSystemHexId === 'string' ? state.coreSystemHexId : null,
         coreSystemManual: !!state.coreSystemManual,
@@ -167,9 +180,14 @@ function applySectorRecord(key, record, options = {}) {
         starDistribution: record.config.starDistribution || 'clusters',
         sectorConfigSnapshot: deepClone(record.config),
         deepSpacePois: deepClone(record.deepSpacePois || {}),
+        factionState: deepClone(record.factionState || createFactionStateForSector(record.sectors || {}, {
+            coreSystemHexId: record.coreSystemHexId || null,
+            sectorKey: key
+        })),
         pinnedHexIds: deepClone(record.pinnedHexIds || []),
         coreSystemHexId: record.coreSystemHexId || null,
         coreSystemManual: !!record.coreSystemManual,
+        factionOverlayMode: state.factionOverlayMode || 'ownership',
         selectedHexId: null,
         multiSector: deepClone(state.multiSector),
         dimensions: {
@@ -183,6 +201,11 @@ function applySectorRecord(key, record, options = {}) {
         sectors: deepClone(record.sectors)
     };
     applySectorPayload(payload);
+    state.factionState = normalizeFactionState(record.factionState)
+        || createFactionStateForSector(record.sectors || {}, {
+            coreSystemHexId: record.coreSystemHexId || null,
+            sectorKey: key
+        });
     if (preferredSelectedHexId) {
         const group = findHexGroup(preferredSelectedHexId, key);
         if (group) {
@@ -222,6 +245,12 @@ function getOrCreateSectorRecordByKey(targetKey) {
         sectorKey: targetKey,
         knownSectorRecords: state.multiSector.sectorsByKey
     });
+    if (!record.factionState) {
+        record.factionState = createFactionStateForSector(record.sectors || {}, {
+            coreSystemHexId: record.coreSystemHexId || null,
+            sectorKey: targetKey
+        });
+    }
     ensureSectorName(targetKey, record);
     state.multiSector.sectorsByKey[targetKey] = record;
     rebuildGenerationContextSummaries({
@@ -264,6 +293,12 @@ function getOrCreateSectorRecordFromSource(sourceKey, targetKey) {
         sectorKey: targetKey,
         knownSectorRecords: state.multiSector.sectorsByKey
     });
+    if (!record.factionState) {
+        record.factionState = createFactionStateForSector(record.sectors || {}, {
+            coreSystemHexId: record.coreSystemHexId || null,
+            sectorKey: targetKey
+        });
+    }
     ensureSectorName(targetKey, record);
     state.multiSector.sectorsByKey[targetKey] = record;
     rebuildGenerationContextSummaries({
@@ -406,6 +441,12 @@ export function setupMultiSectorLinks() {
     ensureState();
     Object.entries(state.multiSector.sectorsByKey || {}).forEach(([sectorKey, record]) => {
         ensureSectorName(sectorKey, record);
+        if (record && !record.factionState) {
+            record.factionState = createFactionStateForSector(record.sectors || {}, {
+                coreSystemHexId: record.coreSystemHexId || null,
+                sectorKey
+            });
+        }
     });
     if (!state.multiSector.sectorsByKey[state.multiSector.currentKey]) {
         saveCurrentSectorRecord();
@@ -421,6 +462,11 @@ export function setupMultiSectorLinks() {
         state.deepSpacePois = deepClone(currentRecord.deepSpacePois || {});
         state.coreSystemHexId = typeof currentRecord.coreSystemHexId === 'string' ? currentRecord.coreSystemHexId : null;
         state.coreSystemManual = !!currentRecord.coreSystemManual;
+        state.factionState = normalizeFactionState(currentRecord.factionState)
+            || createFactionStateForSector(currentRecord.sectors || {}, {
+                coreSystemHexId: currentRecord.coreSystemHexId || null,
+                sectorKey: state.multiSector.currentKey
+            });
     }
 
     refs.northBtn?.addEventListener('click', () => moveDirection('north'));

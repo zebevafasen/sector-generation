@@ -23,6 +23,7 @@ import {
     getStarOffsets
 } from './render-markers.js';
 import { isJumpGatePoi } from './jump-gate-model.js';
+import { getFactionById, getFactionControlForHex } from './factions.js';
 import { updateSectorNavigationAnchors as updateSectorNavigationAnchorsInternal } from './render-navigation.js';
 import {
     applyExpandedSectorSelectionUi,
@@ -93,6 +94,7 @@ function createHexGroup(svg, col, row, sectorKey, sectorRecord = null) {
     const scopedSectors = sectorRecord && sectorRecord.sectors ? sectorRecord.sectors : state.sectors;
     const scopedPois = sectorRecord && sectorRecord.deepSpacePois ? sectorRecord.deepSpacePois : state.deepSpacePois;
     const scopedPinned = sectorRecord && Array.isArray(sectorRecord.pinnedHexIds) ? sectorRecord.pinnedHexIds : state.pinnedHexIds;
+    const scopedFactionState = sectorRecord && sectorRecord.factionState ? sectorRecord.factionState : state.factionState;
     const scopedCoreSystemHexId = sectorRecord && typeof sectorRecord.coreSystemHexId === 'string'
         ? sectorRecord.coreSystemHexId
         : state.coreSystemHexId;
@@ -119,6 +121,32 @@ function createHexGroup(svg, col, row, sectorKey, sectorRecord = null) {
     poly.setAttribute('stroke', '#334155');
     poly.setAttribute('stroke-width', '1');
     if (isPinned) poly.classList.add('pinned');
+    if (system && scopedFactionState && state.factionOverlayMode !== 'off') {
+        const control = getFactionControlForHex(scopedFactionState, hexId);
+        const owner = control && control.ownerFactionId ? getFactionById(scopedFactionState, control.ownerFactionId) : null;
+        if (state.factionOverlayMode === 'ownership' && owner && owner.color) {
+            poly.setAttribute('fill', owner.color);
+            const baseOpacity = control && Number.isFinite(Number(control.controlStrength))
+                ? Math.max(0.18, Math.min(0.45, Number(control.controlStrength) / 240))
+                : 0.24;
+            poly.setAttribute('fill-opacity', String(baseOpacity));
+            if (control && Array.isArray(control.contestedFactionIds) && control.contestedFactionIds.length) {
+                poly.setAttribute('stroke', '#fb7185');
+                poly.setAttribute('stroke-dasharray', '3 2');
+            }
+        } else if (state.factionOverlayMode === 'contested') {
+            const isContested = !!(control && Array.isArray(control.contestedFactionIds) && control.contestedFactionIds.length);
+            if (isContested) {
+                poly.setAttribute('fill', owner && owner.color ? owner.color : '#be123c');
+                poly.setAttribute('fill-opacity', '0.22');
+                poly.setAttribute('stroke', '#fb7185');
+                poly.setAttribute('stroke-width', '1.5');
+                poly.setAttribute('stroke-dasharray', '3 2');
+            } else {
+                poly.setAttribute('fill-opacity', '0.14');
+            }
+        }
+    }
     g.appendChild(poly);
 
     const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -552,6 +580,7 @@ export function clearInfoPanel() {
         refs.hexCoreBadge.setAttribute('aria-label', '');
     }
     if (refs.selectedSystemPinState) refs.selectedSystemPinState.innerText = 'Pinned: --';
+    if (refs.factionCard) refs.factionCard.classList.add('hidden');
 
     resetBodyDetailsPanel();
 }

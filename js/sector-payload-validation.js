@@ -1,4 +1,5 @@
 import { normalizeDensityPresetKey } from './generation-data.js';
+import { normalizeFactionState } from './factions.js';
 import { normalizeGenerationRolloutStage } from './generation-rollout.js';
 import { JUMP_GATE_POI_CATEGORY, normalizeJumpGateState, normalizePoiCategory } from './jump-gate-model.js';
 import { MAX_GRID_DIMENSION, MIN_GRID_DIMENSION } from './config.js';
@@ -95,6 +96,7 @@ function sanitizeMultiSector(value) {
             sectorName: typeof record.sectorName === 'string' && record.sectorName.trim()
                 ? record.sectorName.trim()
                 : null,
+            factionState: normalizeFactionState(record.factionState),
             coreSystemHexId: coreHexId,
             coreSystemManual: !!(coreHexId && record.coreSystemManual),
             generationContextSummary: sanitizeGenerationContextSummary(record.generationContextSummary)
@@ -348,6 +350,10 @@ export function validateSectorPayload(rawPayload) {
             ? rawPayload.coreSystemHexId
             : null,
         coreSystemManual: !!(typeof rawPayload.coreSystemHexId === 'string' && Object.prototype.hasOwnProperty.call(sectors, rawPayload.coreSystemHexId) && rawPayload.coreSystemManual),
+        factionState: normalizeFactionState(rawPayload.factionState),
+        factionOverlayMode: rawPayload.factionOverlayMode === 'off' || rawPayload.factionOverlayMode === 'contested'
+            ? rawPayload.factionOverlayMode
+            : 'ownership',
         selectedHexId: typeof rawPayload.selectedHexId === 'string'
             && (Object.prototype.hasOwnProperty.call(sectors, rawPayload.selectedHexId)
                 || Object.prototype.hasOwnProperty.call(deepSpacePois, rawPayload.selectedHexId))

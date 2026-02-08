@@ -5,6 +5,7 @@ import { refreshRouteOverlay } from './render.js';
 import { getGlobalHexDisplayId } from './render-shared.js';
 import { isHexCoordInBounds, parseHexId } from './utils.js';
 import { computePath, hexDistance } from './route-planner-core.js';
+import { getFactionById, getFactionControlForHex } from './factions.js';
 
 function getRouteRefs() {
     return {
@@ -73,6 +74,28 @@ function redrawRoute() {
     refreshRouteOverlay();
 }
 
+function computeRouteFactionRisk(pathHexIds) {
+    if (!Array.isArray(pathHexIds) || pathHexIds.length < 2 || !state.factionState) {
+        return { borderCrossings: 0, hostileCrossings: 0 };
+    }
+    let borderCrossings = 0;
+    let hostileCrossings = 0;
+    for (let i = 1; i < pathHexIds.length; i++) {
+        const prev = getFactionControlForHex(state.factionState, pathHexIds[i - 1]);
+        const next = getFactionControlForHex(state.factionState, pathHexIds[i]);
+        const prevOwnerId = prev && prev.ownerFactionId ? prev.ownerFactionId : null;
+        const nextOwnerId = next && next.ownerFactionId ? next.ownerFactionId : null;
+        if (!prevOwnerId || !nextOwnerId || prevOwnerId === nextOwnerId) continue;
+        borderCrossings++;
+        const prevOwner = getFactionById(state.factionState, prevOwnerId);
+        const relation = Number(prevOwner && prevOwner.relations ? prevOwner.relations[nextOwnerId] : 0);
+        if (Number.isFinite(relation) && relation <= -25) {
+            hostileCrossings++;
+        }
+    }
+    return { borderCrossings, hostileCrossings };
+}
+
 function recalculateRoute(refs, options = {}) {
     const shouldRedraw = options.redraw !== false;
     const { width, height } = getGridDimensions();
@@ -99,7 +122,11 @@ function recalculateRoute(refs, options = {}) {
     if (!route.pathHexIds.length) {
         showStatusMessage(`No valid route ${formatHexForDisplay(route.startHexId)} -> ${formatHexForDisplay(route.endHexId)} (max 2 empty hexes before a system or refueling station).`, 'warn', { persist: true });
     } else {
-        showStatusMessage(`Route ${formatHexForDisplay(route.startHexId)} -> ${formatHexForDisplay(route.endHexId)}: ${route.hops} hops`, 'success', { persist: true });
+        const risk = computeRouteFactionRisk(route.pathHexIds);
+        const riskSuffix = risk.borderCrossings
+            ? ` • ${risk.borderCrossings} border crossing${risk.borderCrossings === 1 ? '' : 's'}${risk.hostileCrossings ? ` (${risk.hostileCrossings} hostile)` : ''}`
+            : '';
+        showStatusMessage(`Route ${formatHexForDisplay(route.startHexId)} -> ${formatHexForDisplay(route.endHexId)}: ${route.hops} hops${riskSuffix}`, 'success', { persist: true });
     }
     if (shouldRedraw) redrawRoute();
 }

@@ -802,3 +802,41 @@ test('search panel can find manually renamed POIs with POI scope', async ({ page
   });
   expect(selectedHexId).toBe(targetHexId);
 });
+
+test('faction panel initializes and can advance turn with system ownership visible', async ({ page }) => {
+  await page.goto('/sector_generator.html');
+  await page.locator('#generateSectorBtn').click();
+
+  await expect.poll(async () => await page.locator('#factionList li').count()).toBeGreaterThan(0);
+  await expect(page.locator('#factionTurnLabel')).toContainText('Turn: 0');
+
+  const populatedHex = page.locator('.hex-group').filter({
+    has: page.locator('circle.star-circle')
+  }).first();
+  await populatedHex.click({ force: true });
+  await expect(page.locator('#systemDetails')).toBeVisible();
+  await expect(page.locator('#infoFactionCard')).toBeVisible();
+
+  await page.locator('#advanceFactionTurnBtn').click();
+  await expect(page.locator('#factionTurnLabel')).toContainText('Turn: 1');
+});
+
+test('search supports faction owner filter', async ({ page }) => {
+  await page.goto('/sector_generator.html');
+  await page.locator('#generateSectorBtn').click();
+  await page.locator('#searchToggleBtn').click();
+  await expect(page.locator('#searchPanelContent')).toBeVisible();
+
+  const selected = await page.evaluate(() => {
+    const select = document.getElementById('searchFactionSelect');
+    if (!select) return '';
+    const options = Array.from(select.options || []);
+    const next = options.find((opt) => opt.value);
+    if (!next) return '';
+    select.value = next.value;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    return next.value;
+  });
+  expect(selected).toBeTruthy();
+  await expect.poll(async () => await page.locator('#searchResultsList [data-search-hex-id]').count()).toBeGreaterThan(0);
+});
