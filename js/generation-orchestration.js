@@ -105,6 +105,8 @@ export function buildSectorFromConfigAction(config, fixedSystems = {}, options =
         homeSectorKey
     } = deps;
     const normalized = normalizeGenerationConfig(config);
+    const perfEnabled = !!normalized.generationPerformanceDebugEnabled;
+    const perfStart = perfEnabled ? performance.now() : 0;
     const width = normalized.width;
     const height = normalized.height;
     const totalHexes = width * height;
@@ -124,9 +126,15 @@ export function buildSectorFromConfigAction(config, fixedSystems = {}, options =
     const sectorKey = options.sectorKey || homeSectorKey;
     const isHomeSector = sectorKey === homeSectorKey;
     const layoutSeed = options.layoutSeed || state.layoutSeed || state.currentSeed || '';
-    const generationContext = normalized.crossSectorContextEnabled
-        ? createGenerationContext(layoutSeed, options.knownSectorRecords || {}, normalized)
-        : null;
+    let generationContext = null;
+    if (normalized.crossSectorContextEnabled) {
+        try {
+            generationContext = createGenerationContext(layoutSeed, options.knownSectorRecords || {}, normalized);
+        } catch (error) {
+            console.warn('Generation context creation failed; falling back to local-only cluster behavior.', error);
+            generationContext = null;
+        }
+    }
 
     let systemCount = computeSystemCount(totalHexes, normalized);
     if (validFixedEntries.length > systemCount) {
@@ -229,6 +237,20 @@ export function buildSectorFromConfigAction(config, fixedSystems = {}, options =
         knownSectorRecords: options.knownSectorRecords || {},
         coreSystemHexId: core.coreSystemHexId || null
     });
+    if (perfEnabled) {
+        const elapsed = performance.now() - perfStart;
+        console.debug('[generation-performance]', {
+            sectorKey,
+            width,
+            height,
+            systemsGenerated: Object.keys(nextSectors).length,
+            poiGenerated: Object.keys(deepSpacePois || {}).length,
+            clusterMode: normalized.starDistribution,
+            clusterV2Enabled: !!normalized.clusterV2Enabled,
+            contextEnabled: !!normalized.crossSectorContextEnabled,
+            elapsedMs: Number(elapsed.toFixed(2))
+        });
+    }
 
     return {
         config: normalized,

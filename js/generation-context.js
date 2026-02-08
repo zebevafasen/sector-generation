@@ -229,3 +229,11 @@ export function createGenerationContext(layoutSeed, knownSectorRecords = {}, set
     }
     return context;
 }
+
+export function getGenerationContextCacheSizeForDebug() {
+    return contextCache.size;
+}
+
+export function clearGenerationContextCacheForDebug() {
+    contextCache.clear();
+}

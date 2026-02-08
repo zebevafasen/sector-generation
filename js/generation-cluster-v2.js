@@ -126,12 +126,15 @@ function computeCandidateScore(item, anchors, selectedHexIds, randomFn, options)
     }
     const overpackPenalty = Math.max(0, localNeighbors - 2) * 0.35;
 
-    const direction = getDirectionForHex(item.hexId, width, height);
+    const cachedMeta = options.candidateMetaByHex && options.candidateMetaByHex.get(item.hexId)
+        ? options.candidateMetaByHex.get(item.hexId)
+        : null;
+    const direction = cachedMeta ? cachedMeta.direction : getDirectionForHex(item.hexId, width, height);
     const edgePressure = direction && generationContext
         ? generationContext.getEdgePressure(sectorKey, direction)
         : 0;
     const boundaryBias = clamp(edgePressure * Math.max(0, boundaryContinuityStrength), 0, 1.5);
-    const edgeDistance = getEdgeDistance(item.hexId, width, height);
+    const edgeDistance = cachedMeta ? cachedMeta.edgeDistance : getEdgeDistance(item.hexId, width, height);
     const isNearEdge = Number.isFinite(edgeDistance) && edgeDistance <= 1;
     const edgePenalty = isEdgeHex(item.hexId, width, height) ? Math.max(0, edgeBalance * 0.4) : 0;
     const continuityStrength = Math.max(0, boundaryContinuityStrength);
@@ -178,16 +181,27 @@ function stageASelectAnchors(parsedCandidates, systemsToGenerate, randomFn, widt
 function stageBGrowSelection(parsedCandidates, systemsToGenerate, anchors, randomFn, options) {
     const selectedHexIds = [];
     const selectedSet = new Set();
+    const targetCount = Math.max(0, Math.min(systemsToGenerate, parsedCandidates.length));
     const localNeighborCap = Math.max(1, Number(options.settings.clusterLocalNeighborCap) || 5);
     let capRelaxation = 0;
+    const candidateMetaByHex = new Map();
+    parsedCandidates.forEach((item) => {
+        const direction = getDirectionForHex(item.hexId, options.width, options.height);
+        const edgeDistance = getEdgeDistance(item.hexId, options.width, options.height);
+        candidateMetaByHex.set(item.hexId, {
+            direction,
+            edgeDistance,
+            isNearEdge: Number.isFinite(edgeDistance) && edgeDistance <= 1
+        });
+    });
     const edgeCounts = { north: 0, south: 0, west: 0, east: 0 };
-    const edgeTotals = {
-        north: parsedCandidates.filter((item) => getDirectionForHex(item.hexId, options.width, options.height) === 'north' && getEdgeDistance(item.hexId, options.width, options.height) <= 1).length,
-        south: parsedCandidates.filter((item) => getDirectionForHex(item.hexId, options.width, options.height) === 'south' && getEdgeDistance(item.hexId, options.width, options.height) <= 1).length,
-        west: parsedCandidates.filter((item) => getDirectionForHex(item.hexId, options.width, options.height) === 'west' && getEdgeDistance(item.hexId, options.width, options.height) <= 1).length,
-        east: parsedCandidates.filter((item) => getDirectionForHex(item.hexId, options.width, options.height) === 'east' && getEdgeDistance(item.hexId, options.width, options.height) <= 1).length
-    };
-    while (selectedHexIds.length < systemsToGenerate) {
+    const edgeTotals = { north: 0, south: 0, west: 0, east: 0 };
+    candidateMetaByHex.forEach((meta) => {
+        if (meta.direction && meta.isNearEdge && Number.isFinite(edgeTotals[meta.direction])) {
+            edgeTotals[meta.direction] += 1;
+        }
+    });
+    while (selectedHexIds.length < targetCount) {
         const stageEdgeOccupancy = {
             north: edgeCounts.north / Math.max(1, edgeTotals.north),
             south: edgeCounts.south / Math.max(1, edgeTotals.south),
@@ -210,7 +224,8 @@ function stageBGrowSelection(parsedCandidates, systemsToGenerate, anchors, rando
                     boundaryContinuityStrength: Math.max(0, Number(options.settings.boundaryContinuityStrength) || 0),
                     localNeighborCap,
                     capRelaxation,
-                    stageEdgeOccupancy
+                    stageEdgeOccupancy,
+                    candidateMetaByHex
                 })
             }))
             .filter((item) => Number.isFinite(item.score));
@@ -224,9 +239,9 @@ function stageBGrowSelection(parsedCandidates, systemsToGenerate, anchors, rando
         }
         selectedHexIds.push(next.hexId);
         selectedSet.add(next.hexId);
-        const direction = getDirectionForHex(next.hexId, options.width, options.height);
-        if (direction && getEdgeDistance(next.hexId, options.width, options.height) <= 1 && Number.isFinite(edgeCounts[direction])) {
-            edgeCounts[direction] += 1;
+        const selectedMeta = candidateMetaByHex.get(next.hexId) || null;
+        if (selectedMeta && selectedMeta.direction && selectedMeta.isNearEdge && Number.isFinite(edgeCounts[selectedMeta.direction])) {
+            edgeCounts[selectedMeta.direction] += 1;
         }
     }
     return selectedHexIds;

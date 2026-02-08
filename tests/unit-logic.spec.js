@@ -641,6 +641,35 @@ test.describe('pure logic modules', () => {
     expect(result.edgeKeys.sort()).toEqual(['east', 'north', 'south', 'west']);
   });
 
+  test('generation context cache remains bounded to prevent memory growth', async ({ page }) => {
+    await page.goto('/sector_generator.html');
+
+    const result = await page.evaluate(async () => {
+      const ctx = await import('/js/generation-context.js');
+      ctx.clearGenerationContextCacheForDebug();
+      for (let i = 0; i < 60; i++) {
+        const key = `NN${String.fromCharCode(65 + (i % 26))}${String.fromCharCode(65 + ((i + 3) % 26))}`;
+        ctx.createGenerationContext(`seed-${i}`, {
+          [key]: {
+            config: { width: 4, height: 4 },
+            sectors: { '1-1': {}, '2-2': {} },
+            coreSystemHexId: '1-1'
+          }
+        }, {
+          crossSectorContextEnabled: true,
+          boundaryContinuityStrength: 0.55
+        });
+      }
+      const cacheSize = ctx.getGenerationContextCacheSizeForDebug();
+      ctx.clearGenerationContextCacheForDebug();
+      const cacheSizeAfterClear = ctx.getGenerationContextCacheSizeForDebug();
+      return { cacheSize, cacheSizeAfterClear };
+    });
+
+    expect(result.cacheSize).toBeLessThanOrEqual(24);
+    expect(result.cacheSizeAfterClear).toBe(0);
+  });
+
   test('cluster v2 keeps deterministic picks and improves center occupancy on fixed seed', async ({ page }) => {
     await page.goto('/sector_generator.html');
 

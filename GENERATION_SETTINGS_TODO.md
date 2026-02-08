@@ -80,7 +80,10 @@ This document breaks the procedural generation redesign into phased, step-by-ste
 - Removed: no functional removals in this phase.
 
 ### Phase 9 - Completed
-- Added: context cache bounds and selector fallback guardrails for stability.
+- Added: bounded context-cache validation and debug cache controls for memory-growth guardrails.
+- Added: optional generation performance diagnostics (`generationPerformanceDebugEnabled`) with per-sector timing logs.
+- Changed: context creation now has explicit fail-safe fallback to local-only behavior on errors.
+- Changed: Cluster V2 growth pass now reuses cached edge metadata to keep per-sector complexity bounded on larger sectors.
 - Changed: clustering/context paths now degrade safely to legacy behavior on failure.
 - Removed: no functional removals in this phase.
 

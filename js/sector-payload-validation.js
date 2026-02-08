@@ -280,6 +280,7 @@ function sanitizeSectorConfigSnapshot(value) {
         clusterEdgeBalance: Math.max(0, toFinite(value.clusterEdgeBalance, 0.26)),
         clusterCenterVoidProtection: Math.max(0, toFinite(value.clusterCenterVoidProtection, 0.35)),
         coreScoringDebugEnabled: value.coreScoringDebugEnabled ?? false,
+        generationPerformanceDebugEnabled: value.generationPerformanceDebugEnabled ?? false,
         coreTagWeights,
         coreTagContributionCap: Math.max(0, toFinite(value.coreTagContributionCap, 16)),
         coreTagPerTagCap: Math.max(0, toFinite(value.coreTagPerTagCap, 8)),

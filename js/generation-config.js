@@ -78,6 +78,7 @@ export function normalizeGenerationConfig(config) {
         clusterEdgeBalance: Math.max(0, toFiniteNumber(source.clusterEdgeBalance, GENERATION_SETTINGS.clusterEdgeBalance)),
         clusterCenterVoidProtection: Math.max(0, toFiniteNumber(source.clusterCenterVoidProtection, GENERATION_SETTINGS.clusterCenterVoidProtection)),
         coreScoringDebugEnabled: source.coreScoringDebugEnabled ?? GENERATION_SETTINGS.coreScoringDebugEnabled,
+        generationPerformanceDebugEnabled: source.generationPerformanceDebugEnabled ?? GENERATION_SETTINGS.generationPerformanceDebugEnabled,
         coreTagWeights: {
             ...GENERATION_SETTINGS.coreTagWeights,
             ...Object.fromEntries(

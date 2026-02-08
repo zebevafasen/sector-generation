@@ -225,6 +225,7 @@ const DEFAULT_GENERATION_SETTINGS = {
     clusterEdgeBalance: 0.26,
     clusterCenterVoidProtection: 0.35,
     coreScoringDebugEnabled: false,
+    generationPerformanceDebugEnabled: false,
     coreTagWeights: {
         hegemon: 8,
         trade: 6,
@@ -278,6 +279,7 @@ function sanitizeGenerationSettings(value = {}) {
         clusterEdgeBalance: Math.max(0, toFiniteNumber(source.clusterEdgeBalance, base.clusterEdgeBalance)),
         clusterCenterVoidProtection: Math.max(0, toFiniteNumber(source.clusterCenterVoidProtection, base.clusterCenterVoidProtection)),
         coreScoringDebugEnabled: source.coreScoringDebugEnabled ?? base.coreScoringDebugEnabled,
+        generationPerformanceDebugEnabled: source.generationPerformanceDebugEnabled ?? base.generationPerformanceDebugEnabled,
         coreTagWeights: {
             ...base.coreTagWeights,
             ...Object.fromEntries(
@@ -344,6 +346,7 @@ export function hydrateGenerationData(loadedData = {}) {
         clusterEdgeBalance: loadedData.clusterEdgeBalance,
         clusterCenterVoidProtection: loadedData.clusterCenterVoidProtection,
         coreScoringDebugEnabled: loadedData.coreScoringDebugEnabled,
+        generationPerformanceDebugEnabled: loadedData.generationPerformanceDebugEnabled,
         coreTagWeights: loadedData.coreTagWeights,
         coreTagContributionCap: loadedData.coreTagContributionCap,
         coreTagPerTagCap: loadedData.coreTagPerTagCap,

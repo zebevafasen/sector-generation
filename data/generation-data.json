@@ -193,6 +193,7 @@
     "clusterEdgeBalance": 0.26,
     "clusterCenterVoidProtection": 0.35,
     "coreScoringDebugEnabled": false,
+    "generationPerformanceDebugEnabled": false,
     "coreTagWeights": {
       "hegemon": 8,
       "trade": 6,
