@@ -2,7 +2,6 @@ import {
     GRID_PRESETS,
     NAME_PREFIX,
     NAME_SUFFIX,
-    POI_TYPES,
     STAR_VISUALS,
     state
 } from './config.js';
@@ -669,20 +668,13 @@ export function generateSystemData(config = null, context = null) {
             : pickRandomPlanetType(rand, excludedTypes);
         if (type === 'Terrestrial') hasTerrestrial = true;
         const environment = generatePlanetEnvironment(type, rand);
-        const features = [];
-
-        if (rand() < generationProfile.planetPoiChance) {
-            const poi = POI_TYPES[Math.floor(rand() * POI_TYPES.length)];
-            features.push(poi);
-        }
-
         planets.push({
             name: `${name} ${romanize(i + 1)}`,
             type,
             size: generatePlanetSize(type, rand),
             atmosphere: environment.atmosphere,
             temperature: environment.temperature,
-            features,
+            features: [],
             pop: 0,
             basePop: 0,
             tags: [],
@@ -705,11 +697,10 @@ export function generateSystemData(config = null, context = null) {
     }
 
     if (rand() < generationProfile.stationChance) {
-        const poi = POI_TYPES[Math.floor(rand() * POI_TYPES.length)];
         planets.push({
             name: `Station Alpha-${Math.floor(rand() * 99)}`,
             type: 'Artificial',
-            features: [poi],
+            features: [],
             pop: 0
         });
     }

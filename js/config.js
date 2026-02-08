@@ -96,10 +96,6 @@ const DEFAULT_PLANET_TYPES = [
     'Gas Giant', 'Terrestrial', 'Oceanic', 'Volcanic', 'Desert', 'Barren', 'Arctic'
 ];
 
-const DEFAULT_POI_TYPES = [
-    'Research Station', 'Mining Outpost', 'Refueling Depot', 'Pirate Haven', 'Ancient Ruins', 'Jump Gate', 'Active Jump-Gate', 'Inactive Jump-Gate'
-];
-
 const DEFAULT_GRID_PRESETS = {
     scout: { label: 'Scout Run', width: 4, height: 6 },
     frontier: { label: 'Frontier Drift', width: 6, height: 8 },
@@ -141,7 +137,6 @@ const DEFAULT_NAME_SUFFIX = [
 export let STAR_VISUALS = DEFAULT_STAR_VISUALS;
 export let STAR_CLASS_INFO = DEFAULT_STAR_CLASS_INFO;
 export let PLANET_TYPES = DEFAULT_PLANET_TYPES;
-export let POI_TYPES = DEFAULT_POI_TYPES;
 export let GRID_PRESETS = DEFAULT_GRID_PRESETS;
 export let STAR_AGE_DISPLAY = DEFAULT_STAR_AGE_DISPLAY;
 export let NAME_PREFIX = DEFAULT_NAME_PREFIX;
@@ -151,7 +146,6 @@ export function hydrateConfigData(loadedData = {}) {
     STAR_VISUALS = loadedData.starVisuals || DEFAULT_STAR_VISUALS;
     STAR_CLASS_INFO = loadedData.starClassInfo || DEFAULT_STAR_CLASS_INFO;
     PLANET_TYPES = loadedData.planetTypes || DEFAULT_PLANET_TYPES;
-    POI_TYPES = loadedData.poiTypes || DEFAULT_POI_TYPES;
     GRID_PRESETS = loadedData.gridPresets || DEFAULT_GRID_PRESETS;
     STAR_AGE_DISPLAY = loadedData.starAgeDisplay || DEFAULT_STAR_AGE_DISPLAY;
     NAME_PREFIX = loadedData.namePrefix || DEFAULT_NAME_PREFIX;

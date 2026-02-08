@@ -94,16 +94,6 @@
     "Barren",
     "Arctic"
   ],
-  "poiTypes": [
-    "Research Station",
-    "Mining Outpost",
-    "Refueling Depot",
-    "Pirate Haven",
-    "Ancient Ruins",
-    "Jump Gate",
-    "Active Jump-Gate",
-    "Inactive Jump-Gate"
-  ],
   "gridPresets": {
     "scout": { "label": "Scout Run", "width": 4, "height": 6 },
     "frontier": { "label": "Frontier Drift", "width": 6, "height": 8 },
