@@ -731,3 +731,50 @@ test('inactive jump-gates stay linked and activation in edit mode synchronizes b
   expect(synced.sourceLink).toBeTruthy();
   expect(synced.targetLink).toBeTruthy();
 });
+
+test('search panel can find manually renamed POIs with POI scope', async ({ page }) => {
+  await page.goto('/sector_generator.html');
+  await page.locator('#generateSectorBtn').click();
+  await page.locator('#editModeToggleBtn').click();
+  await expect(page.locator('#editModeToggleBtn')).toContainText('EDIT MODE: ON');
+
+  const targetHexId = await page.evaluate(() => {
+    const groups = Array.from(document.querySelectorAll('.hex-group'));
+    const empty = groups.find((group) => {
+      const hasSystem = !!group.querySelector('circle.star-circle');
+      const hasPoi = !!group.querySelector('.deep-space-poi-marker');
+      return !hasSystem && !hasPoi;
+    });
+    if (!empty) return null;
+    empty.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    return String(empty.getAttribute('data-id') || '');
+  });
+  expect(targetHexId).toBeTruthy();
+
+  await expect(page.locator('#addPoiHereBtn')).toBeVisible();
+  await page.locator('#addPoiHereBtn').click();
+  await expect(page.locator('#statusMessage')).toContainText('Added POI');
+
+  await Promise.all([
+    page.waitForEvent('dialog').then((dialog) => dialog.accept('Search Test POI')),
+    page.locator('#renamePoiBtn').click()
+  ]);
+  await expect(page.locator('#statusMessage')).toContainText('Renamed POI');
+
+  await page.locator('#searchToggleBtn').click();
+  await expect(page.locator('#searchPanelContent')).toBeVisible();
+  await page.locator('#searchScopeSelect').selectOption('pois');
+  await page.locator('#searchNameInput').fill('Search Test POI');
+
+  await expect(page.locator('#searchResultsList li')).toHaveCount(1);
+  await expect(page.locator('#searchResultsList li')).toContainText('Search Test POI');
+
+  await page.locator('#searchResultsList [data-search-hex-id]').click();
+  await expect(page.locator('.hex.selected')).toHaveCount(1);
+  const selectedHexId = await page.evaluate(() => {
+    const selectedPoly = document.querySelector('.hex-group polygon.hex.selected');
+    const group = selectedPoly ? selectedPoly.closest('.hex-group') : null;
+    return group ? String(group.getAttribute('data-id') || '') : '';
+  });
+  expect(selectedHexId).toBe(targetHexId);
+});

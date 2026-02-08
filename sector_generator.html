@@ -227,15 +227,40 @@
                     <input
                         type="text"
                         id="searchNameInput"
-                        placeholder="System name contains..."
+                        placeholder="Search names, hex IDs, tags, star classes..."
                         class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm focus:border-sky-500 focus:outline-none"
                     >
+                    <div class="grid grid-cols-2 gap-2">
+                        <select id="searchScopeSelect" class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs focus:border-sky-500 focus:outline-none">
+                            <option value="all">Systems + POIs</option>
+                            <option value="systems">Systems Only</option>
+                            <option value="pois">POIs Only</option>
+                        </select>
+                        <select id="searchSortSelect" class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs focus:border-sky-500 focus:outline-none">
+                            <option value="relevance">Sort: Relevance</option>
+                            <option value="name">Sort: Name</option>
+                            <option value="hex">Sort: Hex ID</option>
+                            <option value="population">Sort: Population</option>
+                            <option value="planets">Sort: Planet Count</option>
+                        </select>
+                    </div>
                     <div class="grid grid-cols-2 gap-2">
                         <select id="searchStarClassSelect" class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs focus:border-sky-500 focus:outline-none">
                             <option value="">Any Class</option>
                         </select>
                         <select id="searchTagSelect" class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs focus:border-sky-500 focus:outline-none">
                             <option value="">Any Tag</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <select id="searchPlanetTypeSelect" class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs focus:border-sky-500 focus:outline-none">
+                            <option value="">Any Planet Type</option>
+                        </select>
+                        <select id="searchResultLimitSelect" class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs focus:border-sky-500 focus:outline-none">
+                            <option value="25">Show Top 25</option>
+                            <option value="50">Show Top 50</option>
+                            <option value="100">Show Top 100</option>
+                            <option value="0">Show All</option>
                         </select>
                     </div>
                     <div class="grid grid-cols-2 gap-2">
@@ -256,16 +281,48 @@
                             class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs focus:border-sky-500 focus:outline-none"
                         >
                     </div>
-                    <label class="flex items-center gap-2 text-xs text-slate-400">
-                        <input type="checkbox" id="searchInhabitedOnlyToggle" class="accent-sky-500 bg-slate-800 border-slate-600 rounded">
-                        Inhabited systems only
-                    </label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            id="searchMinPlanetsInput"
+                            placeholder="Min Planets"
+                            class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs focus:border-sky-500 focus:outline-none"
+                        >
+                        <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            id="searchMaxPlanetsInput"
+                            placeholder="Max Planets"
+                            class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs focus:border-sky-500 focus:outline-none"
+                        >
+                    </div>
+                    <div class="grid grid-cols-2 gap-1">
+                        <label class="flex items-center gap-1.5 text-[11px] text-slate-400">
+                            <input type="checkbox" id="searchInhabitedOnlyToggle" class="accent-sky-500 bg-slate-800 border-slate-600 rounded">
+                            Inhabited
+                        </label>
+                        <label class="flex items-center gap-1.5 text-[11px] text-slate-400">
+                            <input type="checkbox" id="searchCoreOnlyToggle" class="accent-sky-500 bg-slate-800 border-slate-600 rounded">
+                            Core only
+                        </label>
+                        <label class="flex items-center gap-1.5 text-[11px] text-slate-400">
+                            <input type="checkbox" id="searchPinnedOnlyToggle" class="accent-sky-500 bg-slate-800 border-slate-600 rounded">
+                            Pinned only
+                        </label>
+                        <label class="flex items-center gap-1.5 text-[11px] text-slate-400">
+                            <input type="checkbox" id="searchMultiStarOnlyToggle" class="accent-sky-500 bg-slate-800 border-slate-600 rounded">
+                            Multi-star
+                        </label>
+                    </div>
                     <div class="flex gap-2">
                         <button id="searchApplyBtn" class="flex-1 py-1.5 text-xs rounded bg-sky-700 hover:bg-sky-600 text-white transition-colors">Search</button>
                         <button id="searchClearBtn" class="flex-1 py-1.5 text-xs rounded bg-slate-800 border border-slate-700 hover:border-sky-500 transition-colors">Clear</button>
                     </div>
                     <p id="searchResultsCount" class="text-[11px] text-slate-500">0 matches</p>
-                    <ul id="searchResultsList" class="max-h-44 overflow-y-auto space-y-1 pr-1"></ul>
+                    <ul id="searchResultsList" class="max-h-56 overflow-y-auto space-y-1 pr-1"></ul>
                 </div>
             </div>
         </div>
