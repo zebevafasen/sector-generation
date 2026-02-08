@@ -207,6 +207,11 @@ export function buildSectorPayload(meta = {}) {
         sectorConfigSnapshot: state.sectorConfigSnapshot || null,
         pinnedHexIds: Array.isArray(state.pinnedHexIds) ? state.pinnedHexIds : [],
         selectedHexId: state.selectedHexId || null,
+        viewState: {
+            x: Number.isFinite(state.viewState && state.viewState.x) ? state.viewState.x : 0,
+            y: Number.isFinite(state.viewState && state.viewState.y) ? state.viewState.y : 0,
+            scale: Number.isFinite(state.viewState && state.viewState.scale) ? state.viewState.scale : 1
+        },
         multiSector: state.multiSector || null,
         dimensions: { width, height },
         stats: { totalHexes, totalSystems },

@@ -1,5 +1,10 @@
 const { test, expect } = require('@playwright/test');
 
+function parseViewportScale(transform) {
+  const match = String(transform || '').match(/scale\(([-\d.]+)\)/);
+  return match ? Number(match[1]) : 1;
+}
+
 test('local save/load restores previous sector state', async ({ page }) => {
   await page.goto('/sector_generator.html');
   await page.locator('#generateSectorBtn').click();
@@ -93,4 +98,43 @@ test('load local restores expanded view rendering without extra sector clicks', 
   await page.locator('#loadSectorLocalBtn').click();
   await expect(page.locator('#toggleExpandedSectorViewBtn')).toContainText('Expanded View: On');
   await expect(page.locator('.sector-layer')).toHaveCount(2);
+});
+
+test('save/load preserves map zoom level', async ({ page }) => {
+  await page.goto('/sector_generator.html');
+  await page.locator('#generateSectorBtn').click();
+
+  const mapContainer = page.locator('#mapContainer');
+  await mapContainer.hover();
+  await page.mouse.wheel(0, -1200);
+
+  const zoomedTransform = await page.locator('#mapViewport').getAttribute('transform');
+  const zoomedScale = parseViewportScale(zoomedTransform);
+  expect(zoomedScale).toBeGreaterThan(1);
+
+  await page.locator('#saveSectorLocalBtn').click();
+  await page.locator('#loadSectorLocalBtn').click();
+
+  const restoredTransform = await page.locator('#mapViewport').getAttribute('transform');
+  const restoredScale = parseViewportScale(restoredTransform);
+  expect(Math.abs(restoredScale - zoomedScale)).toBeLessThan(0.02);
+});
+
+test('reload restores autosaved zoom level', async ({ page }) => {
+  await page.goto('/sector_generator.html');
+  await page.locator('#generateSectorBtn').click();
+
+  const mapContainer = page.locator('#mapContainer');
+  await mapContainer.hover();
+  await page.mouse.wheel(0, -1000);
+
+  const zoomedTransform = await page.locator('#mapViewport').getAttribute('transform');
+  const zoomedScale = parseViewportScale(zoomedTransform);
+  expect(zoomedScale).toBeGreaterThan(1);
+
+  await page.reload();
+  await expect(page.locator('#statusTotalHexes')).toContainText('Hexes');
+  const restoredTransform = await page.locator('#mapViewport').getAttribute('transform');
+  const restoredScale = parseViewportScale(restoredTransform);
+  expect(Math.abs(restoredScale - zoomedScale)).toBeLessThan(0.05);
 });

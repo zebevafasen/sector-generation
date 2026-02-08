@@ -134,7 +134,17 @@ export function createStorageApplyService(deps) {
         }
         state.selectedHexId = null;
         clearInfoPanel();
-        drawGrid(width, height);
+        if (nextPayload.viewState) {
+            state.viewState = {
+                ...state.viewState,
+                ...nextPayload.viewState,
+                isDragging: false,
+                dragDistance: 0
+            };
+            drawGrid(width, height, { resetView: false });
+        } else {
+            drawGrid(width, height);
+        }
         if (nextPayload.selectedHexId && (state.sectors[nextPayload.selectedHexId] || state.deepSpacePois[nextPayload.selectedHexId])) {
             const group = findHexGroup(nextPayload.selectedHexId);
             if (group) selectHex(nextPayload.selectedHexId, group);

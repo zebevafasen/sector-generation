@@ -97,6 +97,7 @@ function bindPersistenceSync(refs) {
         syncDensityPresetForProfile(refs.generationProfile.value);
     });
     window.addEventListener(EVENTS.SECTOR_DATA_CHANGED, autoSaveSectorState);
+    window.addEventListener(EVENTS.VIEW_STATE_CHANGED, autoSaveSectorState);
 }
 
 function bindAppEventHandlers(deps) {

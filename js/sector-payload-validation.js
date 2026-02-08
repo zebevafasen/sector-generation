@@ -118,6 +118,19 @@ function sanitizeDeepSpacePois(rawPois, width, height, sectors) {
     return { deepSpacePois, dropped };
 }
 
+function sanitizeViewState(value) {
+    if (!isPlainObject(value)) return null;
+    const x = Number(value.x);
+    const y = Number(value.y);
+    const scale = Number(value.scale);
+    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(scale)) return null;
+    return {
+        x,
+        y,
+        scale: Math.max(0.2, Math.min(5, scale))
+    };
+}
+
 export function validateSectorPayload(rawPayload) {
     if (!isPlainObject(rawPayload)) {
         return { ok: false, error: 'Payload must be an object.' };
@@ -174,6 +187,7 @@ export function validateSectorPayload(rawPayload) {
                 || Object.prototype.hasOwnProperty.call(deepSpacePois, rawPayload.selectedHexId))
             ? rawPayload.selectedHexId
             : null,
+        viewState: sanitizeViewState(rawPayload.viewState),
         stats: {
             totalHexes: toPositiveInt(rawPayload.stats && rawPayload.stats.totalHexes, width * height),
             totalSystems: toNonNegativeInt(rawPayload.stats && rawPayload.stats.totalSystems, Object.keys(sectors).length)

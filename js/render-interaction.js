@@ -6,7 +6,9 @@ export function setupPanZoomAction(deps) {
         clearInfoPanel,
         isExpandedSectorViewEnabled,
         getCurrentGridDimensions,
-        drawGrid
+        drawGrid,
+        emitEvent,
+        events
     } = deps;
     const setShiftShortcutCursor = (enabled) => {
         document.body.classList.toggle('route-shortcut-active', enabled);
@@ -29,6 +31,7 @@ export function setupPanZoomAction(deps) {
         state.viewState.y = mouseY - worldY * newScale;
         state.viewState.scale = newScale;
         updateViewTransform();
+        if (emitEvent && events && events.VIEW_STATE_CHANGED) emitEvent(events.VIEW_STATE_CHANGED);
     });
 
     container.addEventListener('mousedown', (e) => {
@@ -54,7 +57,9 @@ export function setupPanZoomAction(deps) {
     });
 
     window.addEventListener('mouseup', () => {
+        const dragged = state.viewState.dragDistance > 5;
         state.viewState.isDragging = false;
+        if (dragged && emitEvent && events && events.VIEW_STATE_CHANGED) emitEvent(events.VIEW_STATE_CHANGED);
     });
     window.addEventListener('keydown', (e) => {
         if (e.key === 'Shift') setShiftShortcutCursor(true);

@@ -1,5 +1,6 @@
 export const EVENTS = {
     SECTOR_DATA_CHANGED: 'sectorDataChanged',
+    VIEW_STATE_CHANGED: 'viewStateChanged',
     HEX_SELECTED: 'hexSelected',
     ROUTE_SHORTCUT_HEX: 'routeShortcutHex',
     ROUTE_SHORTCUT_CLEAR: 'routeShortcutClear',

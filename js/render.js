@@ -351,7 +351,9 @@ export function setupPanZoom() {
         clearInfoPanel,
         isExpandedSectorViewEnabled: () => isExpandedSectorViewEnabled(state),
         getCurrentGridDimensions,
-        drawGrid
+        drawGrid,
+        emitEvent,
+        events: EVENTS
     });
 }
 
