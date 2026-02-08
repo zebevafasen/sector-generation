@@ -30,6 +30,7 @@ import { generateSystemName, generateSystemStars } from './generation-system.js'
 import { readGenerationConfigFromUi } from './sector-config.js';
 import { generateSystemDataAction, reconcilePlanetaryBodiesAction } from './generation-system-data.js';
 import { setEditModeAction, toggleEditModeAction } from './generation-edit-mode.js';
+import { buildGenerationDepInputs, buildOrchestrationCoreDeps } from './generation-composition.js';
 import {
     buildGenerationActionDeps,
     buildGenerationRerollDeps
@@ -59,8 +60,8 @@ import {
     updateSectorStatus as updateSectorStatusCore
 } from './generation-orchestration.js';
 
-function buildOrchestrationCoreDeps() {
-    return {
+function getOrchestrationCoreDeps() {
+    return buildOrchestrationCoreDeps({
         state,
         normalizeGenerationConfig,
         generateSeedString,
@@ -78,7 +79,7 @@ function buildOrchestrationCoreDeps() {
         emitEvent,
         events: EVENTS,
         homeSectorKey: HOME_SECTOR_KEY
-    };
+    });
 }
 
 function updateSectorStatus(totalHexes, systemCount) {
@@ -94,13 +95,13 @@ function setAndUseNewSeed(updateInput = true) {
 
 function buildSectorFromConfig(config, fixedSystems = {}, options = {}) {
     return buildSectorFromConfigCore(config, fixedSystems, options, {
-        ...buildOrchestrationCoreDeps(),
+        ...getOrchestrationCoreDeps(),
         generateSystemData
     });
 }
 
 function refreshSectorSnapshot(config, width, height, changeLabel = 'Update Sector') {
-    refreshSectorSnapshotCore(config, width, height, changeLabel, buildOrchestrationCoreDeps());
+    refreshSectorSnapshotCore(config, width, height, changeLabel, getOrchestrationCoreDeps());
 }
 
 function hasPinnedContentAtHex(hexId) {
@@ -182,8 +183,8 @@ export function toggleEditMode() {
     });
 }
 
-function buildGenerationDepInputs() {
-    return {
+function getGenerationDepInputs() {
+    return buildGenerationDepInputs({
         state,
         rand,
         showStatusMessage,
@@ -215,51 +216,51 @@ function buildGenerationDepInputs() {
         setRandomStream,
         setAndUseNewSeed,
         composeContentSeed
-    };
+    });
 }
 
 export function addSystemAtHex(hexId) {
-    addSystemAtHexAction(hexId, buildGenerationActionDeps(buildGenerationDepInputs()));
+    addSystemAtHexAction(hexId, buildGenerationActionDeps(getGenerationDepInputs()));
 }
 
 export function deleteSelectedSystem() {
-    deleteSelectedSystemAction(buildGenerationActionDeps(buildGenerationDepInputs()));
+    deleteSelectedSystemAction(buildGenerationActionDeps(getGenerationDepInputs()));
 }
 
 export function addPoiAtHex(hexId) {
-    addPoiAtHexAction(hexId, buildGenerationActionDeps(buildGenerationDepInputs()));
+    addPoiAtHexAction(hexId, buildGenerationActionDeps(getGenerationDepInputs()));
 }
 
 export function deletePoiAtHex(hexId) {
-    deletePoiAtHexAction(hexId, buildGenerationActionDeps(buildGenerationDepInputs()));
+    deletePoiAtHexAction(hexId, buildGenerationActionDeps(getGenerationDepInputs()));
 }
 
 export function renamePoiAtHex(hexId) {
-    renamePoiAtHexAction(hexId, buildGenerationActionDeps(buildGenerationDepInputs()));
+    renamePoiAtHexAction(hexId, buildGenerationActionDeps(getGenerationDepInputs()));
 }
 
 export function addBodyToSelectedSystem(kind) {
-    addBodyToSelectedSystemAction(kind, buildGenerationActionDeps(buildGenerationDepInputs()));
+    addBodyToSelectedSystemAction(kind, buildGenerationActionDeps(getGenerationDepInputs()));
 }
 
 export function deleteSelectedBody() {
-    deleteSelectedBodyAction(buildGenerationActionDeps(buildGenerationDepInputs()));
+    deleteSelectedBodyAction(buildGenerationActionDeps(getGenerationDepInputs()));
 }
 
 export function rerollSelectedPlanet() {
-    rerollSelectedPlanetAction(buildGenerationRerollDeps(buildGenerationDepInputs()));
+    rerollSelectedPlanetAction(buildGenerationRerollDeps(getGenerationDepInputs()));
 }
 
 export function rerollSelectedSystem() {
-    rerollSelectedSystemAction(buildGenerationRerollDeps(buildGenerationDepInputs()));
+    rerollSelectedSystemAction(buildGenerationRerollDeps(getGenerationDepInputs()));
 }
 
 export function togglePinSelectedSystem() {
-    togglePinSelectedSystemAction(buildGenerationRerollDeps(buildGenerationDepInputs()));
+    togglePinSelectedSystemAction(buildGenerationRerollDeps(getGenerationDepInputs()));
 }
 
 export function rerollUnpinnedSystems() {
-    rerollUnpinnedSystemsAction(buildGenerationRerollDeps(buildGenerationDepInputs()));
+    rerollUnpinnedSystemsAction(buildGenerationRerollDeps(getGenerationDepInputs()));
 }
 
 export function createSectorRecord(options = {}) {
