@@ -45,6 +45,7 @@ export function getInfoPanelRefs() {
         panel: document.getElementById('infoPanel'),
         hexId: document.getElementById('infoHexId'),
         hexCoreBadge: document.getElementById('infoHexCoreBadge'),
+        topActionBar: document.getElementById('infoTopActionBar'),
         systemDetails: document.getElementById('systemDetails'),
         emptyDetails: document.getElementById('emptyDetails'),
         typeLabel: document.getElementById('infoType'),

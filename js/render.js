@@ -502,6 +502,8 @@ export function clearInfoPanel() {
     refs.emptyDetails.innerText = 'Select a hex to view data.';
     state.selectedSystemData = null;
     state.selectedBodyIndex = null;
+    if (refs.topActionBar) refs.topActionBar.classList.add('hidden');
+    if (refs.selectedSystemPinState) refs.selectedSystemPinState.classList.add('hidden');
 
     if (refs.starClassLabel) {
         refs.starClassLabel.innerText = 'Class --';

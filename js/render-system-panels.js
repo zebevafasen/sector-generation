@@ -99,6 +99,8 @@ export function configureSystemHeaderAndStar({ refs, system, id, preselectedBody
         updateInfoPanel,
         redrawAndReselect
     });
+    if (refs.topActionBar) refs.topActionBar.classList.remove('hidden');
+    if (refs.selectedSystemPinState) refs.selectedSystemPinState.classList.remove('hidden');
 
     const isPinned = !!(state.pinnedHexIds && state.pinnedHexIds.includes(id));
     const isCore = !!(id && state.coreSystemHexId === id && state.sectors && state.sectors[id]);
@@ -135,6 +137,9 @@ export function configureSystemHeaderAndStar({ refs, system, id, preselectedBody
 export function renderEmptyHexInfo({ refs, id, deepSpacePoi = null }) {
     refs.systemDetails.classList.add('hidden');
     refs.emptyDetails.classList.remove('hidden');
+    const hasPoi = !!deepSpacePoi;
+    if (refs.topActionBar) refs.topActionBar.classList.toggle('hidden', !hasPoi);
+    if (refs.selectedSystemPinState) refs.selectedSystemPinState.classList.toggle('hidden', !hasPoi);
     if (deepSpacePoi) {
         const poiStyle = getPoiTypeStyle(deepSpacePoi.kind, deepSpacePoi);
         const poiTypeLabel = formatPoiTypeLabel(deepSpacePoi);
