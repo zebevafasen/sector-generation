@@ -5,6 +5,12 @@ function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
 }
 
+function countLocalNeighbors(selectedHexIds, hexId, distanceCap = 2) {
+    return selectedHexIds.reduce((count, otherHexId) => (
+        count + (hexDistanceById(otherHexId, hexId) <= distanceCap ? 1 : 0)
+    ), 0);
+}
+
 function isEdgeHex(hexId, width, height) {
     const parsed = parseHexId(hexId);
     if (!parsed) return false;
@@ -29,7 +35,8 @@ function sortByCoordThenScore(items) {
     return [...items].sort((a, b) => {
         if (b.score !== a.score) return b.score - a.score;
         if (a.coord.col !== b.coord.col) return a.coord.col - b.coord.col;
-        return a.coord.row - b.coord.row;
+        if (a.coord.row !== b.coord.row) return a.coord.row - b.coord.row;
+        return String(a.hexId).localeCompare(String(b.hexId));
     });
 }
 
@@ -74,6 +81,22 @@ function chooseSecondaryAnchors(primaryAnchor, parsedCandidates, systemsToGenera
     return anchors;
 }
 
+function computeAnchorAffinity(item, anchors, growthDecay) {
+    return anchors.reduce((best, anchor) => {
+        const distance = hexDistanceById(item.hexId, anchor.hexId);
+        const score = Math.pow(Math.max(0.01, growthDecay), distance);
+        return Math.max(best, score);
+    }, 0);
+}
+
+function computeCenterAffinity(item, width, height) {
+    const centerX = (Math.max(1, width) - 1) / 2;
+    const centerY = (Math.max(1, height) - 1) / 2;
+    const maxCenterDistance = Math.max(1, Math.hypot(centerX, centerY));
+    const centerDistance = Math.hypot(item.coord.col - centerX, item.coord.row - centerY);
+    return 1 - (centerDistance / maxCenterDistance);
+}
+
 function computeCandidateScore(item, anchors, selectedHexIds, randomFn, options) {
     const {
         width,
@@ -84,23 +107,16 @@ function computeCandidateScore(item, anchors, selectedHexIds, randomFn, options)
         isHomeSector,
         generationContext,
         sectorKey,
-        boundaryContinuityStrength
+        boundaryContinuityStrength,
+        localNeighborCap,
+        capRelaxation
     } = options;
-    const centerX = (Math.max(1, width) - 1) / 2;
-    const centerY = (Math.max(1, height) - 1) / 2;
-    const maxCenterDistance = Math.max(1, Math.hypot(centerX, centerY));
-    const centerDistance = Math.hypot(item.coord.col - centerX, item.coord.row - centerY);
-    const centerAffinity = 1 - (centerDistance / maxCenterDistance);
-
-    const anchorAffinity = anchors.reduce((best, anchor) => {
-        const distance = hexDistanceById(item.hexId, anchor.hexId);
-        const score = Math.pow(Math.max(0.01, growthDecay), distance);
-        return Math.max(best, score);
-    }, 0);
-
-    const localNeighbors = selectedHexIds.reduce((count, hexId) => (
-        count + (hexDistanceById(hexId, item.hexId) <= 2 ? 1 : 0)
-    ), 0);
+    const centerAffinity = computeCenterAffinity(item, width, height);
+    const anchorAffinity = computeAnchorAffinity(item, anchors, growthDecay);
+    const localNeighbors = countLocalNeighbors(selectedHexIds, item.hexId, 2);
+    if (localNeighbors >= (localNeighborCap + capRelaxation)) {
+        return Number.NEGATIVE_INFINITY;
+    }
     const overpackPenalty = Math.max(0, localNeighbors - 2) * 0.35;
 
     const direction = getDirectionForHex(item.hexId, width, height);
@@ -120,6 +136,161 @@ function computeCandidateScore(item, anchors, selectedHexIds, randomFn, options)
         - edgePenalty
         + variance
     );
+}
+
+function stageASelectAnchors(parsedCandidates, systemsToGenerate, randomFn, width, height, settings) {
+    const primaryAnchor = choosePrimaryAnchor(
+        parsedCandidates,
+        randomFn,
+        width,
+        height,
+        Math.max(0, Number(settings.clusterAnchorJitter) || 0)
+    );
+    if (!primaryAnchor) return [];
+    const secondaryAnchors = chooseSecondaryAnchors(primaryAnchor, parsedCandidates, systemsToGenerate, randomFn, settings);
+    return [primaryAnchor, ...secondaryAnchors];
+}
+
+function stageBGrowSelection(parsedCandidates, systemsToGenerate, anchors, randomFn, options) {
+    const selectedHexIds = [];
+    const selectedSet = new Set();
+    const localNeighborCap = Math.max(1, Number(options.settings.clusterLocalNeighborCap) || 5);
+    let capRelaxation = 0;
+    while (selectedHexIds.length < systemsToGenerate) {
+        const scored = parsedCandidates
+            .filter((item) => !selectedSet.has(item.hexId))
+            .map((item) => ({
+                ...item,
+                score: computeCandidateScore(item, anchors, selectedHexIds, randomFn, {
+                    width: options.width,
+                    height: options.height,
+                    centerBiasStrength: Math.max(0, Number(options.settings.centerBiasStrength) || 0),
+                    growthDecay: Math.max(0.05, Number(options.settings.clusterGrowthDecay) || 0.82),
+                    edgeBalance: Math.max(0, Number(options.settings.clusterEdgeBalance) || 0),
+                    isHomeSector: !!options.isHomeSector,
+                    generationContext: options.generationContext || null,
+                    sectorKey: options.sectorKey || '',
+                    boundaryContinuityStrength: Math.max(0, Number(options.settings.boundaryContinuityStrength) || 0),
+                    localNeighborCap,
+                    capRelaxation
+                })
+            }))
+            .filter((item) => Number.isFinite(item.score));
+        const next = sortByCoordThenScore(scored)[0];
+        if (!next) {
+            if (capRelaxation < 2) {
+                capRelaxation++;
+                continue;
+            }
+            break;
+        }
+        selectedHexIds.push(next.hexId);
+        selectedSet.add(next.hexId);
+    }
+    return selectedHexIds;
+}
+
+function applyEdgeBalancing(selectedHexIds, parsedCandidates, anchors, options) {
+    const { width, height, settings } = options;
+    const edgeBalanceStrength = Math.max(0, Number(settings.clusterEdgeBalance) || 0);
+    if (selectedHexIds.length < 4 || edgeBalanceStrength <= 0) return selectedHexIds;
+    const candidateEdgeRatio = parsedCandidates.length
+        ? parsedCandidates.filter((item) => isEdgeHex(item.hexId, width, height)).length / parsedCandidates.length
+        : 0;
+    const selectedEdgeHexIds = selectedHexIds.filter((hexId) => isEdgeHex(hexId, width, height));
+    const selectedEdgeRatio = selectedEdgeHexIds.length / Math.max(1, selectedHexIds.length);
+    const allowedEdgeRatio = clamp(candidateEdgeRatio + (0.08 / (edgeBalanceStrength + 0.2)), 0.15, 0.7);
+    if (selectedEdgeRatio <= allowedEdgeRatio) return selectedHexIds;
+
+    const swapsNeeded = Math.min(
+        selectedEdgeHexIds.length,
+        Math.max(0, Math.floor((selectedEdgeRatio - allowedEdgeRatio) * selectedHexIds.length))
+    );
+    if (swapsNeeded <= 0) return selectedHexIds;
+    const selectedSet = new Set(selectedHexIds);
+    const dropCandidates = selectedEdgeHexIds
+        .map((hexId) => ({ hexId, coord: parseHexId(hexId) }))
+        .filter((item) => !!item.coord)
+        .map((item) => ({
+            ...item,
+            score: computeCenterAffinity(item, width, height) + (computeAnchorAffinity(item, anchors, settings.clusterGrowthDecay || 0.82) * 0.6)
+        }))
+        .sort((a, b) => a.score - b.score || a.coord.col - b.coord.col || a.coord.row - b.coord.row);
+    const addCandidates = parsedCandidates
+        .filter((item) => !selectedSet.has(item.hexId) && !isEdgeHex(item.hexId, width, height))
+        .map((item) => ({
+            ...item,
+            score: computeCenterAffinity(item, width, height) + (computeAnchorAffinity(item, anchors, settings.clusterGrowthDecay || 0.82) * 0.6)
+        }))
+        .sort((a, b) => b.score - a.score || a.coord.col - b.coord.col || a.coord.row - b.coord.row);
+    if (!dropCandidates.length || !addCandidates.length) return selectedHexIds;
+
+    const next = [...selectedHexIds];
+    for (let i = 0; i < swapsNeeded; i++) {
+        const drop = dropCandidates[i];
+        const add = addCandidates[i];
+        if (!drop || !add) break;
+        const index = next.indexOf(drop.hexId);
+        if (index < 0) continue;
+        next[index] = add.hexId;
+    }
+    return next;
+}
+
+function enforceLocalOccupancyCap(selectedHexIds, parsedCandidates, anchors, options) {
+    const localNeighborCap = Math.max(1, Number(options.settings.clusterLocalNeighborCap) || 5);
+    if (selectedHexIds.length < 4) return selectedHexIds;
+    const centerX = (Math.max(1, options.width) - 1) / 2;
+    const centerY = (Math.max(1, options.height) - 1) / 2;
+    const selectedSet = new Set(selectedHexIds);
+    const next = [...selectedHexIds];
+    const replacementPool = parsedCandidates
+        .filter((item) => !selectedSet.has(item.hexId))
+        .map((item) => ({
+            ...item,
+            score: computeCenterAffinity(item, options.width, options.height)
+                + (computeAnchorAffinity(item, anchors, options.settings.clusterGrowthDecay || 0.82) * 0.6)
+        }))
+        .sort((a, b) => b.score - a.score || a.coord.col - b.coord.col || a.coord.row - b.coord.row);
+    if (!replacementPool.length) return next;
+
+    for (let pass = 0; pass < next.length; pass++) {
+        const offender = next
+            .map((hexId) => ({
+                hexId,
+                coord: parseHexId(hexId),
+                neighbors: countLocalNeighbors(next.filter((other) => other !== hexId), hexId, 2)
+            }))
+            .filter((item) => !!item.coord && item.neighbors > localNeighborCap)
+            .sort((a, b) => {
+                if (b.neighbors !== a.neighbors) return b.neighbors - a.neighbors;
+                const aCenterDist = Math.hypot(a.coord.col - centerX, a.coord.row - centerY);
+                const bCenterDist = Math.hypot(b.coord.col - centerX, b.coord.row - centerY);
+                if (bCenterDist !== aCenterDist) return bCenterDist - aCenterDist;
+                if (b.coord.col !== a.coord.col) return b.coord.col - a.coord.col;
+                return b.coord.row - a.coord.row;
+            })[0];
+        if (!offender) break;
+
+        const offenderIndex = next.indexOf(offender.hexId);
+        if (offenderIndex < 0) break;
+        let replacementIndex = -1;
+        for (let i = 0; i < replacementPool.length; i++) {
+            const candidate = replacementPool[i];
+            const localCount = countLocalNeighbors(next.filter((_, idx) => idx !== offenderIndex), candidate.hexId, 2);
+            if (localCount <= localNeighborCap) {
+                replacementIndex = i;
+                break;
+            }
+        }
+        if (replacementIndex < 0) break;
+        const replacement = replacementPool.splice(replacementIndex, 1)[0];
+        selectedSet.delete(offender.hexId);
+        selectedSet.add(replacement.hexId);
+        next[offenderIndex] = replacement.hexId;
+    }
+
+    return next;
 }
 
 function postBiasCleanup(selectedHexIds, parsedCandidates, options) {
@@ -170,45 +341,30 @@ export function selectClusteredSystemCoordsV2(candidateCoords, systemsToGenerate
         .filter((item) => !!item.coord);
     if (!parsedCandidates.length) return candidateCoords.slice(0, systemsToGenerate);
 
-    const primaryAnchor = choosePrimaryAnchor(
-        parsedCandidates,
-        randomFn,
+    const anchors = stageASelectAnchors(parsedCandidates, systemsToGenerate, randomFn, width, height, settings);
+    if (!anchors.length) return candidateCoords.slice(0, systemsToGenerate);
+    const stageBGrown = stageBGrowSelection(parsedCandidates, systemsToGenerate, anchors, randomFn, {
         width,
         height,
-        Math.max(0, Number(settings.clusterAnchorJitter) || 0)
-    );
-    if (!primaryAnchor) return candidateCoords.slice(0, systemsToGenerate);
-    const secondaryAnchors = chooseSecondaryAnchors(primaryAnchor, parsedCandidates, systemsToGenerate, randomFn, settings);
-    const anchors = [primaryAnchor, ...secondaryAnchors];
+        sectorKey: options.sectorKey || '',
+        isHomeSector: !!options.isHomeSector,
+        settings,
+        generationContext: options.generationContext || null
+    });
+    const stageCEdgeBalanced = applyEdgeBalancing(stageBGrown, parsedCandidates, anchors, {
+        width,
+        height,
+        settings
+    });
 
-    const selectedHexIds = [];
-    const selectedSet = new Set();
-    while (selectedHexIds.length < systemsToGenerate) {
-        const scored = parsedCandidates
-            .filter((item) => !selectedSet.has(item.hexId))
-            .map((item) => ({
-                ...item,
-                score: computeCandidateScore(item, anchors, selectedHexIds, randomFn, {
-                    width,
-                    height,
-                    centerBiasStrength: Math.max(0, Number(settings.centerBiasStrength) || 0),
-                    growthDecay: Math.max(0.05, Number(settings.clusterGrowthDecay) || 0.82),
-                    edgeBalance: Math.max(0, Number(settings.clusterEdgeBalance) || 0),
-                    isHomeSector: !!options.isHomeSector,
-                    generationContext: options.generationContext || null,
-                    sectorKey: options.sectorKey || '',
-                    boundaryContinuityStrength: Math.max(0, Number(settings.boundaryContinuityStrength) || 0)
-                })
-            }));
-        const next = sortByCoordThenScore(scored)[0];
-        if (!next) break;
-        selectedHexIds.push(next.hexId);
-        selectedSet.add(next.hexId);
-    }
-
-    return postBiasCleanup(selectedHexIds, parsedCandidates, {
+    const stageCCenterProtected = postBiasCleanup(stageCEdgeBalanced, parsedCandidates, {
         width,
         height,
         centerVoidProtection: Math.max(0, Number(settings.clusterCenterVoidProtection) || 0)
+    });
+    return enforceLocalOccupancyCap(stageCCenterProtected, parsedCandidates, anchors, {
+        width,
+        height,
+        settings
     });
 }

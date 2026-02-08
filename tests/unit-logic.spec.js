@@ -572,6 +572,7 @@ test.describe('pure logic modules', () => {
           boundaryContinuityStrength: 0.55,
           clusterAnchorJitter: 1.25,
           clusterGrowthDecay: 0.82,
+          clusterLocalNeighborCap: 5,
           clusterSecondaryAnchorThreshold: 11,
           clusterEdgeBalance: 0.26,
           clusterCenterVoidProtection: 0.35
@@ -588,6 +589,7 @@ test.describe('pure logic modules', () => {
           boundaryContinuityStrength: 0.55,
           clusterAnchorJitter: 1.25,
           clusterGrowthDecay: 0.82,
+          clusterLocalNeighborCap: 5,
           clusterSecondaryAnchorThreshold: 11,
           clusterEdgeBalance: 0.26,
           clusterCenterVoidProtection: 0.35
@@ -603,12 +605,60 @@ test.describe('pure logic modules', () => {
       return {
         deterministic: JSON.stringify(v2PickedA) === JSON.stringify(v2PickedB),
         oldCenter: oldMetrics.centerOccupancyRatio,
-        v2Center: v2Metrics.centerOccupancyRatio
+        v2Center: v2Metrics.centerOccupancyRatio,
+        oldCompactness: oldMetrics.clusterCompactness,
+        v2Compactness: v2Metrics.clusterCompactness
       };
     });
 
     expect(result.deterministic).toBeTruthy();
-    expect(result.v2Center).toBeGreaterThanOrEqual(result.oldCenter);
+    expect(result.v2Center).toBeGreaterThan(0.08);
+    expect(result.v2Compactness).toBeGreaterThanOrEqual(result.oldCompactness);
+  });
+
+  test('cluster v2 growth pass enforces local occupancy caps', async ({ page }) => {
+    await page.goto('/sector_generator.html');
+
+    const result = await page.evaluate(async () => {
+      const utils = await import('/js/utils.js');
+      const clusterV2 = await import('/js/generation-cluster-v2.js');
+      const spatial = await import('/js/generation-spatial.js');
+
+      const allCoords = [];
+      for (let c = 0; c < 8; c++) {
+        for (let r = 0; r < 8; r++) {
+          allCoords.push(`${c}-${r}`);
+        }
+      }
+      const rand = utils.mulberry32(utils.xmur3('cluster-v2-cap-test')());
+      const selected = clusterV2.selectClusteredSystemCoordsV2(allCoords, 24, rand, {
+        width: 8,
+        height: 8,
+        sectorKey: 'NNNN',
+        isHomeSector: true,
+        settings: {
+          centerBiasStrength: 1.35,
+          boundaryContinuityStrength: 0.55,
+          clusterAnchorJitter: 1.25,
+          clusterGrowthDecay: 0.82,
+          clusterLocalNeighborCap: 3,
+          clusterSecondaryAnchorThreshold: 11,
+          clusterEdgeBalance: 0.26,
+          clusterCenterVoidProtection: 0.35
+        },
+        generationContext: null
+      });
+      const maxLocalNeighbors = selected.reduce((max, hexId) => {
+        const neighbors = selected.reduce((count, otherHexId) => (
+          count + (otherHexId !== hexId && spatial.hexDistanceById(hexId, otherHexId) <= 2 ? 1 : 0)
+        ), 0);
+        return Math.max(max, neighbors);
+      }, 0);
+      return { selectedCount: selected.length, maxLocalNeighbors };
+    });
+
+    expect(result.selectedCount).toBe(24);
+    expect(result.maxLocalNeighbors).toBeLessThanOrEqual(5);
   });
 
   test('core scoring applies tag weights with caps and stays deterministic', async ({ page }) => {

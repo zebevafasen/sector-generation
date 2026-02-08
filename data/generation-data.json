@@ -188,6 +188,7 @@
     "boundaryContinuityStrength": 0.55,
     "clusterAnchorJitter": 1.25,
     "clusterGrowthDecay": 0.82,
+    "clusterLocalNeighborCap": 5,
     "clusterSecondaryAnchorThreshold": 11,
     "clusterEdgeBalance": 0.26,
     "clusterCenterVoidProtection": 0.35,

@@ -73,6 +73,7 @@ export function normalizeGenerationConfig(config) {
         boundaryContinuityStrength: Math.max(0, toFiniteNumber(source.boundaryContinuityStrength, GENERATION_SETTINGS.boundaryContinuityStrength)),
         clusterAnchorJitter: Math.max(0, toFiniteNumber(source.clusterAnchorJitter, GENERATION_SETTINGS.clusterAnchorJitter)),
         clusterGrowthDecay: Math.max(0.05, toFiniteNumber(source.clusterGrowthDecay, GENERATION_SETTINGS.clusterGrowthDecay)),
+        clusterLocalNeighborCap: Math.max(1, Math.floor(toFiniteNumber(source.clusterLocalNeighborCap, GENERATION_SETTINGS.clusterLocalNeighborCap))),
         clusterSecondaryAnchorThreshold: Math.max(1, Math.floor(toFiniteNumber(source.clusterSecondaryAnchorThreshold, GENERATION_SETTINGS.clusterSecondaryAnchorThreshold))),
         clusterEdgeBalance: Math.max(0, toFiniteNumber(source.clusterEdgeBalance, GENERATION_SETTINGS.clusterEdgeBalance)),
         clusterCenterVoidProtection: Math.max(0, toFiniteNumber(source.clusterCenterVoidProtection, GENERATION_SETTINGS.clusterCenterVoidProtection)),

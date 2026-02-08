@@ -36,8 +36,12 @@ This document breaks the procedural generation redesign into phased, step-by-ste
 - Removed: no functional removals in this phase.
 
 ### Phase 3 - Completed
-- Added: Cluster V2 staged selector (`js/generation-cluster-v2.js`) with anchor selection, growth scoring, and post-bias cleanup.
-- Changed: orchestration routes clustered generation through V2 behind `clusterV2Enabled` with safe fallback.
+- Added: explicit Stage A/B/C internals in Cluster V2 (`js/generation-cluster-v2.js`) for anchor selection, iterative growth, and post-bias cleanup.
+- Added: `clusterLocalNeighborCap` setting for growth-pass occupancy caps.
+- Changed: Stage B now enforces local neighbor caps with controlled relaxation, keeping generation robust without stalling.
+- Changed: Stage C now applies deterministic edge-balancing and final occupancy-cap enforcement after center-void protection.
+- Changed: deterministic tie-break ordering tightened (score -> col -> row -> hexId).
+- Changed: orchestration continues routing clustered generation through V2 behind `clusterV2Enabled` with safe fallback.
 - Removed: none; legacy selector intentionally retained for rollback safety.
 
 ### Phase 4 - Completed
