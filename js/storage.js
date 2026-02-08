@@ -6,6 +6,7 @@ import { showStatusMessage } from './core.js';
 import {
     AUTO_SAVE_STORAGE_KEY,
     MANUAL_SAVE_STORAGE_KEY,
+    VIEW_STATE_STORAGE_KEY,
     buildSectorPayload,
     readFirstValidPayloadFromStorage
 } from './storage-payload.js';
@@ -18,6 +19,25 @@ const storageApplyService = createStorageApplyService({
     autoSaveSectorState
 });
 
+let viewStateSaveTimer = null;
+
+function readStoredViewState() {
+    if (!(typeof window !== 'undefined' && window.localStorage)) return null;
+    try {
+        const raw = window.localStorage.getItem(VIEW_STATE_STORAGE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return null;
+        const x = Number(parsed.x);
+        const y = Number(parsed.y);
+        const scale = Number(parsed.scale);
+        if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(scale)) return null;
+        return { x, y, scale };
+    } catch {
+        return null;
+    }
+}
+
 export function autoSaveSectorState() {
     if (!(typeof window !== 'undefined' && window.localStorage)) return;
     try {
@@ -26,6 +46,26 @@ export function autoSaveSectorState() {
     } catch (err) {
         console.error(err);
     }
+}
+
+export function autoSaveViewStateDebounced(delayMs = 700) {
+    if (!(typeof window !== 'undefined' && window.localStorage)) return;
+    if (viewStateSaveTimer) {
+        window.clearTimeout(viewStateSaveTimer);
+    }
+    viewStateSaveTimer = window.setTimeout(() => {
+        viewStateSaveTimer = null;
+        try {
+            const snapshot = {
+                x: Number.isFinite(state.viewState?.x) ? state.viewState.x : 0,
+                y: Number.isFinite(state.viewState?.y) ? state.viewState.y : 0,
+                scale: Number.isFinite(state.viewState?.scale) ? state.viewState.scale : 1
+            };
+            window.localStorage.setItem(VIEW_STATE_STORAGE_KEY, JSON.stringify(snapshot));
+        } catch (err) {
+            console.error(err);
+        }
+    }, Math.max(100, delayMs));
 }
 
 export function restoreCachedSectorState() {
@@ -37,7 +77,14 @@ export function restoreCachedSectorState() {
             LOCAL_STORAGE_KEY
         ]);
         if (!result.payload) return false;
-        applySectorPayload(result.payload);
+        const storedViewState = readStoredViewState();
+        const payload = storedViewState
+            ? {
+                ...result.payload,
+                viewState: storedViewState
+            }
+            : result.payload;
+        applySectorPayload(payload);
         return true;
     } catch (err) {
         console.error(err);

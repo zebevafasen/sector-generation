@@ -1,3 +1,19 @@
+function normalizeSectorKey(value) {
+    const key = String(value || '').trim().toUpperCase();
+    return key || null;
+}
+
+export function applyExpandedSectorSelectionUi(sectorKey) {
+    const activeSectorKey = normalizeSectorKey(sectorKey);
+    document.querySelectorAll('.sector-layer').forEach((layer) => {
+        const layerKey = normalizeSectorKey(layer.getAttribute('data-sector-key'));
+        const isActive = !!activeSectorKey && layerKey === activeSectorKey;
+        layer.classList.toggle('current-sector-layer', isActive);
+        const frame = layer.querySelector('.sector-frame');
+        if (frame) frame.classList.toggle('sector-frame-selected', isActive);
+    });
+}
+
 export function setupPanZoomAction(deps) {
     const {
         state,
@@ -5,8 +21,6 @@ export function setupPanZoomAction(deps) {
         updateViewTransform,
         clearInfoPanel,
         isExpandedSectorViewEnabled,
-        getCurrentGridDimensions,
-        drawGrid,
         emitEvent,
         events
     } = deps;
@@ -76,14 +90,14 @@ export function setupPanZoomAction(deps) {
         const isHexClick = path.some((node) => node instanceof Element && node.classList && node.classList.contains('hex-group'))
             || (e.target instanceof Element && !!e.target.closest('.hex-group'));
         if (isHexClick) return;
-        document.querySelectorAll('.hex.selected').forEach(el => el.classList.remove('selected'));
+        const selectedHex = document.querySelector('.hex.selected');
+        if (selectedHex) selectedHex.classList.remove('selected');
         state.selectedHexId = null;
         state.selectedBodyIndex = null;
         clearInfoPanel();
         if (isExpandedSectorViewEnabled() && state.multiSector) {
             state.multiSector.selectedSectorKey = null;
-            const { width, height } = getCurrentGridDimensions();
-            drawGrid(width, height, { resetView: false });
+            applyExpandedSectorSelectionUi(null);
         }
     });
 }
@@ -133,7 +147,8 @@ export function handleHexClickAction(e, id, groupElement, deps) {
 
 export function selectHexAction(id, groupElement, deps) {
     const { state, updateInfoPanel, emitEvent, events } = deps;
-    document.querySelectorAll('.hex.selected').forEach(el => el.classList.remove('selected'));
+    const selectedHex = document.querySelector('.hex.selected');
+    if (selectedHex) selectedHex.classList.remove('selected');
     const poly = groupElement.querySelector('polygon');
     if (poly) poly.classList.add('selected');
     state.selectedHexId = id;
@@ -143,13 +158,7 @@ export function selectHexAction(id, groupElement, deps) {
     if (sectorKey && state.multiSector) {
         state.multiSector.selectedSectorKey = sectorKey;
         if (state.multiSector.expandedView) {
-            document.querySelectorAll('.sector-layer').forEach((layer) => {
-                const layerKey = String(layer.getAttribute('data-sector-key') || '').trim().toUpperCase();
-                const isActive = layerKey === sectorKey;
-                layer.classList.toggle('current-sector-layer', isActive);
-                const frame = layer.querySelector('.sector-frame');
-                if (frame) frame.classList.toggle('sector-frame-selected', isActive);
-            });
+            applyExpandedSectorSelectionUi(sectorKey);
         }
     }
     updateInfoPanel(id);

@@ -8,6 +8,7 @@ import { sortHexIds } from './utils.js';
 
 export const AUTO_SAVE_STORAGE_KEY = `${LOCAL_STORAGE_KEY}:autosave`;
 export const MANUAL_SAVE_STORAGE_KEY = `${LOCAL_STORAGE_KEY}:manual`;
+export const VIEW_STATE_STORAGE_KEY = `${LOCAL_STORAGE_KEY}:view`;
 
 export function readFirstValidPayloadFromStorage(keys) {
     if (!(typeof window !== 'undefined' && window.localStorage)) {

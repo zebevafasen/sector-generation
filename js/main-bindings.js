@@ -19,6 +19,7 @@ import {
 import { activateSelectedJumpGate, travelSelectedJumpGate } from './multi-sector.js';
 import {
     autoSaveSectorState,
+    autoSaveViewStateDebounced,
     exportSector,
     exportSectorGmBrief,
     exportSectorPng,
@@ -97,7 +98,7 @@ function bindPersistenceSync(refs) {
         syncDensityPresetForProfile(refs.generationProfile.value);
     });
     window.addEventListener(EVENTS.SECTOR_DATA_CHANGED, autoSaveSectorState);
-    window.addEventListener(EVENTS.VIEW_STATE_CHANGED, autoSaveSectorState);
+    window.addEventListener(EVENTS.VIEW_STATE_CHANGED, autoSaveViewStateDebounced);
 }
 
 function bindAppEventHandlers(deps) {

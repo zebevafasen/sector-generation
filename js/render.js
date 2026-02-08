@@ -26,6 +26,7 @@ import {
 import { isJumpGatePoi } from './jump-gate-model.js';
 import { updateSectorNavigationAnchors as updateSectorNavigationAnchorsInternal } from './render-navigation.js';
 import {
+    applyExpandedSectorSelectionUi,
     handleHexClickAction,
     refreshRouteOverlayAction,
     selectHexAction,
@@ -330,7 +331,7 @@ export function drawGrid(cols, rows, options = {}) {
                 if (!state.multiSector) return;
                 if (state.multiSector.selectedSectorKey === entry.sectorKey) return;
                 state.multiSector.selectedSectorKey = entry.sectorKey;
-                drawGrid(cols, rows, { resetView: false });
+                applyExpandedSectorSelectionUi(entry.sectorKey);
             });
             if (!isSelectedSector) {
                 layer.addEventListener('mouseenter', () => {
