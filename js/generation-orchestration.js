@@ -1,3 +1,5 @@
+import { rebuildGenerationContextSummaries } from './generation-context-summary.js';
+
 export function refreshSectorSnapshotAction(config, width, height, changeLabel = 'Update Sector', deps) {
     const {
         state,
@@ -315,6 +317,11 @@ export function generateSectorAction(deps) {
             }
         }
     };
+    rebuildGenerationContextSummaries({
+        layoutSeed: state.layoutSeed || seedUsed || '',
+        sectorsByKey: state.multiSector.sectorsByKey,
+        settings: config
+    });
     clearSelectionInfo();
 
     redrawGridAndReselect(built.width, built.height, { resetView: true });
@@ -351,8 +358,8 @@ export function createSectorRecordAction(options = {}, deps) {
     });
     state.currentSeed = previousSeed;
     state.seededRandomFn = previousRandom;
-
-    return {
+    const sectorKey = options && options.sectorKey ? options.sectorKey : homeSectorKey;
+    const record = {
         seed,
         config,
         sectors: deepClone(built.sectors),
@@ -360,7 +367,19 @@ export function createSectorRecordAction(options = {}, deps) {
         pinnedHexIds: [],
         coreSystemHexId: built.coreSystemHexId || null,
         coreSystemManual: !!built.coreSystemManual,
+        generationContextSummary: null,
         totalHexes: built.totalHexes,
         systemCount: built.systemCount
     };
+    const knownSectorRecords = {
+        ...(options && options.knownSectorRecords ? options.knownSectorRecords : {}),
+        [sectorKey]: record
+    };
+    rebuildGenerationContextSummaries({
+        layoutSeed: options && options.layoutSeed ? options.layoutSeed : (state.layoutSeed || state.currentSeed || seed),
+        sectorsByKey: knownSectorRecords,
+        settings: config
+    });
+
+    return record;
 }

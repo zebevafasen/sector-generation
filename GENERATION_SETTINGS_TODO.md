@@ -66,8 +66,11 @@ This document breaks the procedural generation redesign into phased, step-by-ste
 - Removed: no functional removals in this phase.
 
 ### Phase 7 - Completed
-- Added: layout-seed/context propagation through generation orchestration and neighbor sector creation paths.
-- Changed: multi-sector generation calls now pass context-compatible inputs consistently.
+- Added: shared context-summary rebuild utility (`js/generation-context-summary.js`) for deterministic per-sector summary snapshots.
+- Added: persisted `generationContextSummary` on sector records (density ratio/map, edge occupancy, core hex, dominant tags).
+- Changed: context summaries now rebuild deterministically across generation, neighbor creation, sector switching, and payload load/import.
+- Changed: multi-sector lifecycle paths now refresh summaries whenever `sectorsByKey` mutates.
+- Changed: payload validation now sanitizes optional `generationContextSummary` shape for compatibility safety.
 - Removed: duplicate helper logic cleanup by consolidating `getOrCreateSectorRecord` into `getOrCreateSectorRecordByKey`.
 
 ### Phase 8 - Completed

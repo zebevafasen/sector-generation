@@ -7,6 +7,7 @@ import { HOME_SECTOR_KEY } from './sector-address.js';
 import { clearInfoPanel, drawGrid, findHexGroup, selectHex } from './render.js';
 import { validateSectorPayload } from './sector-payload-validation.js';
 import { ensureSystemStarFields } from './star-system.js';
+import { rebuildGenerationContextSummaries } from './generation-context-summary.js';
 
 function getStorageUiRefs() {
     return {
@@ -141,6 +142,11 @@ export function createStorageApplyService(deps) {
             if (typeof state.multiSector.expandedView !== 'boolean') {
                 state.multiSector.expandedView = false;
             }
+            rebuildGenerationContextSummaries({
+                layoutSeed: state.layoutSeed || state.currentSeed || '',
+                sectorsByKey: state.multiSector.sectorsByKey,
+                settings: state.sectorConfigSnapshot || {}
+            });
         } else {
             state.multiSector = {
                 currentKey: HOME_SECTOR_KEY,

@@ -590,6 +590,57 @@ test.describe('pure logic modules', () => {
     expect(result.hasSummary).toBeTruthy();
   });
 
+  test('generation context summaries rebuild deterministically for sector records', async ({ page }) => {
+    await page.goto('/sector_generator.html');
+
+    const result = await page.evaluate(async () => {
+      const mod = await import('/js/generation-context-summary.js');
+      const records = {
+        NNNN: {
+          config: { width: 4, height: 4 },
+          sectors: { '1-1': {}, '2-2': {} },
+          deepSpacePois: {},
+          coreSystemHexId: '1-1',
+          coreSystemManual: false,
+          totalHexes: 16,
+          systemCount: 2
+        },
+        NNNO: {
+          config: { width: 4, height: 4 },
+          sectors: { '0-1': {}, '0-2': {}, '0-0': {} },
+          deepSpacePois: {},
+          coreSystemHexId: '0-1',
+          coreSystemManual: false,
+          totalHexes: 16,
+          systemCount: 3
+        }
+      };
+      mod.rebuildGenerationContextSummaries({
+        layoutSeed: 'seed-context-summary',
+        sectorsByKey: records,
+        settings: { boundaryContinuityStrength: 0.55 }
+      });
+      const first = JSON.stringify(records);
+      mod.rebuildGenerationContextSummaries({
+        layoutSeed: 'seed-context-summary',
+        sectorsByKey: records,
+        settings: { boundaryContinuityStrength: 0.55 }
+      });
+      const second = JSON.stringify(records);
+      return {
+        deterministic: first === second,
+        hasSummaryA: !!records.NNNN.generationContextSummary,
+        hasSummaryB: !!records.NNNO.generationContextSummary,
+        edgeKeys: Object.keys(records.NNNN.generationContextSummary?.edgeOccupancy || {})
+      };
+    });
+
+    expect(result.deterministic).toBeTruthy();
+    expect(result.hasSummaryA).toBeTruthy();
+    expect(result.hasSummaryB).toBeTruthy();
+    expect(result.edgeKeys.sort()).toEqual(['east', 'north', 'south', 'west']);
+  });
+
   test('cluster v2 keeps deterministic picks and improves center occupancy on fixed seed', async ({ page }) => {
     await page.goto('/sector_generator.html');
 

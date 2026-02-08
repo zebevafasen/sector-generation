@@ -92,7 +92,8 @@ function sanitizeMultiSector(value) {
         sectorsByKey[key] = {
             ...record,
             coreSystemHexId: coreHexId,
-            coreSystemManual: !!(coreHexId && record.coreSystemManual)
+            coreSystemManual: !!(coreHexId && record.coreSystemManual),
+            generationContextSummary: sanitizeGenerationContextSummary(record.generationContextSummary)
         };
     });
     return {
@@ -213,6 +214,34 @@ function sanitizeViewState(value) {
         x,
         y,
         scale: Math.max(0.2, Math.min(5, scale))
+    };
+}
+
+function sanitizeGenerationContextSummary(value) {
+    if (!isPlainObject(value)) return null;
+    const clamp01 = (raw) => {
+        const num = Number(raw);
+        if (!Number.isFinite(num)) return 0;
+        return Math.max(0, Math.min(1, num));
+    };
+    const edge = isPlainObject(value.edgeOccupancy) ? value.edgeOccupancy : {};
+    return {
+        densityRatio: clamp01(value.densityRatio),
+        edgeOccupancy: {
+            north: clamp01(edge.north),
+            south: clamp01(edge.south),
+            west: clamp01(edge.west),
+            east: clamp01(edge.east)
+        },
+        coreHexId: typeof value.coreHexId === 'string' ? value.coreHexId : null,
+        dominantTagSignals: Array.isArray(value.dominantTagSignals)
+            ? value.dominantTagSignals.map((tag) => String(tag || '').trim().toLowerCase()).filter(Boolean).slice(0, 8)
+            : [],
+        densityMap: Array.isArray(value.densityMap)
+            ? value.densityMap.slice(0, 3).map((row) => (
+                Array.isArray(row) ? row.slice(0, 3).map((cell) => clamp01(cell)) : []
+            ))
+            : []
     };
 }
 
