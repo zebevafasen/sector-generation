@@ -299,7 +299,7 @@ test('neighbor sector generation is independent from adjacent sectors', async ({
   await expect(page.locator('.hex-group[data-id="0-1"] circle.star-circle')).toHaveCount(0);
 });
 
-test('linked jump-gates share the same displayed details', async ({ page }) => {
+test('linked jump-gates share details but keep distinct names', async ({ page }) => {
   await page.goto('/sector_generator.html');
   await page.locator('#generateSectorBtn').click();
 
@@ -386,11 +386,13 @@ test('linked jump-gates share the same displayed details', async ({ page }) => {
     const source = payload.multiSector?.sectorsByKey?.[pair.a.sectorKey]?.deepSpacePois?.[pair.a.hexId];
     const target = payload.multiSector?.sectorsByKey?.[pair.b.sectorKey]?.deepSpacePois?.[pair.b.hexId];
     if (!source || !target) return null;
-    const fields = ['kind', 'name', 'summary', 'risk', 'rewardHint'];
-    const allEqual = fields.every((field) => String(source[field] || '') === String(target[field] || ''));
-    return { allEqual, source, target };
+    const sharedFields = ['kind', 'summary', 'risk', 'rewardHint'];
+    const sharedEqual = sharedFields.every((field) => String(source[field] || '') === String(target[field] || ''));
+    const distinctNames = String(source.name || '').trim().toLowerCase() !== String(target.name || '').trim().toLowerCase();
+    return { sharedEqual, distinctNames, source, target };
   });
 
   expect(synced).toBeTruthy();
-  expect(synced.allEqual).toBeTruthy();
+  expect(synced.sharedEqual).toBeTruthy();
+  expect(synced.distinctNames).toBeTruthy();
 });

@@ -27,10 +27,8 @@ function getDeterministicRandom(seedText) {
 }
 
 function getCanonicalJumpGateProfile(pairId, sourcePoi = null, targetPoi = null) {
-    const serial = (xmur3(pairId)() % 900) + 100;
     const defaultProfile = {
         kind: 'Navigation',
-        name: `Active Jump-Gate ${serial}`,
         summary: 'A synchronized jump-gate endpoint tied to a linked remote sector.',
         risk: 'Low',
         rewardHint: 'Enables near-instant transit to its paired gate.'
@@ -43,11 +41,28 @@ function getCanonicalJumpGateProfile(pairId, sourcePoi = null, targetPoi = null)
     const secondary = targetPoi || sourcePoi || {};
     return {
         kind: pickString(preferred.kind, pickString(secondary.kind, defaultProfile.kind)),
-        name: pickString(preferred.name, pickString(secondary.name, defaultProfile.name)),
         summary: pickString(preferred.summary, pickString(secondary.summary, defaultProfile.summary)),
         risk: pickString(preferred.risk, pickString(secondary.risk, defaultProfile.risk)),
         rewardHint: pickString(preferred.rewardHint, pickString(secondary.rewardHint, defaultProfile.rewardHint))
     };
+}
+
+function getPairedJumpGateNames(pairId, sourcePoi = null, targetPoi = null) {
+    const serial = (xmur3(pairId)() % 900) + 100;
+    const fallbackA = `Active Jump-Gate ${serial}A`;
+    const fallbackB = `Active Jump-Gate ${serial}B`;
+    const normalize = (value) => {
+        const text = typeof value === 'string' ? value.trim() : '';
+        return /^active jump-gate\b/i.test(text) ? text : '';
+    };
+
+    let aName = normalize(sourcePoi && sourcePoi.name) || fallbackA;
+    let bName = normalize(targetPoi && targetPoi.name) || fallbackB;
+    if (aName.toLowerCase() === bName.toLowerCase()) {
+        aName = fallbackA;
+        bName = fallbackB;
+    }
+    return { aName, bName };
 }
 
 function buildSectorOffsetCandidates() {
@@ -219,11 +234,13 @@ export function createJumpGateService(state, ensureState) {
                 : null;
             const targetPoi = record.deepSpacePois[targetHexId] || null;
             const profile = getCanonicalJumpGateProfile(pairId, sourcePoi, targetPoi);
+            const names = getPairedJumpGateNames(pairId, sourcePoi, targetPoi);
 
             if (sourcePoi) {
                 sourceRecord.deepSpacePois[pair.a.hexId] = {
                     ...sourcePoi,
                     ...profile,
+                    name: names.aName,
                     jumpGateState: 'active',
                     jumpGatePairId: pairId,
                     jumpGateLink: {
@@ -236,6 +253,7 @@ export function createJumpGateService(state, ensureState) {
             record.deepSpacePois[targetHexId] = {
                 ...(targetPoi || {}),
                 ...profile,
+                name: names.bName,
                 jumpGateState: 'active',
                 jumpGatePairId: pairId,
                 jumpGateLink: {
