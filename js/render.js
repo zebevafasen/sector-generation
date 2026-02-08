@@ -4,7 +4,6 @@ import { EVENTS, emitEvent } from './events.js';
 import { refreshSystemPlanetPopulation } from './planet-population.js';
 import { refreshSystemPlanetTags } from './planet-tags.js';
 import { ensureSystemStarFields, getSystemStars } from './star-system.js';
-import { countSystemBodies } from './body-classification.js';
 import { formatLocalHexDisplayId, getCurrentGridDimensions, getGlobalHexDisplayId, renderRouteOverlay } from './render-shared.js';
 import {
     buildCurrentSectorEntry,
@@ -479,7 +478,6 @@ export function updateInfoPanel(id, preselectedBodyIndex = null) {
             updateInfoPanel,
             redrawAndReselect
         });
-        refs.planetCountLabel.innerText = countSystemBodies(system).planets;
         refs.populationLabel.innerText = system.totalPop;
         renderSystemBodyLists({
             refs,

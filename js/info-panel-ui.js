@@ -54,7 +54,6 @@ export function getInfoPanelRefs() {
         starSummary: document.getElementById('infoStarSummary'),
         starList: document.getElementById('infoStarList'),
         starSummaryLabel: document.getElementById('infoStarSummaryLabel'),
-        planetCountLabel: document.getElementById('infoPlanetCount'),
         populationLabel: document.getElementById('infoPop'),
         planetList: document.getElementById('infoPlanetList'),
         beltList: document.getElementById('infoBeltList'),
