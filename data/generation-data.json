@@ -1,0 +1,170 @@
+{
+  "starClassPlanetWeights": {
+    "O": { "Gas Giant": 0.28, "Terrestrial": 0.07, "Oceanic": 0.02, "Volcanic": 0.24, "Desert": 0.17, "Barren": 0.2, "Arctic": 0.02 },
+    "B": { "Gas Giant": 0.26, "Terrestrial": 0.09, "Oceanic": 0.03, "Volcanic": 0.2, "Desert": 0.17, "Barren": 0.2, "Arctic": 0.05 },
+    "A": { "Gas Giant": 0.24, "Terrestrial": 0.15, "Oceanic": 0.08, "Volcanic": 0.16, "Desert": 0.16, "Barren": 0.13, "Arctic": 0.08 },
+    "F": { "Gas Giant": 0.2, "Terrestrial": 0.23, "Oceanic": 0.17, "Volcanic": 0.1, "Desert": 0.14, "Barren": 0.08, "Arctic": 0.08 },
+    "G": { "Gas Giant": 0.19, "Terrestrial": 0.24, "Oceanic": 0.19, "Volcanic": 0.09, "Desert": 0.12, "Barren": 0.08, "Arctic": 0.09 },
+    "K": { "Gas Giant": 0.17, "Terrestrial": 0.22, "Oceanic": 0.16, "Volcanic": 0.11, "Desert": 0.13, "Barren": 0.1, "Arctic": 0.11 },
+    "M": { "Gas Giant": 0.12, "Terrestrial": 0.2, "Oceanic": 0.11, "Volcanic": 0.18, "Desert": 0.11, "Barren": 0.16, "Arctic": 0.12 },
+    "Neutron": { "Gas Giant": 0.2, "Terrestrial": 0.04, "Oceanic": 0.01, "Volcanic": 0.3, "Desert": 0.08, "Barren": 0.35, "Arctic": 0.02 },
+    "Black Hole": { "Gas Giant": 0.22, "Terrestrial": 0.02, "Oceanic": 0, "Volcanic": 0.32, "Desert": 0.06, "Barren": 0.36, "Arctic": 0.02 },
+    "default": { "Gas Giant": 0.18, "Terrestrial": 0.22, "Oceanic": 0.14, "Volcanic": 0.11, "Desert": 0.15, "Barren": 0.12, "Arctic": 0.08 }
+  },
+  "habitablePlanetTypes": ["Terrestrial", "Oceanic", "Desert", "Arctic"],
+  "baseHabitabilityTypeWeight": {
+    "Terrestrial": 2.2,
+    "Oceanic": 1.0,
+    "Desert": 0.8,
+    "Arctic": 0.75
+  },
+  "adjacentDuplicateNameChance": 0.35,
+  "habitableWorldSuffixes": [
+    "Haven",
+    "Eden",
+    "Sanctuary",
+    "Harbor",
+    "Bastion",
+    "Refuge",
+    "Prospect",
+    "Utopia",
+    "Arcadia",
+    "New Dawn",
+    "Greenfall",
+    "Crossing"
+  ],
+  "densityPresetBaseRatios": {
+    "void": 0.05,
+    "sparse": 0.15,
+    "busy": 0.33,
+    "dense": 0.5,
+    "core": 0.7
+  },
+  "densityPresetRatiosByProfile": {
+    "high_adventure": {
+      "void": 0.05,
+      "sparse": 0.15,
+      "standard": 0.2,
+      "busy": 0.33,
+      "dense": 0.5,
+      "core": 0.7
+    },
+    "hard_scifi": {
+      "void": 0.03,
+      "sparse": 0.1,
+      "standard": 0.15,
+      "busy": 0.25,
+      "dense": 0.4,
+      "core": 0.55
+    },
+    "cinematic": {
+      "void": 0.08,
+      "sparse": 0.2,
+      "standard": 0.33,
+      "busy": 0.5,
+      "dense": 0.7,
+      "core": 0.85
+    }
+  },
+  "deepSpacePoiTemplates": [
+    {
+      "kind": "Navigation",
+      "name": "Relay Beacon",
+      "summary": "A functioning long-range navigation relay anchored to old trade routes.",
+      "risk": "Low",
+      "rewardHint": "Improves navigation confidence for nearby travel plans."
+    },
+    {
+      "kind": "Hazard",
+      "name": "Ion Storm Front",
+      "summary": "A volatile electromagnetic storm pocket that scrambles sensors.",
+      "risk": "High",
+      "rewardHint": "Forcing a crossing can save time at elevated danger."
+    },
+    {
+      "kind": "Opportunity",
+      "name": "Drift Wreck Cluster",
+      "summary": "Scattered hulks from an old convoy battle with salvage potential.",
+      "risk": "Medium",
+      "rewardHint": "Potential salvage, encrypted logs, and recoverable cargo."
+    },
+    {
+      "kind": "Mystery",
+      "name": "Anomalous Signal Echo",
+      "summary": "A periodic deep-space signal with no stable origin point.",
+      "risk": "Unknown",
+      "rewardHint": "Could indicate hidden structures, traps, or first-contact traces."
+    },
+    {
+      "kind": "Opportunity",
+      "name": "Smuggler Dead-Drop",
+      "summary": "A masked cache buoy linked to covert transport networks.",
+      "risk": "Medium",
+      "rewardHint": "Useful supplies and faction leads if intercepted quietly."
+    },
+    {
+      "kind": "Navigation",
+      "name": "Ancient Lane Marker",
+      "summary": "A pre-collapse gravimetric marker still broadcasting weak lane data.",
+      "risk": "Low",
+      "rewardHint": "Can reveal safer micro-routes and old map fragments.",
+      "weight": 1
+    },
+    {
+      "kind": "Navigation",
+      "name": "Active Jump-Gate",
+      "summary": "A functioning gate nexus that can sling ships across major corridor distances.",
+      "risk": "Low",
+      "rewardHint": "Can open rapid transit options between distant regions.",
+      "weight": 0.14,
+      "jumpGateState": "active"
+    },
+    {
+      "kind": "Navigation",
+      "name": "Inactive Jump-Gate",
+      "summary": "A dormant gate structure with partial telemetry and unstable startup traces.",
+      "risk": "Medium",
+      "rewardHint": "Potential to restore long-range transit if reactivated.",
+      "weight": 0.32,
+      "jumpGateState": "inactive"
+    },
+    {
+      "kind": "Navigation",
+      "name": "Refueling Station",
+      "summary": "An autonomous tanker dock with reserve fuel cells and transfer hardpoints.",
+      "risk": "Low",
+      "rewardHint": "Extends long-haul range by enabling mid-route fuel top-offs.",
+      "weight": 0.22,
+      "isRefuelingStation": true
+    }
+  ],
+  "generationProfiles": {
+    "cinematic": {
+      "inhabitedChance": 0.45,
+      "planetPoiChance": 0.2,
+      "beltChance": 0.35,
+      "stationChance": 0.3,
+      "extraHabitableBaseChance": 0.12,
+      "extraHabitableDecay": 0.45,
+      "habitabilityTypeMultipliers": { "Terrestrial": 1.15, "Oceanic": 1.0, "Desert": 0.95, "Arctic": 0.9 }
+    },
+    "hard_scifi": {
+      "inhabitedChance": 0.3,
+      "planetPoiChance": 0.12,
+      "beltChance": 0.48,
+      "stationChance": 0.2,
+      "extraHabitableBaseChance": 0.06,
+      "extraHabitableDecay": 0.35,
+      "habitabilityTypeMultipliers": { "Terrestrial": 1.1, "Oceanic": 0.9, "Desert": 0.75, "Arctic": 0.65 }
+    },
+    "high_adventure": {
+      "inhabitedChance": 0.58,
+      "planetPoiChance": 0.32,
+      "beltChance": 0.28,
+      "stationChance": 0.5,
+      "extraHabitableBaseChance": 0.16,
+      "extraHabitableDecay": 0.55,
+      "habitabilityTypeMultipliers": { "Terrestrial": 1.05, "Oceanic": 1.1, "Desert": 1.0, "Arctic": 0.95 }
+    }
+  }
+}

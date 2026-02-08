@@ -5,7 +5,7 @@ function normalizeLookupKey(value) {
         .replace(/\s+/g, '-');
 }
 
-const PLANET_TYPE_TOOLTIPS = {
+const DEFAULT_PLANET_TYPE_TOOLTIPS = {
     terrestrial: 'Rocky world with a solid surface. Most likely class to support Earth-like conditions.',
     oceanic: 'Water-dominated world with deep global oceans, often humid and cloud-heavy.',
     volcanic: 'Geologically active world with widespread volcanism, high heat, and unstable surface conditions.',
@@ -18,7 +18,7 @@ const PLANET_TYPE_TOOLTIPS = {
     artificial: 'Constructed object such as a station or habitat.'
 };
 
-const PLANET_SIZE_TOOLTIPS = {
+const DEFAULT_PLANET_SIZE_TOOLTIPS = {
     tiny: 'Very small world, usually with weak gravity and limited atmosphere retention.',
     small: 'Below-average planetary mass and gravity.',
     medium: 'Mid-sized world near baseline terrestrial scale.',
@@ -26,7 +26,7 @@ const PLANET_SIZE_TOOLTIPS = {
     huge: 'Very massive world, often with extreme gravity and thick envelopes.'
 };
 
-const ATMOSPHERE_TOOLTIPS = {
+const DEFAULT_ATMOSPHERE_TOOLTIPS = {
     breathable: 'Atmosphere supports unassisted human breathing under normal pressure conditions.',
     humid: 'Moisture-rich atmosphere with high water vapor content.',
     dense: 'High-pressure atmosphere that can intensify weather and drag.',
@@ -39,7 +39,7 @@ const ATMOSPHERE_TOOLTIPS = {
     crushing: 'Extreme atmospheric pressure that rapidly destroys unprotected craft and life.'
 };
 
-const TEMPERATURE_TOOLTIPS = {
+const DEFAULT_TEMPERATURE_TOOLTIPS = {
     frozen: 'Persistently icy conditions with widespread solid volatiles.',
     freezing: 'Extremely cold climate with long-term subzero surface conditions.',
     cold: 'Low-temperature climate; survival often needs thermal support.',
@@ -50,7 +50,7 @@ const TEMPERATURE_TOOLTIPS = {
     burning: 'Extreme, near-sterilizing heat dominated by intense thermal exposure.'
 };
 
-const PLANET_TAG_TOOLTIPS = {
+const DEFAULT_PLANET_TAG_TOOLTIPS = {
     'colony-world': 'Young settlement still building core infrastructure, institutions, and long-range resilience.',
     'core-trade-hub': 'High-throughput commercial nexus with strong logistics, finance, and interstellar market reach.',
     'industrial-powerhouse': 'Production-focused world with heavy manufacturing, refining, and strategic material output.',
@@ -87,6 +87,34 @@ const PLANET_TAG_TOOLTIPS = {
     'prison-planet': 'World organized around large-scale detention infrastructure, penal colonies, and security enforcement.',
     'abandoned-colony': 'Former settled world now largely depopulated after collapse, evacuation, or systemic failure.'
 };
+
+let PLANET_TYPE_TOOLTIPS = DEFAULT_PLANET_TYPE_TOOLTIPS;
+let PLANET_SIZE_TOOLTIPS = DEFAULT_PLANET_SIZE_TOOLTIPS;
+let ATMOSPHERE_TOOLTIPS = DEFAULT_ATMOSPHERE_TOOLTIPS;
+let TEMPERATURE_TOOLTIPS = DEFAULT_TEMPERATURE_TOOLTIPS;
+let PLANET_TAG_TOOLTIPS = DEFAULT_PLANET_TAG_TOOLTIPS;
+
+export function hydrateTooltipData(loadedData = {}) {
+    PLANET_TYPE_TOOLTIPS = loadedData.planetTypeTooltips || DEFAULT_PLANET_TYPE_TOOLTIPS;
+    PLANET_SIZE_TOOLTIPS = loadedData.planetSizeTooltips || DEFAULT_PLANET_SIZE_TOOLTIPS;
+    ATMOSPHERE_TOOLTIPS = loadedData.atmosphereTooltips || DEFAULT_ATMOSPHERE_TOOLTIPS;
+    TEMPERATURE_TOOLTIPS = loadedData.temperatureTooltips || DEFAULT_TEMPERATURE_TOOLTIPS;
+    PLANET_TAG_TOOLTIPS = loadedData.planetTagTooltips || DEFAULT_PLANET_TAG_TOOLTIPS;
+}
+
+function denormalizeLookupKey(value) {
+    return String(value || '')
+        .split('-')
+        .filter(Boolean)
+        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ');
+}
+
+export function getKnownPlanetTags() {
+    return Object.keys(PLANET_TAG_TOOLTIPS)
+        .filter(key => key && !key.includes('/'))
+        .map(denormalizeLookupKey);
+}
 
 export function resolveFieldTooltip(field, value) {
     const fieldKey = normalizeLookupKey(field);

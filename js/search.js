@@ -5,6 +5,7 @@ import { findHexGroup, selectHex } from './render.js';
 import { getGlobalHexDisplayId } from './render-shared.js';
 import { countSystemBodies, isPlanetaryBody } from './body-classification.js';
 import { escapeHtml } from './info-panel-ui.js';
+import { getKnownPlanetTags } from './tooltip-data.js';
 
 function getSearchRefs() {
     return {
@@ -140,9 +141,19 @@ function clearFilters(refs) {
     runSearch(refs);
 }
 
+function populateSearchTagOptions(refs) {
+    if (!refs.tagSelect) return;
+    const tags = getKnownPlanetTags();
+    refs.tagSelect.innerHTML = [
+        '<option value="">Any Tag</option>',
+        ...tags.map((tag) => `<option value="${escapeHtml(tag)}">${escapeHtml(tag)}</option>`)
+    ].join('');
+}
+
 export function setupSearchPanel() {
     const refs = getSearchRefs();
     if (!refs.resultsList) return;
+    populateSearchTagOptions(refs);
 
     refs.applyBtn?.addEventListener('click', () => runSearch(refs));
     refs.clearBtn?.addEventListener('click', () => clearFilters(refs));

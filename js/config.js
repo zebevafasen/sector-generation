@@ -1,12 +1,10 @@
-import { SYSTEM_NAME_PREFIX } from '../names/system_names/system_name_prefix.js';
-import { SYSTEM_NAME_SUFFIX } from '../names/system_names/system_name_suffix.js';
 import { HOME_SECTOR_KEY } from './sector-address.js';
 export const HEX_SIZE = 40;
 export const HEX_WIDTH = Math.sqrt(3) * HEX_SIZE;
 export const HEX_HEIGHT = 2 * HEX_SIZE;
 
 // Colors & glow data for Star Classes (approximate blackbody colors)
-export const STAR_VISUALS = {
+const DEFAULT_STAR_VISUALS = {
     O: { core: '#6fa8ff', mid: '#a8c4ff', halo: '#e1ecff' },
     B: { core: '#84b9ff', mid: '#bfd4ff', halo: '#f0f6ff' },
     A: { core: '#cfdfff', mid: '#e8f0ff', halo: '#ffffff' },
@@ -19,7 +17,7 @@ export const STAR_VISUALS = {
     default: { core: '#ffffff', mid: '#ffe5b4', halo: '#fff5d5' }
 };
 
-export const STAR_CLASS_INFO = {
+const DEFAULT_STAR_CLASS_INFO = {
     O: {
         name: 'O-type (Blue Hypergiant)',
         temp: '30,000 - 50,000 K',
@@ -94,15 +92,11 @@ export const STAR_CLASS_INFO = {
     }
 };
 
-export const PLANET_TYPES = [
+const DEFAULT_PLANET_TYPES = [
     'Gas Giant', 'Terrestrial', 'Oceanic', 'Volcanic', 'Desert', 'Barren', 'Arctic'
 ];
 
-export const POI_TYPES = [
-    'Research Station', 'Mining Outpost', 'Refueling Depot', 'Pirate Haven', 'Ancient Ruins', 'Jump Gate', 'Active Jump-Gate', 'Inactive Jump-Gate'
-];
-
-export const GRID_PRESETS = {
+const DEFAULT_GRID_PRESETS = {
     scout: { label: 'Scout Run', width: 4, height: 6 },
     frontier: { label: 'Frontier Drift', width: 6, height: 8 },
     standard: { label: 'Standard Chart', width: 8, height: 10 },
@@ -110,10 +104,55 @@ export const GRID_PRESETS = {
     dominion: { label: 'Dominion Net', width: 12, height: 16 }
 };
 
-export const LOCAL_STORAGE_KEY = 'hex-star-sector-gen';
+const DEFAULT_STAR_AGE_DISPLAY = {
+    millionLabel: 'M Years',
+    billionLabel: 'B Years',
+    unknownLabel: 'Unknown'
+};
 
-export const NAME_PREFIX = SYSTEM_NAME_PREFIX;
-export const NAME_SUFFIX = SYSTEM_NAME_SUFFIX;
+const DEFAULT_NAME_PREFIX = [
+    'Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon', 'Zeta', 'Eta', 'Theta', 'Iota', 'Kappa',
+    'Lambda', 'Mu', 'Nu', 'Xi', 'Omicron', 'Pi', 'Rho', 'Sigma', 'Tau', 'Upsilon',
+    'Phi', 'Chi', 'Psi', 'Omega', 'Vega', 'Altair', 'Sirius', 'Rigel', 'Deneb', 'Arcturus',
+    'Bellatrix', 'Canopus', 'Betelgeuse', 'Aldebaran', 'Spica', 'Polaris', 'Antares', 'Capella', 'Regulus', 'Fomalhaut',
+    'Mimosa', 'Alnilam', 'Alnitak', 'Saiph', 'Procyon', 'Achernar', 'Hadar', 'Dubhe', 'Kepler', 'Trappist',
+    'Proxima', 'Sol', 'Helios', 'Luyten', 'Barnard', 'Wolf', 'Ross', 'Lacaille', 'Gliese', 'Kapteyn',
+    'Tycho', 'Hubble', 'Sagan', 'Drake', 'Lyra', 'Orion', 'Draco', 'Cygnus', 'Carina', 'Perseus',
+    'Cassio', 'Andromeda', 'Pegasus', 'Aquila', 'Vulpecula', 'Hydra', 'Centaur', 'Pavo', 'Corvus', 'Ara',
+    'Astra', 'Nova', 'Aether', 'Umbra', 'Lumen', 'Nereid', 'Acheron', 'Erebus', 'Talos', 'Nyx',
+    'Atlas', 'Janus', 'Selene', 'Icarus', 'Vesper', 'Aurora', 'Xylar', 'Zorya', 'Kharon', 'Valkyr',
+    'Myrmidon', 'Halcyon', 'Riven', 'Eidolon'
+];
+
+const DEFAULT_NAME_SUFFIX = [
+    'Major', 'Minor', 'Prime', 'Secundus', 'Tertius', 'Quartus', 'Quintus', 'Ultima',
+    'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII',
+    'Ceti', 'Centauri', 'Eridani', 'Draconis', 'Lyrae', 'Pegasi', 'Orionis', 'Aquilae', 'Cygni', 'Carinae',
+    'Hydrae', 'Andromedae', 'Cassiopeiae', 'Persei', 'Leonis', 'Pavonis', 'Reach', 'Frontier', 'Sector', 'Expanse',
+    'Belt', 'Marches', 'Drift', 'Span', 'Gate', 'Pass', 'Corridor', 'Run', 'Approach', 'Basin',
+    'Crown', 'Veil', 'Arm', 'Spur', 'Rim', 'Core', 'Depths', 'Horizon', 'Nexus', 'Anchor',
+    'Outpost', 'Domain', 'Territory', 'Quarter', 'Cluster', 'Vault', 'Relay', 'Terminus'
+];
+
+export let STAR_VISUALS = DEFAULT_STAR_VISUALS;
+export let STAR_CLASS_INFO = DEFAULT_STAR_CLASS_INFO;
+export let PLANET_TYPES = DEFAULT_PLANET_TYPES;
+export let GRID_PRESETS = DEFAULT_GRID_PRESETS;
+export let STAR_AGE_DISPLAY = DEFAULT_STAR_AGE_DISPLAY;
+export let NAME_PREFIX = DEFAULT_NAME_PREFIX;
+export let NAME_SUFFIX = DEFAULT_NAME_SUFFIX;
+
+export function hydrateConfigData(loadedData = {}) {
+    STAR_VISUALS = loadedData.starVisuals || DEFAULT_STAR_VISUALS;
+    STAR_CLASS_INFO = loadedData.starClassInfo || DEFAULT_STAR_CLASS_INFO;
+    PLANET_TYPES = loadedData.planetTypes || DEFAULT_PLANET_TYPES;
+    GRID_PRESETS = loadedData.gridPresets || DEFAULT_GRID_PRESETS;
+    STAR_AGE_DISPLAY = loadedData.starAgeDisplay || DEFAULT_STAR_AGE_DISPLAY;
+    NAME_PREFIX = loadedData.namePrefix || DEFAULT_NAME_PREFIX;
+    NAME_SUFFIX = loadedData.nameSuffix || DEFAULT_NAME_SUFFIX;
+}
+
+export const LOCAL_STORAGE_KEY = 'hex-star-sector-gen';
 
 export const state = {
     editMode: false,
