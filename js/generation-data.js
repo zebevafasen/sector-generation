@@ -274,6 +274,55 @@ const DEFAULT_FACTION_RULES = {
         kinds: ['navigation', 'opportunity'],
         allowRefuelingStation: true,
         maxSystemDistance: 1
+    },
+    scoring: {
+        homeSelection: {
+            typeAffinityWeight: 5,
+            populationWeight: 2,
+            coreBonus: 6
+        },
+        influence: {
+            system: {
+                powerWeight: 0.68,
+                militaryWeight: 0.4,
+                populationWeight: 1.4,
+                populationCap: 28,
+                doctrineModifiers: {
+                    expansionist: 8,
+                    mercantile: 4,
+                    isolationist: -5
+                },
+                distanceBase: 6,
+                distanceScale: 9.5,
+                noiseScale: 0.45
+            },
+            poi: {
+                powerWeight: 0.48,
+                militaryWeight: 0.38,
+                distanceBase: 5,
+                distanceScale: 8.4,
+                noiseScale: 0.25
+            }
+        },
+        poiBonuses: {
+            kind: {
+                navigation: 11,
+                opportunity: 7
+            },
+            category: {
+                jump_gate: 14
+            },
+            refuelingStation: 6,
+            doctrine: {
+                mercantileNavigationOrOpportunity: 5,
+                militaristJumpGate: 4,
+                expansionistFlat: 2
+            }
+        },
+        contested: {
+            minGap: 0.35,
+            relativeGapRatio: 0.06
+        }
     }
 };
 

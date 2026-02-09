@@ -1390,13 +1390,20 @@ test.describe('pure logic modules', () => {
             kinds: ['opportunity'],
             allowRefuelingStation: false,
             maxSystemDistance: 1
+          },
+          scoring: {
+            homeSelection: {
+              typeAffinityWeight: 0,
+              populationWeight: 100,
+              coreBonus: 0
+            }
           }
         }
       });
 
       const state = factions.createFactionStateForSector({
-        '0-0': { name: 'Tradehome', planets: [{ pop: 0.9, tags: ['Trade'] }] },
-        '1-0': { name: 'Outpost', planets: [{ pop: 0.4, tags: ['Relay'] }] }
+        '0-0': { name: 'Tradehome', planets: [{ pop: 0.2, tags: ['Trade'] }] },
+        '1-0': { name: 'Outpost', planets: [{ pop: 0.9, tags: ['Relay'] }] }
       }, {
         deepSpacePois: {
           '2-0': { name: 'Refueling Station', kind: 'Navigation', isRefuelingStation: true }
@@ -1414,6 +1421,7 @@ test.describe('pure logic modules', () => {
         factionType: faction ? faction.type : null,
         factionDoctrine: faction ? faction.doctrine : null,
         factionColor: faction ? faction.color : null,
+        factionHomeHexId: faction ? faction.homeHexId : null,
         refuelControlled: !!(state.controlByHexId && state.controlByHexId['2-0'])
       };
     });
@@ -1422,6 +1430,7 @@ test.describe('pure logic modules', () => {
     expect(result.factionType).toBe('corporate');
     expect(result.factionDoctrine).toBe('mercantile');
     expect(result.factionColor).toBe('#123456');
+    expect(result.factionHomeHexId).toBe('1-0');
     expect(result.refuelControlled).toBeFalsy();
   });
 });

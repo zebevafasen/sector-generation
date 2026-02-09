@@ -53,6 +53,55 @@ const DEFAULT_FACTION_TYPE_TAG_HINTS = {
     pirates: ['pirate', 'smuggl', 'raider', 'outlaw', 'corsair', 'black-market', 'blackmarket'],
     machine: ['machine', 'synthetic', 'ai', 'cyber', 'drone', 'automation', 'datavault', 'archive']
 };
+const DEFAULT_FACTION_SCORING_RULES = {
+    homeSelection: {
+        typeAffinityWeight: 5,
+        populationWeight: 2,
+        coreBonus: 6
+    },
+    influence: {
+        system: {
+            powerWeight: 0.68,
+            militaryWeight: 0.4,
+            populationWeight: 1.4,
+            populationCap: 28,
+            doctrineModifiers: {
+                expansionist: 8,
+                mercantile: 4,
+                isolationist: -5
+            },
+            distanceBase: 6,
+            distanceScale: 9.5,
+            noiseScale: 0.45
+        },
+        poi: {
+            powerWeight: 0.48,
+            militaryWeight: 0.38,
+            distanceBase: 5,
+            distanceScale: 8.4,
+            noiseScale: 0.25
+        }
+    },
+    poiBonuses: {
+        kind: {
+            navigation: 11,
+            opportunity: 7
+        },
+        category: {
+            jump_gate: 14
+        },
+        refuelingStation: 6,
+        doctrine: {
+            mercantileNavigationOrOpportunity: 5,
+            militaristJumpGate: 4,
+            expansionistFlat: 2
+        }
+    },
+    contested: {
+        minGap: 0.35,
+        relativeGapRatio: 0.06
+    }
+};
 
 function getFactionTypes() {
     return Array.isArray(FACTION_RULES?.types) && FACTION_RULES.types.length
@@ -76,6 +125,53 @@ function getFactionTypeTagHints() {
     return FACTION_RULES?.typeTagHints && typeof FACTION_RULES.typeTagHints === 'object'
         ? FACTION_RULES.typeTagHints
         : DEFAULT_FACTION_TYPE_TAG_HINTS;
+}
+
+function getFactionScoringRules() {
+    const loaded = FACTION_RULES?.scoring && typeof FACTION_RULES.scoring === 'object'
+        ? FACTION_RULES.scoring
+        : {};
+    return {
+        homeSelection: {
+            ...DEFAULT_FACTION_SCORING_RULES.homeSelection,
+            ...(loaded.homeSelection && typeof loaded.homeSelection === 'object' ? loaded.homeSelection : {})
+        },
+        influence: {
+            system: {
+                ...DEFAULT_FACTION_SCORING_RULES.influence.system,
+                ...(loaded.influence?.system && typeof loaded.influence.system === 'object' ? loaded.influence.system : {}),
+                doctrineModifiers: {
+                    ...DEFAULT_FACTION_SCORING_RULES.influence.system.doctrineModifiers,
+                    ...(loaded.influence?.system?.doctrineModifiers && typeof loaded.influence.system.doctrineModifiers === 'object'
+                        ? loaded.influence.system.doctrineModifiers
+                        : {})
+                }
+            },
+            poi: {
+                ...DEFAULT_FACTION_SCORING_RULES.influence.poi,
+                ...(loaded.influence?.poi && typeof loaded.influence.poi === 'object' ? loaded.influence.poi : {})
+            }
+        },
+        poiBonuses: {
+            kind: {
+                ...DEFAULT_FACTION_SCORING_RULES.poiBonuses.kind,
+                ...(loaded.poiBonuses?.kind && typeof loaded.poiBonuses.kind === 'object' ? loaded.poiBonuses.kind : {})
+            },
+            category: {
+                ...DEFAULT_FACTION_SCORING_RULES.poiBonuses.category,
+                ...(loaded.poiBonuses?.category && typeof loaded.poiBonuses.category === 'object' ? loaded.poiBonuses.category : {})
+            },
+            refuelingStation: Number(loaded.poiBonuses?.refuelingStation ?? DEFAULT_FACTION_SCORING_RULES.poiBonuses.refuelingStation),
+            doctrine: {
+                ...DEFAULT_FACTION_SCORING_RULES.poiBonuses.doctrine,
+                ...(loaded.poiBonuses?.doctrine && typeof loaded.poiBonuses.doctrine === 'object' ? loaded.poiBonuses.doctrine : {})
+            }
+        },
+        contested: {
+            ...DEFAULT_FACTION_SCORING_RULES.contested,
+            ...(loaded.contested && typeof loaded.contested === 'object' ? loaded.contested : {})
+        }
+    };
 }
 
 function toNameWord(value) {
@@ -211,16 +307,21 @@ function isControllablePoi(poi) {
 
 function getPoiInfluenceBonus(faction, poi) {
     if (!poi || typeof poi !== 'object') return 0;
+    const scoring = getFactionScoringRules();
+    const poiBonuses = scoring.poiBonuses;
     let bonus = 0;
     const kind = String(poi.kind || '').trim().toLowerCase();
     const category = String(poi.poiCategory || '').trim().toLowerCase();
-    if (kind === 'navigation') bonus += 11;
-    if (kind === 'opportunity') bonus += 7;
-    if (category === 'jump_gate') bonus += 14;
-    if (poi.isRefuelingStation) bonus += 6;
-    if (faction.doctrine === 'mercantile' && (kind === 'navigation' || kind === 'opportunity')) bonus += 5;
-    if (faction.doctrine === 'militarist' && category === 'jump_gate') bonus += 4;
-    if (faction.doctrine === 'expansionist') bonus += 2;
+    if (Object.prototype.hasOwnProperty.call(poiBonuses.kind, kind)) bonus += Number(poiBonuses.kind[kind]) || 0;
+    if (Object.prototype.hasOwnProperty.call(poiBonuses.category, category)) bonus += Number(poiBonuses.category[category]) || 0;
+    if (poi.isRefuelingStation) bonus += Number(poiBonuses.refuelingStation) || 0;
+    if (faction.doctrine === 'mercantile' && (kind === 'navigation' || kind === 'opportunity')) {
+        bonus += Number(poiBonuses.doctrine.mercantileNavigationOrOpportunity) || 0;
+    }
+    if (faction.doctrine === 'militarist' && category === 'jump_gate') {
+        bonus += Number(poiBonuses.doctrine.militaristJumpGate) || 0;
+    }
+    if (faction.doctrine === 'expansionist') bonus += Number(poiBonuses.doctrine.expansionistFlat) || 0;
     return bonus;
 }
 
@@ -298,10 +399,11 @@ function rankSystemsForHomes(sectors, coreSystemHexId) {
 
 function scoreHomeCandidateForType(candidate, type) {
     if (!candidate) return Number.NEGATIVE_INFINITY;
+    const homeSelection = getFactionScoringRules().homeSelection;
     const typeAffinity = computeTypeTagAffinity(type, candidate.tagTokens || []);
-    const popScore = (Number(candidate.pop) || 0) * 2;
-    const coreScore = candidate.isCore ? 6 : 0;
-    return (typeAffinity * 5) + popScore + coreScore;
+    const popScore = (Number(candidate.pop) || 0) * (Number(homeSelection.populationWeight) || 0);
+    const coreScore = candidate.isCore ? (Number(homeSelection.coreBonus) || 0) : 0;
+    return (typeAffinity * (Number(homeSelection.typeAffinityWeight) || 0)) + popScore + coreScore;
 }
 
 function chooseHomeCandidateForType(candidates, type) {
@@ -370,20 +472,35 @@ function scoreInfluenceForFaction(faction, target, homeHexId) {
     const powerBoost = (Number(faction.power) || 0);
     const militaryBoost = (Number(faction.military) || 0);
     const stableNoise = stableUnitNoise(`${faction.id}:${targetHexId || ''}`);
+    const scoring = getFactionScoringRules();
+    const systemScoring = scoring.influence.system;
+    const poiScoring = scoring.influence.poi;
     if (controlKind === 'system') {
-        const popBoost = Math.min(28, getSystemPopulation(system) * 1.4);
-        const doctrineMod = faction.doctrine === 'expansionist'
-            ? 8
-            : (faction.doctrine === 'mercantile' ? 4 : (faction.doctrine === 'isolationist' ? -5 : 0));
-        const distanceFalloff = 6 + (distance * 9.5);
-        const randomNoise = stableNoise * 0.45;
-        return Math.max(0.05, (((powerBoost * 0.68) + (militaryBoost * 0.4) + popBoost + doctrineMod) / distanceFalloff) + randomNoise);
+        const popBoost = Math.min(
+            Number(systemScoring.populationCap) || 0,
+            getSystemPopulation(system) * (Number(systemScoring.populationWeight) || 0)
+        );
+        const doctrineMod = Number(systemScoring.doctrineModifiers?.[faction.doctrine]) || 0;
+        const distanceFalloff = (Number(systemScoring.distanceBase) || 0) + (distance * (Number(systemScoring.distanceScale) || 0));
+        const randomNoise = stableNoise * (Number(systemScoring.noiseScale) || 0);
+        return Math.max(
+            0.05,
+            (((powerBoost * (Number(systemScoring.powerWeight) || 0))
+                + (militaryBoost * (Number(systemScoring.militaryWeight) || 0))
+                + popBoost
+                + doctrineMod) / Math.max(0.001, distanceFalloff)) + randomNoise
+        );
     }
     if (controlKind === 'poi') {
         const strategicBoost = getPoiInfluenceBonus(faction, poi);
-        const distanceFalloff = 5 + (distance * 8.4);
-        const randomNoise = stableNoise * 0.25;
-        return Math.max(0.05, (((powerBoost * 0.48) + (militaryBoost * 0.38) + strategicBoost) / distanceFalloff) + randomNoise);
+        const distanceFalloff = (Number(poiScoring.distanceBase) || 0) + (distance * (Number(poiScoring.distanceScale) || 0));
+        const randomNoise = stableNoise * (Number(poiScoring.noiseScale) || 0);
+        return Math.max(
+            0.05,
+            (((powerBoost * (Number(poiScoring.powerWeight) || 0))
+                + (militaryBoost * (Number(poiScoring.militaryWeight) || 0))
+                + strategicBoost) / Math.max(0.001, distanceFalloff)) + randomNoise
+        );
     }
     const doctrineMod = faction.doctrine === 'expansionist'
         ? 2
@@ -407,7 +524,11 @@ function resolveFactionTerritory(factions, sectors, randomFn, options = {}) {
         const ownerFactionId = ranking.length ? ranking[0][0] : null;
         const top = ranking.length ? ranking[0][1] : 0;
         const second = ranking.length > 1 ? ranking[1][1] : 0;
-        const contestedThreshold = Math.max(0.35, top * 0.06);
+        const contestedRules = getFactionScoringRules().contested;
+        const contestedThreshold = Math.max(
+            Number(contestedRules.minGap) || 0,
+            top * (Number(contestedRules.relativeGapRatio) || 0)
+        );
         const contested = ranking
             .filter(([, value], index) => index > 0 && (top - value) <= contestedThreshold)
             .map(([factionId]) => factionId);
