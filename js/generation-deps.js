@@ -17,7 +17,8 @@ export function buildGenerationSharedDeps(inputs) {
         generatePlanetEnvironment,
         generatePlanetSize,
         reconcilePlanetaryBodies,
-        resolveCoreSystemHexId
+        resolveCoreSystemHexId,
+        createFactionStateForSector
     } = inputs;
     return {
         state,
@@ -37,7 +38,8 @@ export function buildGenerationSharedDeps(inputs) {
         generatePlanetEnvironment,
         generatePlanetSize,
         reconcilePlanetaryBodies,
-        resolveCoreSystemHexId
+        resolveCoreSystemHexId,
+        createFactionStateForSector
     };
 }
 

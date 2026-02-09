@@ -82,6 +82,7 @@ function getCurrentConfig() {
         manualMax: 0,
         generationProfile: 'high_adventure',
         starDistribution: 'clusters',
+        factionGenerationCount: null,
         realisticPlanetWeights: false
     });
 }
@@ -126,7 +127,10 @@ function saveCurrentSectorRecord() {
             width,
             height,
             coreSystemHexId: state.coreSystemHexId || null,
-            sectorKey: key
+            sectorKey: key,
+            requestedFactionCount: Number.isFinite(Number(config.factionGenerationCount))
+                ? Number(config.factionGenerationCount)
+                : state.factionGenerationCount
         });
     }
     const totalHexes = config.width * config.height;
@@ -140,7 +144,10 @@ function saveCurrentSectorRecord() {
             width,
             height,
             coreSystemHexId: state.coreSystemHexId || null,
-            sectorKey: key
+            sectorKey: key,
+            requestedFactionCount: Number.isFinite(Number(config.factionGenerationCount))
+                ? Number(config.factionGenerationCount)
+                : state.factionGenerationCount
         })),
         pinnedHexIds: deepClone(state.pinnedHexIds || []),
         coreSystemHexId: typeof state.coreSystemHexId === 'string' ? state.coreSystemHexId : null,
@@ -190,6 +197,9 @@ function applySectorRecord(key, record, options = {}) {
         realisticPlanetWeights: !!record.config.realisticPlanetWeights,
         generationProfile: record.config.generationProfile || 'high_adventure',
         starDistribution: record.config.starDistribution || 'clusters',
+        factionGenerationCount: Number.isFinite(Number(record.config.factionGenerationCount))
+            ? Number(record.config.factionGenerationCount)
+            : state.factionGenerationCount,
         sectorConfigSnapshot: deepClone(record.config),
         deepSpacePois: deepClone(record.deepSpacePois || {}),
         factionState: deepClone(record.factionState || createFactionStateForSector(record.sectors || {}, {
@@ -197,7 +207,10 @@ function applySectorRecord(key, record, options = {}) {
             width: parseInt(record.config?.width, 10) || 8,
             height: parseInt(record.config?.height, 10) || 10,
             coreSystemHexId: record.coreSystemHexId || null,
-            sectorKey: key
+            sectorKey: key,
+            requestedFactionCount: Number.isFinite(Number(record.config?.factionGenerationCount))
+                ? Number(record.config.factionGenerationCount)
+                : state.factionGenerationCount
         })),
         pinnedHexIds: deepClone(record.pinnedHexIds || []),
         coreSystemHexId: record.coreSystemHexId || null,
@@ -222,7 +235,10 @@ function applySectorRecord(key, record, options = {}) {
             width: parseInt(record.config?.width, 10) || 8,
             height: parseInt(record.config?.height, 10) || 10,
             coreSystemHexId: record.coreSystemHexId || null,
-            sectorKey: key
+            sectorKey: key,
+            requestedFactionCount: Number.isFinite(Number(record.config?.factionGenerationCount))
+                ? Number(record.config.factionGenerationCount)
+                : state.factionGenerationCount
         });
     if (preferredSelectedHexId) {
         const group = findHexGroup(preferredSelectedHexId, key);
@@ -269,7 +285,10 @@ function getOrCreateSectorRecordByKey(targetKey) {
             width: parseInt(record.config?.width, 10) || 8,
             height: parseInt(record.config?.height, 10) || 10,
             coreSystemHexId: record.coreSystemHexId || null,
-            sectorKey: targetKey
+            sectorKey: targetKey,
+            requestedFactionCount: Number.isFinite(Number(record.config?.factionGenerationCount))
+                ? Number(record.config.factionGenerationCount)
+                : state.factionGenerationCount
         });
     }
     ensureSectorName(targetKey, record);
@@ -320,7 +339,10 @@ function getOrCreateSectorRecordFromSource(sourceKey, targetKey) {
             width: parseInt(record.config?.width, 10) || 8,
             height: parseInt(record.config?.height, 10) || 10,
             coreSystemHexId: record.coreSystemHexId || null,
-            sectorKey: targetKey
+            sectorKey: targetKey,
+            requestedFactionCount: Number.isFinite(Number(record.config?.factionGenerationCount))
+                ? Number(record.config.factionGenerationCount)
+                : state.factionGenerationCount
         });
     }
     ensureSectorName(targetKey, record);
@@ -471,7 +493,10 @@ export function setupMultiSectorLinks() {
                 width: parseInt(record.config?.width, 10) || 8,
                 height: parseInt(record.config?.height, 10) || 10,
                 coreSystemHexId: record.coreSystemHexId || null,
-                sectorKey
+                sectorKey,
+                requestedFactionCount: Number.isFinite(Number(record.config?.factionGenerationCount))
+                    ? Number(record.config.factionGenerationCount)
+                    : state.factionGenerationCount
             });
         }
     });
@@ -495,7 +520,10 @@ export function setupMultiSectorLinks() {
                 width: parseInt(currentRecord.config?.width, 10) || 8,
                 height: parseInt(currentRecord.config?.height, 10) || 10,
                 coreSystemHexId: currentRecord.coreSystemHexId || null,
-                sectorKey: state.multiSector.currentKey
+                sectorKey: state.multiSector.currentKey,
+                requestedFactionCount: Number.isFinite(Number(currentRecord.config?.factionGenerationCount))
+                    ? Number(currentRecord.config.factionGenerationCount)
+                    : state.factionGenerationCount
             });
     }
 

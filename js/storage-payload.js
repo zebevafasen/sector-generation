@@ -205,6 +205,7 @@ export function buildSectorPayload(meta = {}) {
         realisticPlanetWeights: isRealisticPlanetWeightingEnabled() || !!uiConfig.realisticPlanetWeights,
         generationProfile: uiConfig.generationProfile || 'high_adventure',
         starDistribution: uiConfig.starDistribution || 'clusters',
+        factionGenerationCount: Number.isFinite(uiConfig.factionGenerationCount) ? uiConfig.factionGenerationCount : null,
         sectorConfigSnapshot: state.sectorConfigSnapshot || null,
         pinnedHexIds: Array.isArray(state.pinnedHexIds) ? state.pinnedHexIds : [],
         coreSystemHexId: typeof state.coreSystemHexId === 'string' ? state.coreSystemHexId : null,

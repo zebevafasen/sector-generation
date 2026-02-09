@@ -9,6 +9,7 @@ import { isPlanetaryBody } from './body-classification.js';
 import { generatePlanetEnvironment } from './planet-environment.js';
 import { refreshSystemPlanetPopulation } from './planet-population.js';
 import { refreshSystemPlanetTags } from './planet-tags.js';
+import { createFactionStateForSector } from './factions.js';
 import {
     applyPlanetaryOrderAndNames,
     assignSystemHabitability,
@@ -224,7 +225,8 @@ function getGenerationDepInputs() {
         setRandomStream,
         setAndUseNewSeed,
         composeContentSeed,
-        resolveCoreSystemHexId
+        resolveCoreSystemHexId,
+        createFactionStateForSector
     });
 }
 

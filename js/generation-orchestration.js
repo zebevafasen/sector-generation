@@ -348,7 +348,8 @@ export function buildSectorFromConfigAction(config, fixedSystems = {}, options =
             width,
             height,
             coreSystemHexId: core.coreSystemHexId || null,
-            sectorKey
+            sectorKey,
+            requestedFactionCount: normalized.factionGenerationCount
         }),
         coreSystemHexId: core.coreSystemHexId,
         coreSystemManual: core.coreSystemManual
@@ -410,6 +411,7 @@ export function generateSectorAction(deps) {
     state.coreSystemHexId = built.coreSystemHexId || null;
     state.coreSystemManual = !!built.coreSystemManual;
     state.factionState = built.factionState || null;
+    state.factionGenerationCount = Number.isFinite(config.factionGenerationCount) ? config.factionGenerationCount : null;
     state.selectedHexId = null;
     state.factionOverlayMode = state.factionOverlayMode === 'off' || state.factionOverlayMode === 'contested'
         ? state.factionOverlayMode

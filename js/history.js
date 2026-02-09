@@ -23,6 +23,9 @@ function buildFingerprint(payload) {
         manualRange: payload.manualRange || null,
         generationProfile: payload.generationProfile || 'high_adventure',
         starDistribution: payload.starDistribution || 'clusters',
+        factionGenerationCount: Number.isFinite(Number(payload.factionGenerationCount))
+            ? Number(payload.factionGenerationCount)
+            : null,
         realisticPlanetWeights: !!payload.realisticPlanetWeights,
         dimensions: payload.dimensions || null,
         pinnedHexIds: payload.pinnedHexIds || [],

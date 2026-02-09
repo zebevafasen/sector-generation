@@ -25,6 +25,11 @@ function toNonNegativeInt(value, fallback = 0) {
     return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback;
 }
 
+function toNullableNonNegativeInt(value) {
+    const parsed = Number.parseInt(String(value), 10);
+    return Number.isInteger(parsed) && parsed >= 0 ? parsed : null;
+}
+
 function sanitizeBody(body) {
     if (!isPlainObject(body)) return null;
     const nextType = typeof body.type === 'string' && body.type.trim() ? body.type.trim() : 'Barren';
@@ -276,6 +281,7 @@ function sanitizeSectorConfigSnapshot(value) {
     return {
         ...value,
         starDistribution: value.starDistribution === 'standard' ? 'standard' : 'clusters',
+        factionGenerationCount: toNullableNonNegativeInt(value.factionGenerationCount),
         generationRolloutStage: normalizeGenerationRolloutStage(value.generationRolloutStage, 'full_release'),
         clusterV2Enabled: value.clusterV2Enabled ?? true,
         crossSectorContextEnabled: value.crossSectorContextEnabled ?? true,
@@ -330,6 +336,7 @@ export function validateSectorPayload(rawPayload) {
             ? rawPayload.generationProfile
             : 'high_adventure',
         starDistribution: rawPayload.starDistribution === 'standard' ? 'standard' : 'clusters',
+        factionGenerationCount: toNullableNonNegativeInt(rawPayload.factionGenerationCount),
         seed: typeof rawPayload.seed === 'string' ? rawPayload.seed : '',
         layoutSeed: typeof rawPayload.layoutSeed === 'string'
             ? rawPayload.layoutSeed

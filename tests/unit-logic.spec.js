@@ -1320,6 +1320,39 @@ test.describe('pure logic modules', () => {
     expect(result.machineHome).toBe('1-0');
   });
 
+  test('faction generation respects requested faction count and clamps to generated system count', async ({ page }) => {
+    await page.goto('/sector_generator.html');
+
+    const result = await page.evaluate(async () => {
+      const factions = await import('/js/factions.js');
+      const sectors = {
+        '0-0': { name: 'A', planets: [{ pop: 0.3, tags: ['Trade'] }] },
+        '1-0': { name: 'B', planets: [{ pop: 0.4, tags: ['Capital'] }] },
+        '2-0': { name: 'C', planets: [{ pop: 0.2, tags: ['Frontier'] }] }
+      };
+
+      const autoState = factions.createFactionStateForSector(sectors, { randomFn: () => 0.5 });
+      const requestedHigh = factions.createFactionStateForSector(sectors, {
+        requestedFactionCount: 12,
+        randomFn: () => 0.5
+      });
+      const requestedZero = factions.createFactionStateForSector(sectors, {
+        requestedFactionCount: 0,
+        randomFn: () => 0.5
+      });
+
+      return {
+        autoCount: Array.isArray(autoState.factions) ? autoState.factions.length : 0,
+        clampedCount: Array.isArray(requestedHigh.factions) ? requestedHigh.factions.length : 0,
+        zeroCount: Array.isArray(requestedZero.factions) ? requestedZero.factions.length : 0
+      };
+    });
+
+    expect(result.autoCount).toBeGreaterThan(0);
+    expect(result.clampedCount).toBe(3);
+    expect(result.zeroCount).toBe(0);
+  });
+
   test('faction territory includes systems and directly connected controllable POIs only', async ({ page }) => {
     await page.goto('/sector_generator.html');
 

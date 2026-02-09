@@ -32,6 +32,7 @@ export function getMainRefs() {
         mainRefsCache.editHistoryPanel = document.getElementById('editHistoryPanel');
         mainRefsCache.searchToggleBtn = document.getElementById('searchToggleBtn');
         mainRefsCache.searchPanelContent = document.getElementById('searchPanelContent');
+        mainRefsCache.factionGenerationCountInput = document.getElementById('factionGenerationCountInput');
         mainRefsCache.factionOverlayModeSelect = document.getElementById('factionOverlayModeSelect');
         mainRefsCache.advanceFactionTurnBtn = document.getElementById('advanceFactionTurnBtn');
         mainRefsCache.factionTurnLabel = document.getElementById('factionTurnLabel');

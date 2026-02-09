@@ -162,6 +162,7 @@ export const state = {
     sectors: {},
     deepSpacePois: {},
     factionState: null,
+    factionGenerationCount: null,
     factionOverlayMode: 'ownership',
     selectedHexId: null,
     selectedBodyIndex: null,

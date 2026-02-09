@@ -45,6 +45,10 @@ export function normalizeGenerationConfig(config) {
 
     const generationProfile = GENERATION_PROFILES[source.generationProfile] ? source.generationProfile : 'high_adventure';
     const starDistribution = source.starDistribution === 'standard' ? 'standard' : 'clusters';
+    const requestedFactionCountRaw = parseInt(source.factionGenerationCount, 10);
+    const factionGenerationCount = Number.isFinite(requestedFactionCountRaw) && requestedFactionCountRaw >= 0
+        ? requestedFactionCountRaw
+        : null;
     const sourceCoreTagWeights = source && source.coreTagWeights && typeof source.coreTagWeights === 'object'
         ? source.coreTagWeights
         : {};
@@ -67,6 +71,7 @@ export function normalizeGenerationConfig(config) {
         manualMax,
         generationProfile,
         starDistribution,
+        factionGenerationCount,
         realisticPlanetWeights: !!source.realisticPlanetWeights,
         generationRolloutStage: normalizeGenerationRolloutStage(
             source.generationRolloutStage,

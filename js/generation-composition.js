@@ -80,7 +80,8 @@ export function buildGenerationDepInputs(inputs) {
         setRandomStream,
         setAndUseNewSeed,
         composeContentSeed,
-        resolveCoreSystemHexId
+        resolveCoreSystemHexId,
+        createFactionStateForSector
     } = inputs;
     return {
         state,
@@ -114,6 +115,7 @@ export function buildGenerationDepInputs(inputs) {
         setRandomStream,
         setAndUseNewSeed,
         composeContentSeed,
-        resolveCoreSystemHexId
+        resolveCoreSystemHexId,
+        createFactionStateForSector
     };
 }

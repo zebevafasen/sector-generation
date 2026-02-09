@@ -14,6 +14,7 @@ function getConfigRefs() {
         refsCache.generationProfileSelect = document.getElementById('generationProfile');
         refsCache.starDistributionSelect = document.getElementById('starDistribution');
         refsCache.realisticWeightsToggle = document.getElementById('realisticPlanetWeightsToggle');
+        refsCache.factionGenerationCountInput = document.getElementById('factionGenerationCountInput');
     }
     return refsCache;
 }
@@ -37,6 +38,13 @@ export function readGenerationConfigFromUi(defaults = {}) {
     const clampedHeight = sizeMode === 'preset'
         ? height
         : Math.max(MIN_GRID_DIMENSION, Math.min(MAX_GRID_DIMENSION, height));
+    const factionGenerationCountRaw = parseInt(
+        refs.factionGenerationCountInput ? refs.factionGenerationCountInput.value : String(defaults.factionGenerationCount ?? ''),
+        10
+    );
+    const factionGenerationCount = Number.isFinite(factionGenerationCountRaw) && factionGenerationCountRaw >= 0
+        ? factionGenerationCountRaw
+        : null;
 
     return {
         sizeMode,
@@ -51,6 +59,7 @@ export function readGenerationConfigFromUi(defaults = {}) {
         manualMax: refs.manualMaxInput ? parseInt(refs.manualMaxInput.value, 10) : parseInt(String(defaults.manualMax ?? 0), 10),
         generationProfile: refs.generationProfileSelect ? refs.generationProfileSelect.value : (defaults.generationProfile || 'high_adventure'),
         starDistribution: refs.starDistributionSelect ? refs.starDistributionSelect.value : (defaults.starDistribution || 'clusters'),
-        realisticPlanetWeights: refs.realisticWeightsToggle ? !!refs.realisticWeightsToggle.checked : !!defaults.realisticPlanetWeights
+        realisticPlanetWeights: refs.realisticWeightsToggle ? !!refs.realisticWeightsToggle.checked : !!defaults.realisticPlanetWeights,
+        factionGenerationCount
     };
 }

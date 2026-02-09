@@ -20,6 +20,7 @@ function getStorageUiRefs() {
         manualMaxInput: document.getElementById('manualMax'),
         generationProfileSelect: document.getElementById('generationProfile'),
         starDistributionSelect: document.getElementById('starDistribution'),
+        factionGenerationCountInput: document.getElementById('factionGenerationCountInput'),
         autoSeedToggle: document.getElementById('autoSeedToggle'),
         realisticWeightsToggle: document.getElementById('realisticPlanetWeightsToggle'),
         seedInput: document.getElementById('seedInput'),
@@ -63,6 +64,17 @@ export function createStorageApplyService(deps) {
         if (refs.starDistributionSelect) {
             refs.starDistributionSelect.value = nextPayload.starDistribution === 'standard' ? 'standard' : 'clusters';
         }
+        if (refs.factionGenerationCountInput) {
+            const nextFactionCount = Number.isFinite(Number(nextPayload.factionGenerationCount))
+                ? Math.max(0, Math.floor(Number(nextPayload.factionGenerationCount)))
+                : (Number.isFinite(Number(nextPayload.sectorConfigSnapshot?.factionGenerationCount))
+                    ? Math.max(0, Math.floor(Number(nextPayload.sectorConfigSnapshot.factionGenerationCount)))
+                    : null);
+            refs.factionGenerationCountInput.value = Number.isFinite(nextFactionCount) ? String(nextFactionCount) : '';
+            const systemCount = Object.keys(nextPayload.sectors || {}).length;
+            refs.factionGenerationCountInput.max = String(Math.max(0, systemCount));
+            refs.factionGenerationCountInput.placeholder = systemCount > 0 ? `Auto (0-${systemCount})` : 'Auto';
+        }
         syncDensityPresetForProfile(refs.generationProfileSelect ? refs.generationProfileSelect.value : 'high_adventure');
         if (nextPayload.densityMode) {
             setDensityMode(nextPayload.densityMode);
@@ -94,6 +106,17 @@ export function createStorageApplyService(deps) {
         }
         state.layoutSeed = String(nextPayload.layoutSeed || nextPayload.seed || state.currentSeed || '');
         state.rerollIteration = Number.isFinite(Number(nextPayload.rerollIteration)) ? Number(nextPayload.rerollIteration) : 0;
+        const snapshotFactionCount = nextPayload.sectorConfigSnapshot
+            ? nextPayload.sectorConfigSnapshot.factionGenerationCount
+            : null;
+        const payloadFactionCount = Number.isFinite(Number(nextPayload.factionGenerationCount))
+            ? Number(nextPayload.factionGenerationCount)
+            : null;
+        state.factionGenerationCount = Number.isFinite(payloadFactionCount)
+            ? Math.max(0, Math.floor(payloadFactionCount))
+            : (Number.isFinite(Number(snapshotFactionCount))
+                ? Math.max(0, Math.floor(Number(snapshotFactionCount)))
+                : null);
 
         state.sectors = nextPayload.sectors || {};
         state.deepSpacePois = nextPayload.deepSpacePois || {};
@@ -111,7 +134,8 @@ export function createStorageApplyService(deps) {
                 width,
                 height,
                 coreSystemHexId: state.coreSystemHexId || null,
-                sectorKey: state.multiSector?.currentKey || HOME_SECTOR_KEY
+                sectorKey: state.multiSector?.currentKey || HOME_SECTOR_KEY,
+                requestedFactionCount: state.factionGenerationCount
             });
         state.factionOverlayMode = nextPayload.factionOverlayMode === 'off' || nextPayload.factionOverlayMode === 'contested'
             ? nextPayload.factionOverlayMode
@@ -127,6 +151,7 @@ export function createStorageApplyService(deps) {
             manualMax: nextPayload.manualRange && typeof nextPayload.manualRange.max === 'number' ? nextPayload.manualRange.max : 0,
             generationProfile: nextPayload.generationProfile || 'high_adventure',
             starDistribution: nextPayload.starDistribution === 'standard' ? 'standard' : 'clusters',
+            factionGenerationCount: state.factionGenerationCount,
             realisticPlanetWeights: !!nextPayload.realisticPlanetWeights,
             generationRolloutStage: 'full_release',
             clusterV2Enabled: true,
@@ -164,7 +189,10 @@ export function createStorageApplyService(deps) {
                         width: parseInt(record.config?.width, 10) || width,
                         height: parseInt(record.config?.height, 10) || height,
                         coreSystemHexId: record.coreSystemHexId || null,
-                        sectorKey
+                        sectorKey,
+                        requestedFactionCount: Number.isFinite(Number(record.config?.factionGenerationCount))
+                            ? Number(record.config.factionGenerationCount)
+                            : state.factionGenerationCount
                     });
             });
             const currentRecord = state.multiSector.sectorsByKey[state.multiSector.currentKey || HOME_SECTOR_KEY];

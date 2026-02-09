@@ -1,5 +1,30 @@
 import { HOME_SECTOR_KEY } from './sector-address.js';
 
+function getRequestedFactionCountFromConfigOrState(config, state) {
+    const fromConfig = Number(config && config.factionGenerationCount);
+    if (Number.isFinite(fromConfig) && fromConfig >= 0) return Math.floor(fromConfig);
+    const fromState = Number(state && state.factionGenerationCount);
+    if (Number.isFinite(fromState) && fromState >= 0) return Math.floor(fromState);
+    return null;
+}
+
+function rerollFactionStateForCurrentSector(state, config, createFactionStateForSector) {
+    if (typeof createFactionStateForSector !== 'function') return;
+    const width = Math.max(1, Number(config && config.width) || 8);
+    const height = Math.max(1, Number(config && config.height) || 10);
+    const currentSectorKey = state.multiSector && state.multiSector.currentKey
+        ? state.multiSector.currentKey
+        : HOME_SECTOR_KEY;
+    state.factionState = createFactionStateForSector(state.sectors || {}, {
+        deepSpacePois: state.deepSpacePois || {},
+        width,
+        height,
+        coreSystemHexId: state.coreSystemHexId || null,
+        sectorKey: currentSectorKey,
+        requestedFactionCount: getRequestedFactionCountFromConfigOrState(config, state)
+    });
+}
+
 export function rerollSelectedPlanetAction(deps) {
     const {
         state,
@@ -15,7 +40,8 @@ export function rerollSelectedPlanetAction(deps) {
         reconcilePlanetaryBodies,
         refreshHexInfo,
         reportSystemInvariantIssues,
-        refreshSectorSnapshot
+        refreshSectorSnapshot,
+        createFactionStateForSector
     } = deps;
     const selectedHexId = state.selectedHexId;
     const system = selectedHexId ? state.sectors[selectedHexId] : null;
@@ -74,6 +100,7 @@ export function rerollSelectedPlanetAction(deps) {
 
     const updatedIndex = system.planets.indexOf(targetPlanet);
     state.selectedBodyIndex = updatedIndex >= 0 ? updatedIndex : null;
+    rerollFactionStateForCurrentSector(state, config, createFactionStateForSector);
     refreshHexInfo(selectedHexId, state.selectedBodyIndex);
     reportSystemInvariantIssues(system, 'reroll-planet');
     refreshSectorSnapshot(config, config.width, config.height, 'Reroll Planet');
@@ -95,7 +122,8 @@ export function rerollSelectedSystemAction(deps) {
         resolveCoreSystemHexId,
         reportSystemInvariantIssues,
         redrawHexAndReselect,
-        sanitizePinnedHexes
+        sanitizePinnedHexes,
+        createFactionStateForSector
     } = deps;
     const selectedHexId = state.selectedHexId;
     if (!selectedHexId) {
@@ -107,6 +135,7 @@ export function rerollSelectedSystemAction(deps) {
     const selectedPoi = state.deepSpacePois && state.deepSpacePois[selectedHexId] ? state.deepSpacePois[selectedHexId] : null;
     if (selectedPoi && !state.sectors[selectedHexId]) {
         state.deepSpacePois[selectedHexId] = createDeepSpacePoi({ randomFn: rand });
+        rerollFactionStateForCurrentSector(state, config, createFactionStateForSector);
         redrawHexAndSelectHex(selectedHexId);
         refreshSectorSnapshot(config, config.width, config.height, 'Reroll POI');
         showStatusMessage(`Rerolled POI at ${getGlobalHexDisplayId(selectedHexId)}.`, 'success');
@@ -142,6 +171,7 @@ export function rerollSelectedSystemAction(deps) {
     });
     state.coreSystemHexId = core.coreSystemHexId;
     state.coreSystemManual = core.coreSystemManual;
+    rerollFactionStateForCurrentSector(state, config, createFactionStateForSector);
 
     redrawHexAndReselect(selectedHexId);
     sanitizePinnedHexes(config.width, config.height);
@@ -212,7 +242,8 @@ export function rerollUnpinnedSystemsAction(deps) {
         sanitizePinnedHexes,
         redrawGridAndReselect,
         updateSectorStatus,
-        refreshSectorSnapshot
+        refreshSectorSnapshot,
+        createFactionStateForSector
     } = deps;
     if (!Object.keys(state.sectors || {}).length) {
         showStatusMessage('Generate a sector before rerolling.', 'warn');
@@ -292,6 +323,7 @@ export function rerollUnpinnedSystemsAction(deps) {
             state.deepSpacePois[hexId] = deepClone(poi);
         }
     });
+    rerollFactionStateForCurrentSector(state, config, createFactionStateForSector);
     sanitizePinnedHexes(width, height);
 
     redrawGridAndReselect(width, height, { selectedHexId });

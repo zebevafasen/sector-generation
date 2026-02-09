@@ -74,7 +74,7 @@ function bindPrimaryActions(refs) {
 function bindPersistenceSync(refs) {
     const persistOnChangeIds = [
         'sizePreset', 'gridWidth', 'gridHeight', 'densityPreset', 'manualMin', 'manualMax',
-        'seedInput', 'autoSeedToggle', 'realisticPlanetWeightsToggle', 'generationProfile', 'starDistribution'
+        'seedInput', 'autoSeedToggle', 'realisticPlanetWeightsToggle', 'generationProfile', 'starDistribution', 'factionGenerationCountInput'
     ];
     persistOnChangeIds.forEach((id) => {
         const el = document.getElementById(id);

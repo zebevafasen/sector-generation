@@ -325,14 +325,19 @@ function getPoiInfluenceBonus(faction, poi) {
     return bonus;
 }
 
-function chooseFactionCount(systemCount) {
+function chooseFactionCount(systemCount, requestedCount = null) {
     if (systemCount <= 0) return 0;
+    if (Number.isFinite(requestedCount)) {
+        const normalizedRequested = Math.max(0, Math.floor(requestedCount));
+        if (normalizedRequested === 0) return 0;
+        return clamp(normalizedRequested, 1, systemCount);
+    }
     const countRules = FACTION_RULES?.count && typeof FACTION_RULES.count === 'object' ? FACTION_RULES.count : {};
     const systemsPerFaction = Math.max(1, Number(countRules.systemsPerFaction) || 9);
     const base = Number(countRules.base) || 1;
     const min = Math.max(0, Number(countRules.min) || 2);
-    const max = Math.max(min, Number(countRules.max) || 6);
-    return clamp(Math.round(systemCount / systemsPerFaction) + base, min, max);
+    const max = Math.min(systemCount, Math.max(min, Number(countRules.max) || 6));
+    return clamp(Math.round(systemCount / systemsPerFaction) + base, Math.min(min, max), max);
 }
 
 function buildTerritoryTargets(sectors, options = {}) {
@@ -590,7 +595,13 @@ function withFactionSummaries(factionState) {
 export function createFactionStateForSector(sectors, options = {}) {
     const randomFn = asRandomFn(options.randomFn);
     const ranked = rankSystemsForHomes(sectors, options.coreSystemHexId || null);
-    const factionCount = chooseFactionCount(ranked.length);
+    const hasRequestedFactionCount = options.requestedFactionCount !== null
+        && typeof options.requestedFactionCount !== 'undefined'
+        && String(options.requestedFactionCount).trim() !== '';
+    const requestedFactionCount = hasRequestedFactionCount && Number.isFinite(Number(options.requestedFactionCount))
+        ? Number(options.requestedFactionCount)
+        : null;
+    const factionCount = chooseFactionCount(ranked.length, requestedFactionCount);
     if (!factionCount) {
         return {
             turn: 0,

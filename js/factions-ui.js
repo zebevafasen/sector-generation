@@ -36,11 +36,39 @@ function normalizeOverlayMode(value) {
     return value === 'off' || value === 'contested' ? value : 'ownership';
 }
 
+function normalizeFactionGenerationCount(value) {
+    const parsed = Number.parseInt(String(value), 10);
+    if (!Number.isFinite(parsed) || parsed < 0) return null;
+    return parsed;
+}
+
 function getCurrentDimensions() {
     const snapshot = state.sectorConfigSnapshot || state.lastSectorSnapshot?.sectorConfigSnapshot || {};
     const width = Math.max(1, Number(snapshot.width) || 8);
     const height = Math.max(1, Number(snapshot.height) || 10);
     return { width, height };
+}
+
+function getCurrentRequestedFactionCount() {
+    const stateValue = normalizeFactionGenerationCount(state.factionGenerationCount);
+    if (Number.isFinite(stateValue)) return stateValue;
+    const snapshot = state.sectorConfigSnapshot || state.lastSectorSnapshot?.sectorConfigSnapshot || {};
+    return normalizeFactionGenerationCount(snapshot.factionGenerationCount);
+}
+
+function syncFactionCountToSnapshots(requestedCount) {
+    if (state.sectorConfigSnapshot && typeof state.sectorConfigSnapshot === 'object') {
+        state.sectorConfigSnapshot.factionGenerationCount = requestedCount;
+    }
+    if (state.lastSectorSnapshot && state.lastSectorSnapshot.sectorConfigSnapshot
+        && typeof state.lastSectorSnapshot.sectorConfigSnapshot === 'object') {
+        state.lastSectorSnapshot.sectorConfigSnapshot.factionGenerationCount = requestedCount;
+    }
+    const currentKey = state.multiSector?.currentKey;
+    const currentRecord = currentKey ? state.multiSector?.sectorsByKey?.[currentKey] : null;
+    if (currentRecord?.config && typeof currentRecord.config === 'object') {
+        currentRecord.config.factionGenerationCount = requestedCount;
+    }
 }
 
 function syncFactionStateToCurrentRecord() {
@@ -60,7 +88,8 @@ function ensureCurrentFactionState() {
         width,
         height,
         coreSystemHexId: state.coreSystemHexId || null,
-        sectorKey: state.multiSector?.currentKey || null
+        sectorKey: state.multiSector?.currentKey || null,
+        requestedFactionCount: getCurrentRequestedFactionCount()
     });
     syncFactionStateToCurrentRecord();
     return state.factionState;
@@ -112,6 +141,15 @@ function updateFactionUi() {
     const refs = getMainRefs();
     const factionState = ensureCurrentFactionState();
     renderFactionList(refs, factionState);
+    if (refs.factionGenerationCountInput) {
+        const requestedCount = getCurrentRequestedFactionCount();
+        refs.factionGenerationCountInput.value = Number.isFinite(requestedCount) ? String(requestedCount) : '';
+    }
+    const systemCount = Object.keys(state.sectors || {}).length;
+    if (refs.factionGenerationCountInput) {
+        refs.factionGenerationCountInput.max = String(Math.max(0, systemCount));
+        refs.factionGenerationCountInput.placeholder = systemCount > 0 ? `Auto (0-${systemCount})` : 'Auto';
+    }
     if (refs.factionOverlayModeSelect) {
         refs.factionOverlayModeSelect.value = state.factionOverlayMode || 'ownership';
     }
@@ -121,8 +159,23 @@ export function setupFactionsUi() {
     const refs = getMainRefs();
     const uiPrefs = readFactionUiPrefs();
     state.factionOverlayMode = normalizeOverlayMode(uiPrefs.overlayMode || state.factionOverlayMode);
+    state.factionGenerationCount = normalizeFactionGenerationCount(uiPrefs.generationCount);
     ensureCurrentFactionState();
     updateFactionUi();
+
+    refs.factionGenerationCountInput?.addEventListener('change', () => {
+        const rawValue = refs.factionGenerationCountInput.value;
+        const nextCount = normalizeFactionGenerationCount(rawValue);
+        const systemCount = Object.keys(state.sectors || {}).length;
+        const clampedCount = Number.isFinite(nextCount)
+            ? Math.max(0, Math.min(nextCount, systemCount))
+            : null;
+        state.factionGenerationCount = clampedCount;
+        syncFactionCountToSnapshots(clampedCount);
+        writeFactionUiPrefs({ generationCount: clampedCount });
+        updateFactionUi();
+        showStatusMessage('Faction count updated. It will apply on next generation.', 'info');
+    });
 
     refs.factionOverlayModeSelect?.addEventListener('change', () => {
         state.factionOverlayMode = normalizeOverlayMode(refs.factionOverlayModeSelect.value);
