@@ -111,15 +111,24 @@ function ensureState() {
 function saveCurrentSectorRecord() {
     ensureState();
     const key = state.multiSector.currentKey || HOME_SECTOR_KEY;
+    const config = getCurrentConfig();
+    const width = parseInt(config.width, 10) || 8;
+    const height = parseInt(config.height, 10) || 10;
     if (state.factionState && Array.isArray(state.factionState.factions)) {
-        state.factionState = recalculateFactionTerritory(state.factionState, state.sectors || {});
+        state.factionState = recalculateFactionTerritory(state.factionState, state.sectors || {}, {
+            deepSpacePois: state.deepSpacePois || {},
+            width,
+            height
+        });
     } else {
         state.factionState = createFactionStateForSector(state.sectors || {}, {
+            deepSpacePois: state.deepSpacePois || {},
+            width,
+            height,
             coreSystemHexId: state.coreSystemHexId || null,
             sectorKey: key
         });
     }
-    const config = getCurrentConfig();
     const totalHexes = config.width * config.height;
     const nextRecord = {
         seed: state.currentSeed || '',
@@ -127,6 +136,9 @@ function saveCurrentSectorRecord() {
         sectors: deepClone(state.sectors || {}),
         deepSpacePois: deepClone(state.deepSpacePois || {}),
         factionState: deepClone(state.factionState || createFactionStateForSector(state.sectors || {}, {
+            deepSpacePois: state.deepSpacePois || {},
+            width,
+            height,
             coreSystemHexId: state.coreSystemHexId || null,
             sectorKey: key
         })),
@@ -181,6 +193,9 @@ function applySectorRecord(key, record, options = {}) {
         sectorConfigSnapshot: deepClone(record.config),
         deepSpacePois: deepClone(record.deepSpacePois || {}),
         factionState: deepClone(record.factionState || createFactionStateForSector(record.sectors || {}, {
+            deepSpacePois: record.deepSpacePois || {},
+            width: parseInt(record.config?.width, 10) || 8,
+            height: parseInt(record.config?.height, 10) || 10,
             coreSystemHexId: record.coreSystemHexId || null,
             sectorKey: key
         })),
@@ -203,6 +218,9 @@ function applySectorRecord(key, record, options = {}) {
     applySectorPayload(payload);
     state.factionState = normalizeFactionState(record.factionState)
         || createFactionStateForSector(record.sectors || {}, {
+            deepSpacePois: record.deepSpacePois || {},
+            width: parseInt(record.config?.width, 10) || 8,
+            height: parseInt(record.config?.height, 10) || 10,
             coreSystemHexId: record.coreSystemHexId || null,
             sectorKey: key
         });
@@ -247,6 +265,9 @@ function getOrCreateSectorRecordByKey(targetKey) {
     });
     if (!record.factionState) {
         record.factionState = createFactionStateForSector(record.sectors || {}, {
+            deepSpacePois: record.deepSpacePois || {},
+            width: parseInt(record.config?.width, 10) || 8,
+            height: parseInt(record.config?.height, 10) || 10,
             coreSystemHexId: record.coreSystemHexId || null,
             sectorKey: targetKey
         });
@@ -295,6 +316,9 @@ function getOrCreateSectorRecordFromSource(sourceKey, targetKey) {
     });
     if (!record.factionState) {
         record.factionState = createFactionStateForSector(record.sectors || {}, {
+            deepSpacePois: record.deepSpacePois || {},
+            width: parseInt(record.config?.width, 10) || 8,
+            height: parseInt(record.config?.height, 10) || 10,
             coreSystemHexId: record.coreSystemHexId || null,
             sectorKey: targetKey
         });
@@ -443,6 +467,9 @@ export function setupMultiSectorLinks() {
         ensureSectorName(sectorKey, record);
         if (record && !record.factionState) {
             record.factionState = createFactionStateForSector(record.sectors || {}, {
+                deepSpacePois: record.deepSpacePois || {},
+                width: parseInt(record.config?.width, 10) || 8,
+                height: parseInt(record.config?.height, 10) || 10,
                 coreSystemHexId: record.coreSystemHexId || null,
                 sectorKey
             });
@@ -464,6 +491,9 @@ export function setupMultiSectorLinks() {
         state.coreSystemManual = !!currentRecord.coreSystemManual;
         state.factionState = normalizeFactionState(currentRecord.factionState)
             || createFactionStateForSector(currentRecord.sectors || {}, {
+                deepSpacePois: currentRecord.deepSpacePois || {},
+                width: parseInt(currentRecord.config?.width, 10) || 8,
+                height: parseInt(currentRecord.config?.height, 10) || 10,
                 coreSystemHexId: currentRecord.coreSystemHexId || null,
                 sectorKey: state.multiSector.currentKey
             });

@@ -344,6 +344,9 @@ export function buildSectorFromConfigAction(config, fixedSystems = {}, options =
         sectors: nextSectors,
         deepSpacePois,
         factionState: createFactionStateForSector(nextSectors, {
+            deepSpacePois,
+            width,
+            height,
             coreSystemHexId: core.coreSystemHexId || null,
             sectorKey
         }),
@@ -408,7 +411,9 @@ export function generateSectorAction(deps) {
     state.coreSystemManual = !!built.coreSystemManual;
     state.factionState = built.factionState || null;
     state.selectedHexId = null;
-    state.factionOverlayMode = 'ownership';
+    state.factionOverlayMode = state.factionOverlayMode === 'off' || state.factionOverlayMode === 'contested'
+        ? state.factionOverlayMode
+        : 'ownership';
     state.multiSector = {
         currentKey: homeSectorKey,
         selectedSectorKey: homeSectorKey,

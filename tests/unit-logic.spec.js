@@ -1284,4 +1284,88 @@ test.describe('pure logic modules', () => {
     expect(result.first).toBe('1-1');
     expect(result.scoreTrade).toBeGreaterThan(result.scoreFrontier);
   });
+
+  test('faction generation uses planet tags for type mix and homebase placement', async ({ page }) => {
+    await page.goto('/sector_generator.html');
+
+    const result = await page.evaluate(async () => {
+      const factions = await import('/js/factions.js');
+      const makePlanet = (pop, tags) => ({ pop, tags });
+      const sectors = {
+        '0-0': { name: 'Tradehaven Prime', planets: [makePlanet(0.6, ['Trade Hub', 'Commerce Nexus', 'Logistics'])] },
+        '1-0': { name: 'Machine Bastion', planets: [makePlanet(0.4, ['Machine Cult', 'AI Archive', 'Drone Foundry'])] },
+        '2-0': { name: 'Pop Rich One', planets: [makePlanet(1.6, ['Farmland'])] },
+        '3-0': { name: 'Pop Rich Two', planets: [makePlanet(1.4, ['Resort'])] },
+        '4-0': { name: 'Frontier Reach', planets: [makePlanet(0.7, ['Frontier'])] },
+        '5-0': { name: 'Dustline', planets: [makePlanet(0.3, ['Barren'])] },
+        '6-0': { name: 'Old Relay', planets: [makePlanet(0.2, ['Relay'])] },
+        '7-0': { name: 'Quiet Belt', planets: [makePlanet(0.1, ['Asteroid'])] },
+        '8-0': { name: 'Cold Rim', planets: [makePlanet(0.2, ['Ice'])] }
+      };
+      const state = factions.createFactionStateForSector(sectors, {
+        randomFn: () => 0.5
+      });
+      const byType = Object.fromEntries((state.factions || []).map((f) => [f.type, f]));
+      return {
+        factionCount: Array.isArray(state.factions) ? state.factions.length : 0,
+        types: (state.factions || []).map((f) => f.type).sort(),
+        corporateHome: byType.corporate ? byType.corporate.homeHexId : null,
+        machineHome: byType.machine ? byType.machine.homeHexId : null
+      };
+    });
+
+    expect(result.factionCount).toBe(2);
+    expect(result.types).toEqual(['corporate', 'machine']);
+    expect(result.corporateHome).toBe('0-0');
+    expect(result.machineHome).toBe('1-0');
+  });
+
+  test('faction territory includes systems and directly connected controllable POIs only', async ({ page }) => {
+    await page.goto('/sector_generator.html');
+
+    const result = await page.evaluate(async () => {
+      const factions = await import('/js/factions.js');
+      const sectors = {
+        '0-0': { name: 'Alpha', planets: [{ pop: 1.2, tags: ['Capital'] }] },
+        '1-0': { name: 'Beta', planets: [{ pop: 0.6, tags: ['Trade'] }] },
+        '2-0': { name: 'Gamma', planets: [{ pop: 0.4, tags: ['Machine'] }] },
+        '0-1': { name: 'Delta', planets: [{ pop: 0.3, tags: ['Outpost'] }] },
+        '1-1': { name: 'Epsilon', planets: [{ pop: 0.5, tags: ['Market'] }] },
+        '2-1': { name: 'Zeta', planets: [{ pop: 0.2, tags: ['Archive'] }] },
+        '0-2': { name: 'Eta', planets: [{ pop: 0.2, tags: ['Frontier'] }] },
+        '1-2': { name: 'Theta', planets: [{ pop: 0.1, tags: ['Relay'] }] },
+        '2-2': { name: 'Iota', planets: [{ pop: 0.1, tags: ['Temple'] }] }
+      };
+      const deepSpacePois = {
+        '3-0': { name: 'Refuel Near', kind: 'Navigation', isRefuelingStation: true },
+        '3-1': { name: 'Gate Near', kind: 'Navigation', poiCategory: 'jump_gate', jumpGateState: 'inactive' },
+        '5-5': { name: 'Refuel Far', kind: 'Navigation', isRefuelingStation: true },
+        '3-2': { name: 'Hazard Zone', kind: 'Hazard' }
+      };
+      const factionState = factions.createFactionStateForSector(sectors, {
+        deepSpacePois,
+        width: 6,
+        height: 6,
+        randomFn: () => 0.5
+      });
+      const controlByHexId = factionState.controlByHexId || {};
+      return {
+        hasRefuelPoiControl: !!controlByHexId['3-0'],
+        hasJumpGatePoiControl: !!controlByHexId['3-1'],
+        hasFarRefuelPoiControl: !!controlByHexId['5-5'],
+        hasHazardPoiControl: !!controlByHexId['3-2'],
+        hasNearbyEmptyTileControl: !!controlByHexId['4-2'],
+        hasFarEmptyTileControl: !!controlByHexId['5-4'],
+        controlKindRefuel: controlByHexId['3-0'] ? controlByHexId['3-0'].controlKind : null
+      };
+    });
+
+    expect(result.hasRefuelPoiControl).toBeTruthy();
+    expect(result.hasJumpGatePoiControl).toBeTruthy();
+    expect(result.hasFarRefuelPoiControl).toBeFalsy();
+    expect(result.hasHazardPoiControl).toBeFalsy();
+    expect(result.hasNearbyEmptyTileControl).toBeFalsy();
+    expect(result.hasFarEmptyTileControl).toBeFalsy();
+    expect(result.controlKindRefuel).toBe('poi');
+  });
 });

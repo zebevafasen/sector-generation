@@ -194,3 +194,14 @@ test('reload preserves faction overlay menu option', async ({ page }) => {
   await page.reload();
   await expect(page.locator('#factionOverlayModeSelect')).toHaveValue('contested');
 });
+
+test('generate preserves faction overlay menu option', async ({ page }) => {
+  await page.goto('/sector_generator.html');
+  await page.locator('#generateSectorBtn').click();
+
+  await page.locator('#factionOverlayModeSelect').selectOption('off');
+  await expect(page.locator('#factionOverlayModeSelect')).toHaveValue('off');
+
+  await page.locator('#generateSectorBtn').click();
+  await expect(page.locator('#factionOverlayModeSelect')).toHaveValue('off');
+});

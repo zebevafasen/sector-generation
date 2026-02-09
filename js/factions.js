@@ -14,6 +14,17 @@ function parseHex(hexId) {
     return { col, row };
 }
 
+function stableUnitNoise(seed) {
+    const text = String(seed || '');
+    let hash = 2166136261;
+    for (let i = 0; i < text.length; i++) {
+        hash ^= text.charCodeAt(i);
+        hash = Math.imul(hash, 16777619);
+    }
+    const normalized = ((hash >>> 0) % 10000) / 9999;
+    return (normalized * 2) - 1;
+}
+
 function hexDistance(hexA, hexB) {
     const a = parseHex(hexA);
     const b = parseHex(hexB);
@@ -32,6 +43,14 @@ function getSystemPopulation(system) {
 const FACTION_TYPES = ['empire', 'corporate', 'coalition', 'cult', 'pirates', 'machine'];
 const FACTION_DOCTRINES = ['expansionist', 'mercantile', 'isolationist', 'technocratic', 'militarist', 'zealous'];
 const FACTION_COLORS = ['#60a5fa', '#22d3ee', '#34d399', '#f59e0b', '#f472b6', '#a78bfa', '#f87171', '#facc15'];
+const FACTION_TYPE_TAG_HINTS = {
+    empire: ['capital', 'fortress', 'military', 'command', 'imperial', 'garrison', 'stronghold'],
+    corporate: ['trade', 'market', 'commerce', 'logistics', 'shipping', 'mining', 'industry', 'refinery'],
+    coalition: ['alliance', 'union', 'federation', 'diplom', 'treaty', 'cooperative', 'concord'],
+    cult: ['temple', 'relic', 'sacred', 'faith', 'occult', 'shrine', 'pilgrim'],
+    pirates: ['pirate', 'smuggl', 'raider', 'outlaw', 'corsair', 'black-market', 'blackmarket'],
+    machine: ['machine', 'synthetic', 'ai', 'cyber', 'drone', 'automation', 'datavault', 'archive']
+};
 
 function toNameWord(value) {
     const cleaned = String(value || '').replace(/[^A-Za-z0-9'-]/g, '').trim();
@@ -53,6 +72,70 @@ function normalizeColor(color, fallbackIndex = 0) {
     const clean = String(color || '').trim();
     if (/^#[0-9a-f]{6}$/i.test(clean)) return clean;
     return FACTION_COLORS[fallbackIndex % FACTION_COLORS.length];
+}
+
+function normalizeTagToken(value) {
+    return String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9-]+/g, ' ')
+        .trim();
+}
+
+function collectPlanetTagTokens(system) {
+    if (!system || !Array.isArray(system.planets)) return [];
+    const tokens = [];
+    system.planets.forEach((planet) => {
+        const tags = Array.isArray(planet && planet.tags) ? planet.tags : [];
+        tags.forEach((tag) => {
+            const token = normalizeTagToken(tag);
+            if (token) tokens.push(token);
+        });
+    });
+    return tokens;
+}
+
+function tokenMatchesHint(token, hint) {
+    if (!token || !hint) return false;
+    return token.includes(hint) || hint.includes(token);
+}
+
+function computeTypeTagAffinity(type, tokens) {
+    const hints = Array.isArray(FACTION_TYPE_TAG_HINTS[type]) ? FACTION_TYPE_TAG_HINTS[type] : [];
+    if (!hints.length || !tokens.length) return 0;
+    let score = 0;
+    tokens.forEach((token) => {
+        hints.forEach((hint) => {
+            if (tokenMatchesHint(token, hint)) score += 1;
+        });
+    });
+    return score;
+}
+
+function rankFactionTypesBySectorTags(sectors, randomFn) {
+    const sectorTokens = Object.values(sectors || {})
+        .flatMap((system) => collectPlanetTagTokens(system));
+    return FACTION_TYPES
+        .map((type) => {
+            const tagScore = computeTypeTagAffinity(type, sectorTokens);
+            const tieBreaker = (randomFn() * 0.01);
+            return {
+                type,
+                score: 1 + tagScore + tieBreaker
+            };
+        })
+        .sort((a, b) => b.score - a.score || a.type.localeCompare(b.type));
+}
+
+function chooseFactionTypesForSector(sectors, count, randomFn) {
+    if (count <= 0) return [];
+    const ranked = rankFactionTypesBySectorTags(sectors, randomFn);
+    if (!ranked.length) return [];
+    const selection = [];
+    for (let i = 0; i < count; i++) {
+        selection.push(ranked[i % ranked.length].type);
+    }
+    return selection;
 }
 
 function buildFactionStats(randomFn) {
@@ -81,9 +164,75 @@ function buildFactionRelations(factions, randomFn) {
     return relationPairs;
 }
 
+function isControllablePoi(poi) {
+    if (!poi || typeof poi !== 'object') return false;
+    const category = String(poi.poiCategory || '').trim().toLowerCase();
+    if (category === 'jump_gate') return true;
+    if (poi.isRefuelingStation) return true;
+    const kind = String(poi.kind || '').trim().toLowerCase();
+    return kind === 'navigation' || kind === 'opportunity';
+}
+
+function getPoiInfluenceBonus(faction, poi) {
+    if (!poi || typeof poi !== 'object') return 0;
+    let bonus = 0;
+    const kind = String(poi.kind || '').trim().toLowerCase();
+    const category = String(poi.poiCategory || '').trim().toLowerCase();
+    if (kind === 'navigation') bonus += 11;
+    if (kind === 'opportunity') bonus += 7;
+    if (category === 'jump_gate') bonus += 14;
+    if (poi.isRefuelingStation) bonus += 6;
+    if (faction.doctrine === 'mercantile' && (kind === 'navigation' || kind === 'opportunity')) bonus += 5;
+    if (faction.doctrine === 'militarist' && category === 'jump_gate') bonus += 4;
+    if (faction.doctrine === 'expansionist') bonus += 2;
+    return bonus;
+}
+
 function chooseFactionCount(systemCount) {
     if (systemCount <= 0) return 0;
     return clamp(Math.round(systemCount / 9) + 1, 2, 6);
+}
+
+function buildTerritoryTargets(sectors, options = {}) {
+    const targets = [];
+    const systems = sectors && typeof sectors === 'object' ? sectors : {};
+    const deepSpacePois = options.deepSpacePois && typeof options.deepSpacePois === 'object'
+        ? options.deepSpacePois
+        : {};
+    const systemHexIds = Object.keys(systems);
+
+    const minDistanceToAnySystem = (hexId) => {
+        if (!systemHexIds.length) return Number.POSITIVE_INFINITY;
+        let best = Number.POSITIVE_INFINITY;
+        for (let i = 0; i < systemHexIds.length; i++) {
+            const distance = hexDistance(hexId, systemHexIds[i]);
+            if (distance < best) best = distance;
+            if (best <= 0) break;
+        }
+        return best;
+    };
+
+    Object.entries(systems).forEach(([hexId, system]) => {
+        targets.push({
+            hexId,
+            controlKind: 'system',
+            system,
+            poi: null
+        });
+    });
+
+    Object.entries(deepSpacePois).forEach(([hexId, poi]) => {
+        if (systems[hexId]) return;
+        if (!isControllablePoi(poi)) return;
+        if (minDistanceToAnySystem(hexId) > 1) return;
+        targets.push({
+            hexId,
+            controlKind: 'poi',
+            system: null,
+            poi
+        });
+    });
+    return targets;
 }
 
 function rankSystemsForHomes(sectors, coreSystemHexId) {
@@ -92,7 +241,8 @@ function rankSystemsForHomes(sectors, coreSystemHexId) {
             hexId,
             system,
             pop: getSystemPopulation(system),
-            isCore: coreSystemHexId === hexId
+            isCore: coreSystemHexId === hexId,
+            tagTokens: collectPlanetTagTokens(system)
         }))
         .sort((a, b) => {
             if (a.isCore !== b.isCore) return a.isCore ? -1 : 1;
@@ -101,11 +251,45 @@ function rankSystemsForHomes(sectors, coreSystemHexId) {
         });
 }
 
-function buildFactions(homeCandidates, count, randomFn) {
+function scoreHomeCandidateForType(candidate, type) {
+    if (!candidate) return Number.NEGATIVE_INFINITY;
+    const typeAffinity = computeTypeTagAffinity(type, candidate.tagTokens || []);
+    const popScore = (Number(candidate.pop) || 0) * 2;
+    const coreScore = candidate.isCore ? 6 : 0;
+    return (typeAffinity * 5) + popScore + coreScore;
+}
+
+function chooseHomeCandidateForType(candidates, type) {
+    if (!Array.isArray(candidates) || !candidates.length) return null;
+    const scored = candidates
+        .map((candidate) => ({
+            candidate,
+            score: scoreHomeCandidateForType(candidate, type)
+        }))
+        .sort((a, b) => b.score - a.score || (b.candidate.pop - a.candidate.pop));
+    return scored[0] ? scored[0].candidate : candidates[0];
+}
+
+function assignHomesForFactionTypes(homeCandidates, factionTypes) {
+    const available = Array.isArray(homeCandidates) ? [...homeCandidates] : [];
+    const chosenHomes = [];
+    factionTypes.forEach((type) => {
+        const picked = chooseHomeCandidateForType(available, type);
+        chosenHomes.push(picked || null);
+        if (picked) {
+            const index = available.findIndex((entry) => entry.hexId === picked.hexId);
+            if (index >= 0) available.splice(index, 1);
+        }
+    });
+    return chosenHomes;
+}
+
+function buildFactions(homeCandidates, factionTypes, randomFn) {
     const factions = [];
-    for (let i = 0; i < count; i++) {
-        const home = homeCandidates[i] || null;
-        const type = FACTION_TYPES[i % FACTION_TYPES.length];
+    const homes = assignHomesForFactionTypes(homeCandidates, factionTypes);
+    for (let i = 0; i < factionTypes.length; i++) {
+        const home = homes[i] || null;
+        const type = factionTypes[i] || FACTION_TYPES[i % FACTION_TYPES.length];
         const doctrine = FACTION_DOCTRINES[Math.floor(randomFn() * FACTION_DOCTRINES.length)];
         const seedWord = home && home.system && home.system.name ? String(home.system.name).split(/\s+/)[0] : '';
         const stats = buildFactionStats(randomFn);
@@ -129,41 +313,63 @@ function buildFactions(homeCandidates, count, randomFn) {
     return factions;
 }
 
-function scoreInfluenceForFaction(faction, targetHexId, homeHexId, system, randomFn) {
+function scoreInfluenceForFaction(faction, target, homeHexId) {
+    const targetHexId = target && target.hexId ? target.hexId : null;
+    const controlKind = target && target.controlKind ? target.controlKind : 'system';
+    const system = target && target.system ? target.system : null;
+    const poi = target && target.poi ? target.poi : null;
     const distance = Number.isFinite(hexDistance(homeHexId, targetHexId)) ? hexDistance(homeHexId, targetHexId) : 99;
-    const popBoost = Math.min(28, getSystemPopulation(system) * 1.4);
-    const powerBoost = (Number(faction.power) || 0) * 0.68;
-    const militaryBoost = (Number(faction.military) || 0) * 0.4;
+    const powerBoost = (Number(faction.power) || 0);
+    const militaryBoost = (Number(faction.military) || 0);
+    const stableNoise = stableUnitNoise(`${faction.id}:${targetHexId || ''}`);
+    if (controlKind === 'system') {
+        const popBoost = Math.min(28, getSystemPopulation(system) * 1.4);
+        const doctrineMod = faction.doctrine === 'expansionist'
+            ? 8
+            : (faction.doctrine === 'mercantile' ? 4 : (faction.doctrine === 'isolationist' ? -5 : 0));
+        const distanceFalloff = 6 + (distance * 9.5);
+        const randomNoise = stableNoise * 0.45;
+        return Math.max(0.05, (((powerBoost * 0.68) + (militaryBoost * 0.4) + popBoost + doctrineMod) / distanceFalloff) + randomNoise);
+    }
+    if (controlKind === 'poi') {
+        const strategicBoost = getPoiInfluenceBonus(faction, poi);
+        const distanceFalloff = 5 + (distance * 8.4);
+        const randomNoise = stableNoise * 0.25;
+        return Math.max(0.05, (((powerBoost * 0.48) + (militaryBoost * 0.38) + strategicBoost) / distanceFalloff) + randomNoise);
+    }
     const doctrineMod = faction.doctrine === 'expansionist'
-        ? 8
-        : (faction.doctrine === 'mercantile' ? 4 : (faction.doctrine === 'isolationist' ? -5 : 0));
-    const distanceFalloff = 6 + (distance * 9.5);
-    const randomNoise = (randomFn() * 5) - 2.5;
-    return Math.max(0.05, ((powerBoost + militaryBoost + popBoost + doctrineMod) / distanceFalloff) + randomNoise);
+        ? 2
+        : (faction.doctrine === 'isolationist' ? -3 : 0);
+    const distanceFalloff = 8 + (distance * 11);
+    const randomNoise = stableNoise * 0.15;
+    return Math.max(0.05, (((powerBoost * 0.25) + (militaryBoost * 0.15) + doctrineMod) / distanceFalloff) + randomNoise);
 }
 
-function resolveFactionTerritory(factions, sectors, randomFn) {
+function resolveFactionTerritory(factions, sectors, randomFn, options = {}) {
     const controlByHexId = {};
-    const systems = Object.entries(sectors || {});
-    systems.forEach(([hexId, system]) => {
+    const targets = buildTerritoryTargets(sectors, options);
+    targets.forEach((target) => {
+        const hexId = target.hexId;
         const influence = {};
         factions.forEach((faction) => {
             const homeHexId = faction.homeHexId || hexId;
-            influence[faction.id] = Number(scoreInfluenceForFaction(faction, hexId, homeHexId, system, randomFn).toFixed(3));
+            influence[faction.id] = Number(scoreInfluenceForFaction(faction, target, homeHexId).toFixed(3));
         });
         const ranking = Object.entries(influence).sort((a, b) => b[1] - a[1]);
         const ownerFactionId = ranking.length ? ranking[0][0] : null;
         const top = ranking.length ? ranking[0][1] : 0;
         const second = ranking.length > 1 ? ranking[1][1] : 0;
+        const contestedThreshold = Math.max(0.35, top * 0.06);
         const contested = ranking
-            .filter(([, value], index) => index > 0 && (top - value) <= 0.95)
+            .filter(([, value], index) => index > 0 && (top - value) <= contestedThreshold)
             .map(([factionId]) => factionId);
         const controlStrength = clamp(Math.round((top / Math.max(0.2, top + second)) * 100), 1, 100);
         controlByHexId[hexId] = {
             ownerFactionId,
             controlStrength,
             contestedFactionIds: contested,
-            influence
+            influence,
+            controlKind: target.controlKind || 'system'
         };
     });
     return controlByHexId;
@@ -172,30 +378,39 @@ function resolveFactionTerritory(factions, sectors, randomFn) {
 function summarizeFactionSystems(factionState) {
     const counts = {};
     const contestedCounts = {};
+    const tileCounts = {};
+    const contestedTileCounts = {};
     (factionState.factions || []).forEach((faction) => {
         counts[faction.id] = 0;
         contestedCounts[faction.id] = 0;
+        tileCounts[faction.id] = 0;
+        contestedTileCounts[faction.id] = 0;
     });
     Object.values(factionState.controlByHexId || {}).forEach((control) => {
         if (!control) return;
+        const kind = String(control.controlKind || 'system');
         if (control.ownerFactionId && Object.prototype.hasOwnProperty.call(counts, control.ownerFactionId)) {
-            counts[control.ownerFactionId] += 1;
+            tileCounts[control.ownerFactionId] += 1;
+            if (kind === 'system') counts[control.ownerFactionId] += 1;
         }
         (control.contestedFactionIds || []).forEach((factionId) => {
             if (Object.prototype.hasOwnProperty.call(contestedCounts, factionId)) {
-                contestedCounts[factionId] += 1;
+                contestedTileCounts[factionId] += 1;
+                if (kind === 'system') contestedCounts[factionId] += 1;
             }
         });
     });
-    return { counts, contestedCounts };
+    return { counts, contestedCounts, tileCounts, contestedTileCounts };
 }
 
 function withFactionSummaries(factionState) {
-    const { counts, contestedCounts } = summarizeFactionSystems(factionState);
+    const { counts, contestedCounts, tileCounts, contestedTileCounts } = summarizeFactionSystems(factionState);
     const factions = (factionState.factions || []).map((faction) => ({
         ...faction,
         controlledSystems: counts[faction.id] || 0,
-        contestedSystems: contestedCounts[faction.id] || 0
+        contestedSystems: contestedCounts[faction.id] || 0,
+        controlledTiles: tileCounts[faction.id] || 0,
+        contestedTiles: contestedTileCounts[faction.id] || 0
     }));
     return {
         ...factionState,
@@ -216,11 +431,12 @@ export function createFactionStateForSector(sectors, options = {}) {
         };
     }
 
-    const factions = buildFactions(ranked, factionCount, randomFn);
+    const factionTypes = chooseFactionTypesForSector(sectors, factionCount, randomFn);
+    const factions = buildFactions(ranked, factionTypes, randomFn);
     factions.forEach((faction) => {
         faction.homeSectorKey = options.sectorKey || null;
     });
-    const controlByHexId = resolveFactionTerritory(factions, sectors, randomFn);
+    const controlByHexId = resolveFactionTerritory(factions, sectors, randomFn, options);
     return withFactionSummaries({
         turn: 0,
         generatedAt: new Date().toISOString(),
@@ -266,7 +482,7 @@ export function advanceFactionTurn(factionState, sectors, options = {}) {
     const randomFn = asRandomFn(options.randomFn);
     const evolved = factionState.factions.map((faction) => evolveFactionStats(faction, randomFn));
     const withRelations = evolveRelations(evolved, randomFn);
-    const controlByHexId = resolveFactionTerritory(withRelations, sectors || {}, randomFn);
+    const controlByHexId = resolveFactionTerritory(withRelations, sectors || {}, randomFn, options);
     return withFactionSummaries({
         ...factionState,
         turn: Math.max(0, Number(factionState.turn) || 0) + 1,
@@ -279,7 +495,7 @@ export function advanceFactionTurn(factionState, sectors, options = {}) {
 export function recalculateFactionTerritory(factionState, sectors, options = {}) {
     if (!factionState || !Array.isArray(factionState.factions)) return factionState;
     const randomFn = asRandomFn(options.randomFn);
-    const controlByHexId = resolveFactionTerritory(factionState.factions, sectors || {}, randomFn);
+    const controlByHexId = resolveFactionTerritory(factionState.factions, sectors || {}, randomFn, options);
     return withFactionSummaries({
         ...factionState,
         controlByHexId
@@ -319,7 +535,9 @@ export function normalizeFactionState(rawValue) {
                     ? Object.fromEntries(Object.entries(faction.relations).map(([id, value]) => [String(id), clamp(Number(value) || 0, -100, 100)]))
                     : {},
                 controlledSystems: Math.max(0, Number(faction.controlledSystems) || 0),
-                contestedSystems: Math.max(0, Number(faction.contestedSystems) || 0)
+                contestedSystems: Math.max(0, Number(faction.contestedSystems) || 0),
+                controlledTiles: Math.max(0, Number(faction.controlledTiles) || 0),
+                contestedTiles: Math.max(0, Number(faction.contestedTiles) || 0)
             }))
         : [];
     const controlByHexId = rawValue.controlByHexId && typeof rawValue.controlByHexId === 'object'
@@ -334,7 +552,8 @@ export function normalizeFactionState(rawValue) {
                         : [],
                     influence: control.influence && typeof control.influence === 'object'
                         ? Object.fromEntries(Object.entries(control.influence).map(([id, value]) => [String(id), Number(value) || 0]))
-                        : {}
+                        : {},
+                    controlKind: String(control.controlKind || 'system')
                 }])
         )
         : {};

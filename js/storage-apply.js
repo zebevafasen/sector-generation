@@ -107,6 +107,9 @@ export function createStorageApplyService(deps) {
         state.coreSystemManual = !!(state.coreSystemHexId && nextPayload.coreSystemManual);
         state.factionState = normalizeFactionState(nextPayload.factionState)
             || createFactionStateForSector(state.sectors || {}, {
+                deepSpacePois: state.deepSpacePois || {},
+                width,
+                height,
                 coreSystemHexId: state.coreSystemHexId || null,
                 sectorKey: state.multiSector?.currentKey || HOME_SECTOR_KEY
             });
@@ -157,6 +160,9 @@ export function createStorageApplyService(deps) {
                 if (!record || typeof record !== 'object') return;
                 record.factionState = normalizeFactionState(record.factionState)
                     || createFactionStateForSector(record.sectors || {}, {
+                        deepSpacePois: record.deepSpacePois || {},
+                        width: parseInt(record.config?.width, 10) || width,
+                        height: parseInt(record.config?.height, 10) || height,
                         coreSystemHexId: record.coreSystemHexId || null,
                         sectorKey
                     });

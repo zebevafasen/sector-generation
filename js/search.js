@@ -181,6 +181,12 @@ function buildSearchEntries() {
 
     Object.entries(state.deepSpacePois || {}).forEach(([hexId, poi]) => {
         if (!poi) return;
+        const factionControl = getFactionControlForHex(state.factionState, hexId);
+        const ownerFactionId = factionControl && factionControl.ownerFactionId ? factionControl.ownerFactionId : null;
+        const ownerFaction = ownerFactionId ? getFactionById(state.factionState, ownerFactionId) : null;
+        const contestedFactionIds = factionControl && Array.isArray(factionControl.contestedFactionIds)
+            ? factionControl.contestedFactionIds
+            : [];
         entries.push({
             type: 'poi',
             hexId,
@@ -188,6 +194,10 @@ function buildSearchEntries() {
             poi,
             name: String(poi.name || 'Deep-Space POI'),
             isPinned: !!(state.pinnedHexIds && state.pinnedHexIds.includes(hexId)),
+            ownerFactionId,
+            ownerFactionName: ownerFaction ? ownerFaction.name : null,
+            contestedFactionIds,
+            isContested: contestedFactionIds.length > 0,
             queryText: normalize([
                 poi.name,
                 poi.kind,
@@ -195,6 +205,7 @@ function buildSearchEntries() {
                 poi.summary,
                 poi.rewardHint,
                 poi.risk,
+                ownerFaction ? ownerFaction.name : '',
                 getGlobalHexDisplayId(hexId),
                 hexId
             ].join(' '))
@@ -248,7 +259,6 @@ function isSystemOnlyFilterActive(filters) {
         filters.starClass
         || filters.tag
         || filters.planetType
-        || filters.factionOwnerId
         || filters.inhabitedOnly
         || filters.coreOnly
         || filters.multiStarOnly
@@ -300,10 +310,12 @@ function hasActiveSearchCriteria(filters) {
         || filters.starClass
         || filters.tag
         || filters.planetType
+        || filters.factionOwnerId
         || filters.inhabitedOnly
         || filters.coreOnly
         || filters.pinnedOnly
         || filters.multiStarOnly
+        || filters.contestedOnly
         || filters.minPop != null
         || filters.maxPop != null
         || filters.minPlanets != null
@@ -339,6 +351,8 @@ function findMatches(filters) {
         if (filters.scope === 'systems' && entry.type !== 'system') return false;
         if (filters.scope === 'pois' && entry.type !== 'poi') return false;
         if (filters.pinnedOnly && !entry.isPinned) return false;
+        if (filters.factionOwnerId && entry.ownerFactionId !== filters.factionOwnerId) return false;
+        if (filters.contestedOnly && !entry.isContested) return false;
 
         if (entry.type === 'poi' && systemOnlyFilterActive) return false;
 
@@ -347,8 +361,6 @@ function findMatches(filters) {
             if (filters.inhabitedOnly && !entry.isInhabited) return false;
             if (filters.coreOnly && !entry.isCore) return false;
             if (filters.multiStarOnly && !entry.isMultiStar) return false;
-            if (filters.contestedOnly && !entry.isContested) return false;
-            if (filters.factionOwnerId && entry.ownerFactionId !== filters.factionOwnerId) return false;
             if (!systemHasTag(entry.system, filters.tag)) return false;
             if (!systemHasPlanetType(entry.system, filters.planetType)) return false;
             if (filters.minPop != null && entry.totalPop < filters.minPop) return false;
@@ -395,7 +407,11 @@ function renderResults(refs, matches, filters) {
         if (item.type === 'poi') {
             const poiKind = escapeHtml(String(item.poi && item.poi.kind ? item.poi.kind : 'Unknown'));
             const poiRisk = escapeHtml(String(item.poi && item.poi.risk ? item.poi.risk : 'Unknown'));
-            const pinnedLabel = item.isPinned ? ' - Pinned' : '';
+            const markerParts = [];
+            if (item.isPinned) markerParts.push('Pinned');
+            if (item.ownerFactionName) markerParts.push(item.ownerFactionName);
+            if (item.isContested) markerParts.push('Contested');
+            const pinnedLabel = markerParts.length ? ` - ${escapeHtml(markerParts.join(' / '))}` : '';
             return `
                 <li>
                     <button type="button" class="${classes}" data-search-hex-id="${item.hexId}">

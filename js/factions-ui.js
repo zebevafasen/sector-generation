@@ -54,7 +54,11 @@ function syncFactionStateToCurrentRecord() {
 
 function ensureCurrentFactionState() {
     if (state.factionState && Array.isArray(state.factionState.factions)) return state.factionState;
+    const { width, height } = getCurrentDimensions();
     state.factionState = createFactionStateForSector(state.sectors || {}, {
+        deepSpacePois: state.deepSpacePois || {},
+        width,
+        height,
         coreSystemHexId: state.coreSystemHexId || null,
         sectorKey: state.multiSector?.currentKey || null
     });
@@ -130,7 +134,12 @@ export function setupFactionsUi() {
 
     refs.advanceFactionTurnBtn?.addEventListener('click', () => {
         ensureCurrentFactionState();
-        state.factionState = advanceFactionTurn(state.factionState, state.sectors || {});
+        const { width, height } = getCurrentDimensions();
+        state.factionState = advanceFactionTurn(state.factionState, state.sectors || {}, {
+            deepSpacePois: state.deepSpacePois || {},
+            width,
+            height
+        });
         syncFactionStateToCurrentRecord();
         updateFactionUi();
         refreshMapSelection();

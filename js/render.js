@@ -88,6 +88,118 @@ function redrawAndReselect(hexId, preselectedBodyIndex = null) {
     }
 }
 
+function oddqToCube(col, row) {
+    const x = col;
+    const z = row - ((col - (col & 1)) / 2);
+    const y = -x - z;
+    return { x, y, z };
+}
+
+function cubeToOddq(cube) {
+    const col = cube.x;
+    const row = cube.z + ((cube.x - (cube.x & 1)) / 2);
+    return { col, row };
+}
+
+function getHexNeighbors(col, row, cols, rows) {
+    const base = oddqToCube(col, row);
+    const directions = [
+        { x: 1, y: -1, z: 0 },
+        { x: 1, y: 0, z: -1 },
+        { x: 0, y: 1, z: -1 },
+        { x: -1, y: 1, z: 0 },
+        { x: -1, y: 0, z: 1 },
+        { x: 0, y: -1, z: 1 }
+    ];
+    return directions
+        .map((dir) => cubeToOddq({
+            x: base.x + dir.x,
+            y: base.y + dir.y,
+            z: base.z + dir.z
+        }))
+        .filter((next) => next.col >= 0 && next.row >= 0 && next.col < cols && next.row < rows);
+}
+
+function getHexCenter(col, row) {
+    const yOffset = (col % 2 === 1) ? (HEX_HEIGHT / 2) : 0;
+    const x = (col * (HEX_WIDTH * 0.75)) + (HEX_WIDTH / 2);
+    const y = (row * HEX_HEIGHT) + yOffset + (HEX_HEIGHT / 2);
+    return { x, y };
+}
+
+function getHexVertices(col, row) {
+    const center = getHexCenter(col, row);
+    const points = [];
+    for (let i = 0; i < 6; i++) {
+        const angleDeg = 60 * i;
+        const angleRad = (Math.PI / 180) * angleDeg;
+        points.push({
+            x: center.x + (HEX_SIZE - 2) * Math.cos(angleRad),
+            y: center.y + (HEX_SIZE - 2) * Math.sin(angleRad)
+        });
+    }
+    return points;
+}
+
+function findSharedEdgePoints(verticesA, verticesB) {
+    const same = [];
+    verticesA.forEach((left) => {
+        const match = verticesB.find((right) => Math.abs(left.x - right.x) < 0.01 && Math.abs(left.y - right.y) < 0.01);
+        if (match) same.push(left);
+    });
+    return same.length === 2 ? same : null;
+}
+
+function shouldRenderConflictBoundary(left, right) {
+    if (!left || !right) return false;
+    if (!left.ownerFactionId || !right.ownerFactionId) return false;
+    return left.ownerFactionId !== right.ownerFactionId;
+}
+
+function renderFactionConflictBoundaries(layer, sectorRecord, cols, rows) {
+    if (!layer || state.factionOverlayMode !== 'contested') return;
+    const factionState = sectorRecord && sectorRecord.factionState ? sectorRecord.factionState : state.factionState;
+    if (!factionState || !factionState.controlByHexId) return;
+
+    const controlByHexId = factionState.controlByHexId;
+    const drawn = new Set();
+    for (let col = 0; col < cols; col++) {
+        for (let row = 0; row < rows; row++) {
+            const hexId = `${col}-${row}`;
+            const left = controlByHexId[hexId];
+            if (!left) continue;
+            const neighbors = getHexNeighbors(col, row, cols, rows);
+            neighbors.forEach((neighbor) => {
+                const neighborHexId = `${neighbor.col}-${neighbor.row}`;
+                const key = [hexId, neighborHexId].sort().join('|');
+                if (drawn.has(key)) return;
+                drawn.add(key);
+
+                const right = controlByHexId[neighborHexId];
+                if (!shouldRenderConflictBoundary(left, right)) return;
+
+                const leftVertices = getHexVertices(col, row);
+                const rightVertices = getHexVertices(neighbor.col, neighbor.row);
+                const edge = findSharedEdgePoints(leftVertices, rightVertices);
+                if (!edge) return;
+
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', String(edge[0].x));
+                line.setAttribute('y1', String(edge[0].y));
+                line.setAttribute('x2', String(edge[1].x));
+                line.setAttribute('y2', String(edge[1].y));
+                line.setAttribute('stroke', '#fb7185');
+                line.setAttribute('stroke-width', '1.45');
+                line.setAttribute('stroke-dasharray', '2.5 2');
+                line.setAttribute('stroke-linecap', 'round');
+                line.setAttribute('class', 'faction-conflict-boundary');
+                line.setAttribute('pointer-events', 'none');
+                layer.appendChild(line);
+            });
+        }
+    }
+}
+
 function createHexGroup(svg, col, row, sectorKey, sectorRecord = null) {
     const hexId = `${col}-${row}`;
     const normalizedSectorKey = String(sectorKey || getCurrentSectorKey(state)).trim().toUpperCase();
@@ -121,27 +233,25 @@ function createHexGroup(svg, col, row, sectorKey, sectorRecord = null) {
     poly.setAttribute('stroke', '#334155');
     poly.setAttribute('stroke-width', '1');
     if (isPinned) poly.classList.add('pinned');
-    if (system && scopedFactionState && state.factionOverlayMode !== 'off') {
+    if (scopedFactionState && state.factionOverlayMode !== 'off') {
         const control = getFactionControlForHex(scopedFactionState, hexId);
         const owner = control && control.ownerFactionId ? getFactionById(scopedFactionState, control.ownerFactionId) : null;
+        const isContested = !!(control && Array.isArray(control.contestedFactionIds) && control.contestedFactionIds.length);
         if (state.factionOverlayMode === 'ownership' && owner && owner.color) {
             poly.setAttribute('fill', owner.color);
+            const maxOpacity = system ? 0.45 : (deepSpacePoi ? 0.36 : 0.26);
+            const minOpacity = system ? 0.18 : (deepSpacePoi ? 0.14 : 0.1);
             const baseOpacity = control && Number.isFinite(Number(control.controlStrength))
-                ? Math.max(0.18, Math.min(0.45, Number(control.controlStrength) / 240))
-                : 0.24;
+                ? Math.max(minOpacity, Math.min(maxOpacity, Number(control.controlStrength) / 240))
+                : minOpacity;
             poly.setAttribute('fill-opacity', String(baseOpacity));
-            if (control && Array.isArray(control.contestedFactionIds) && control.contestedFactionIds.length) {
-                poly.setAttribute('stroke', '#fb7185');
-                poly.setAttribute('stroke-dasharray', '3 2');
-            }
         } else if (state.factionOverlayMode === 'contested') {
-            const isContested = !!(control && Array.isArray(control.contestedFactionIds) && control.contestedFactionIds.length);
             if (isContested) {
                 poly.setAttribute('fill', owner && owner.color ? owner.color : '#be123c');
                 poly.setAttribute('fill-opacity', '0.22');
                 poly.setAttribute('stroke', '#fb7185');
                 poly.setAttribute('stroke-width', '1.5');
-                poly.setAttribute('stroke-dasharray', '3 2');
+                poly.setAttribute('stroke-dasharray', '2.5 2');
             } else {
                 poly.setAttribute('fill-opacity', '0.14');
             }
@@ -395,6 +505,7 @@ export function drawGrid(cols, rows, options = {}) {
                 layer.appendChild(g);
             }
         }
+        renderFactionConflictBoundaries(layer, entry.record, cols, rows);
 
         viewport.appendChild(layer);
         if (entry.sectorKey === currentKey) currentSectorLayer = layer;

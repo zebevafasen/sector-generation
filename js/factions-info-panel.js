@@ -7,14 +7,17 @@ function ensureCardHidden(refs) {
 }
 
 export function applyFactionSystemCard(refs, hexId) {
-    if (!refs || !refs.factionCard || !hexId || !state.sectors[hexId]) {
+    if (!refs || !refs.factionCard || !hexId) {
         ensureCardHidden(refs);
         return;
     }
     const control = getFactionControlForHex(state.factionState, hexId);
     if (!control || !control.ownerFactionId) {
         refs.factionCard.classList.remove('hidden');
-        if (refs.factionOwnerLabel) refs.factionOwnerLabel.innerText = 'Unclaimed';
+        if (refs.factionOwnerLabel) {
+            refs.factionOwnerLabel.innerText = 'Unclaimed';
+            refs.factionOwnerLabel.style.color = '#e2e8f0';
+        }
         if (refs.factionControlStrengthLabel) refs.factionControlStrengthLabel.innerText = 'Control --';
         if (refs.factionContestedLabel) refs.factionContestedLabel.innerText = 'Contested: No';
         return;
