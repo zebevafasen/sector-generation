@@ -134,8 +134,8 @@ function getHexVertices(col, row) {
         const angleDeg = 60 * i;
         const angleRad = (Math.PI / 180) * angleDeg;
         points.push({
-            x: center.x + (HEX_SIZE - 2) * Math.cos(angleRad),
-            y: center.y + (HEX_SIZE - 2) * Math.sin(angleRad)
+            x: center.x + HEX_SIZE * Math.cos(angleRad),
+            y: center.y + HEX_SIZE * Math.sin(angleRad)
         });
     }
     return points;
@@ -227,9 +227,9 @@ function createHexGroup(svg, col, row, sectorKey, sectorRecord = null) {
     g.onclick = (e) => handleHexClick(e, hexId, g, normalizedSectorKey);
 
     const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-    poly.setAttribute('points', calculateHexPoints(x, y, HEX_SIZE - 2));
+    poly.setAttribute('points', calculateHexPoints(x, y, HEX_SIZE));
     poly.setAttribute('class', 'hex');
-    poly.setAttribute('fill', (system || deepSpacePoi) ? '#0f172a' : '#1e293b');
+    poly.setAttribute('fill', '#03102a');
     poly.setAttribute('stroke', '#334155');
     poly.setAttribute('stroke-width', '1');
     if (isPinned) poly.classList.add('pinned');
