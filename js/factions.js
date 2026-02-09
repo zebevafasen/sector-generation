@@ -1,3 +1,5 @@
+import { FACTION_RULES } from './generation-data.js';
+
 function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
 }
@@ -40,10 +42,10 @@ function getSystemPopulation(system) {
     }, 0);
 }
 
-const FACTION_TYPES = ['empire', 'corporate', 'coalition', 'cult', 'pirates', 'machine'];
-const FACTION_DOCTRINES = ['expansionist', 'mercantile', 'isolationist', 'technocratic', 'militarist', 'zealous'];
-const FACTION_COLORS = ['#60a5fa', '#22d3ee', '#34d399', '#f59e0b', '#f472b6', '#a78bfa', '#f87171', '#facc15'];
-const FACTION_TYPE_TAG_HINTS = {
+const DEFAULT_FACTION_TYPES = ['empire', 'corporate', 'coalition', 'cult', 'pirates', 'machine'];
+const DEFAULT_FACTION_DOCTRINES = ['expansionist', 'mercantile', 'isolationist', 'technocratic', 'militarist', 'zealous'];
+const DEFAULT_FACTION_COLORS = ['#60a5fa', '#22d3ee', '#34d399', '#f59e0b', '#f472b6', '#a78bfa', '#f87171', '#facc15'];
+const DEFAULT_FACTION_TYPE_TAG_HINTS = {
     empire: ['capital', 'fortress', 'military', 'command', 'imperial', 'garrison', 'stronghold'],
     corporate: ['trade', 'market', 'commerce', 'logistics', 'shipping', 'mining', 'industry', 'refinery'],
     coalition: ['alliance', 'union', 'federation', 'diplom', 'treaty', 'cooperative', 'concord'],
@@ -51,6 +53,30 @@ const FACTION_TYPE_TAG_HINTS = {
     pirates: ['pirate', 'smuggl', 'raider', 'outlaw', 'corsair', 'black-market', 'blackmarket'],
     machine: ['machine', 'synthetic', 'ai', 'cyber', 'drone', 'automation', 'datavault', 'archive']
 };
+
+function getFactionTypes() {
+    return Array.isArray(FACTION_RULES?.types) && FACTION_RULES.types.length
+        ? FACTION_RULES.types
+        : DEFAULT_FACTION_TYPES;
+}
+
+function getFactionDoctrines() {
+    return Array.isArray(FACTION_RULES?.doctrines) && FACTION_RULES.doctrines.length
+        ? FACTION_RULES.doctrines
+        : DEFAULT_FACTION_DOCTRINES;
+}
+
+function getFactionColors() {
+    return Array.isArray(FACTION_RULES?.colors) && FACTION_RULES.colors.length
+        ? FACTION_RULES.colors
+        : DEFAULT_FACTION_COLORS;
+}
+
+function getFactionTypeTagHints() {
+    return FACTION_RULES?.typeTagHints && typeof FACTION_RULES.typeTagHints === 'object'
+        ? FACTION_RULES.typeTagHints
+        : DEFAULT_FACTION_TYPE_TAG_HINTS;
+}
 
 function toNameWord(value) {
     const cleaned = String(value || '').replace(/[^A-Za-z0-9'-]/g, '').trim();
@@ -71,7 +97,8 @@ function buildFactionName(seedWord, type, index) {
 function normalizeColor(color, fallbackIndex = 0) {
     const clean = String(color || '').trim();
     if (/^#[0-9a-f]{6}$/i.test(clean)) return clean;
-    return FACTION_COLORS[fallbackIndex % FACTION_COLORS.length];
+    const palette = getFactionColors();
+    return palette[fallbackIndex % palette.length];
 }
 
 function normalizeTagToken(value) {
@@ -101,7 +128,8 @@ function tokenMatchesHint(token, hint) {
 }
 
 function computeTypeTagAffinity(type, tokens) {
-    const hints = Array.isArray(FACTION_TYPE_TAG_HINTS[type]) ? FACTION_TYPE_TAG_HINTS[type] : [];
+    const typeTagHints = getFactionTypeTagHints();
+    const hints = Array.isArray(typeTagHints[type]) ? typeTagHints[type] : [];
     if (!hints.length || !tokens.length) return 0;
     let score = 0;
     tokens.forEach((token) => {
@@ -115,7 +143,7 @@ function computeTypeTagAffinity(type, tokens) {
 function rankFactionTypesBySectorTags(sectors, randomFn) {
     const sectorTokens = Object.values(sectors || {})
         .flatMap((system) => collectPlanetTagTokens(system));
-    return FACTION_TYPES
+    return getFactionTypes()
         .map((type) => {
             const tagScore = computeTypeTagAffinity(type, sectorTokens);
             const tieBreaker = (randomFn() * 0.01);
@@ -166,11 +194,19 @@ function buildFactionRelations(factions, randomFn) {
 
 function isControllablePoi(poi) {
     if (!poi || typeof poi !== 'object') return false;
+    const controllablePois = FACTION_RULES?.controllablePois && typeof FACTION_RULES.controllablePois === 'object'
+        ? FACTION_RULES.controllablePois
+        : {};
+    const allowedCategories = Array.isArray(controllablePois.categories) ? controllablePois.categories : ['jump_gate'];
+    const allowedKinds = Array.isArray(controllablePois.kinds)
+        ? controllablePois.kinds.map((kind) => String(kind).trim().toLowerCase())
+        : ['navigation', 'opportunity'];
+    const allowRefuelingStation = controllablePois.allowRefuelingStation !== false;
     const category = String(poi.poiCategory || '').trim().toLowerCase();
-    if (category === 'jump_gate') return true;
-    if (poi.isRefuelingStation) return true;
+    if (allowedCategories.map((value) => String(value).trim().toLowerCase()).includes(category)) return true;
+    if (allowRefuelingStation && poi.isRefuelingStation) return true;
     const kind = String(poi.kind || '').trim().toLowerCase();
-    return kind === 'navigation' || kind === 'opportunity';
+    return allowedKinds.includes(kind);
 }
 
 function getPoiInfluenceBonus(faction, poi) {
@@ -190,7 +226,12 @@ function getPoiInfluenceBonus(faction, poi) {
 
 function chooseFactionCount(systemCount) {
     if (systemCount <= 0) return 0;
-    return clamp(Math.round(systemCount / 9) + 1, 2, 6);
+    const countRules = FACTION_RULES?.count && typeof FACTION_RULES.count === 'object' ? FACTION_RULES.count : {};
+    const systemsPerFaction = Math.max(1, Number(countRules.systemsPerFaction) || 9);
+    const base = Number(countRules.base) || 1;
+    const min = Math.max(0, Number(countRules.min) || 2);
+    const max = Math.max(min, Number(countRules.max) || 6);
+    return clamp(Math.round(systemCount / systemsPerFaction) + base, min, max);
 }
 
 function buildTerritoryTargets(sectors, options = {}) {
@@ -224,7 +265,11 @@ function buildTerritoryTargets(sectors, options = {}) {
     Object.entries(deepSpacePois).forEach(([hexId, poi]) => {
         if (systems[hexId]) return;
         if (!isControllablePoi(poi)) return;
-        if (minDistanceToAnySystem(hexId) > 1) return;
+        const controllablePois = FACTION_RULES?.controllablePois && typeof FACTION_RULES.controllablePois === 'object'
+            ? FACTION_RULES.controllablePois
+            : {};
+        const maxSystemDistance = Math.max(0, Number(controllablePois.maxSystemDistance) || 1);
+        if (minDistanceToAnySystem(hexId) > maxSystemDistance) return;
         targets.push({
             hexId,
             controlKind: 'poi',
@@ -289,15 +334,18 @@ function buildFactions(homeCandidates, factionTypes, randomFn) {
     const homes = assignHomesForFactionTypes(homeCandidates, factionTypes);
     for (let i = 0; i < factionTypes.length; i++) {
         const home = homes[i] || null;
-        const type = factionTypes[i] || FACTION_TYPES[i % FACTION_TYPES.length];
-        const doctrine = FACTION_DOCTRINES[Math.floor(randomFn() * FACTION_DOCTRINES.length)];
+        const availableTypes = getFactionTypes();
+        const availableDoctrines = getFactionDoctrines();
+        const availableColors = getFactionColors();
+        const type = factionTypes[i] || availableTypes[i % availableTypes.length];
+        const doctrine = availableDoctrines[Math.floor(randomFn() * availableDoctrines.length)];
         const seedWord = home && home.system && home.system.name ? String(home.system.name).split(/\s+/)[0] : '';
         const stats = buildFactionStats(randomFn);
         factions.push({
             id: `f-${i + 1}`,
             name: buildFactionName(seedWord, type, i),
             type,
-            color: normalizeColor(FACTION_COLORS[i], i),
+            color: normalizeColor(availableColors[i], i),
             doctrine,
             tags: [],
             homeHexId: home ? home.hexId : null,

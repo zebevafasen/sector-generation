@@ -1368,4 +1368,60 @@ test.describe('pure logic modules', () => {
     expect(result.hasFarEmptyTileControl).toBeFalsy();
     expect(result.controlKindRefuel).toBe('poi');
   });
+
+  test('faction rules are data-driven through generation-data hydration', async ({ page }) => {
+    await page.goto('/sector_generator.html');
+
+    const result = await page.evaluate(async () => {
+      const generationData = await import('/js/generation-data.js');
+      const factions = await import('/js/factions.js');
+
+      generationData.hydrateGenerationData({
+        factionRules: {
+          count: { systemsPerFaction: 100, base: 1, min: 1, max: 1 },
+          types: ['corporate'],
+          doctrines: ['mercantile'],
+          colors: ['#123456'],
+          typeTagHints: {
+            corporate: ['trade']
+          },
+          controllablePois: {
+            categories: ['jump_gate'],
+            kinds: ['opportunity'],
+            allowRefuelingStation: false,
+            maxSystemDistance: 1
+          }
+        }
+      });
+
+      const state = factions.createFactionStateForSector({
+        '0-0': { name: 'Tradehome', planets: [{ pop: 0.9, tags: ['Trade'] }] },
+        '1-0': { name: 'Outpost', planets: [{ pop: 0.4, tags: ['Relay'] }] }
+      }, {
+        deepSpacePois: {
+          '2-0': { name: 'Refueling Station', kind: 'Navigation', isRefuelingStation: true }
+        },
+        width: 4,
+        height: 4,
+        randomFn: () => 0.5
+      });
+
+      generationData.hydrateGenerationData({});
+
+      const faction = Array.isArray(state.factions) && state.factions.length ? state.factions[0] : null;
+      return {
+        factionCount: Array.isArray(state.factions) ? state.factions.length : 0,
+        factionType: faction ? faction.type : null,
+        factionDoctrine: faction ? faction.doctrine : null,
+        factionColor: faction ? faction.color : null,
+        refuelControlled: !!(state.controlByHexId && state.controlByHexId['2-0'])
+      };
+    });
+
+    expect(result.factionCount).toBe(1);
+    expect(result.factionType).toBe('corporate');
+    expect(result.factionDoctrine).toBe('mercantile');
+    expect(result.factionColor).toBe('#123456');
+    expect(result.refuelControlled).toBeFalsy();
+  });
 });

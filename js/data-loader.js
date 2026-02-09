@@ -53,6 +53,9 @@ function validateGenerationData(data) {
     if (data.generationSettings && typeof data.generationSettings !== 'object') {
         throw new Error('generation-data.json generationSettings must be an object when provided');
     }
+    if (data.factionRules && typeof data.factionRules !== 'object') {
+        throw new Error('generation-data.json factionRules must be an object when provided');
+    }
 }
 
 function validateTooltipData(data) {

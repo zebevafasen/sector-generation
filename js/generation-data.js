@@ -251,6 +251,32 @@ const DEFAULT_GENERATION_SETTINGS = {
     }
 };
 
+const DEFAULT_FACTION_RULES = {
+    count: {
+        systemsPerFaction: 9,
+        base: 1,
+        min: 2,
+        max: 6
+    },
+    types: ['empire', 'corporate', 'coalition', 'cult', 'pirates', 'machine'],
+    doctrines: ['expansionist', 'mercantile', 'isolationist', 'technocratic', 'militarist', 'zealous'],
+    colors: ['#60a5fa', '#22d3ee', '#34d399', '#f59e0b', '#f472b6', '#a78bfa', '#f87171', '#facc15'],
+    typeTagHints: {
+        empire: ['capital', 'fortress', 'military', 'command', 'imperial', 'garrison', 'stronghold'],
+        corporate: ['trade', 'market', 'commerce', 'logistics', 'shipping', 'mining', 'industry', 'refinery'],
+        coalition: ['alliance', 'union', 'federation', 'diplom', 'treaty', 'cooperative', 'concord'],
+        cult: ['temple', 'relic', 'sacred', 'faith', 'occult', 'shrine', 'pilgrim'],
+        pirates: ['pirate', 'smuggl', 'raider', 'outlaw', 'corsair', 'black-market', 'blackmarket'],
+        machine: ['machine', 'synthetic', 'ai', 'cyber', 'drone', 'automation', 'datavault', 'archive']
+    },
+    controllablePois: {
+        categories: ['jump_gate'],
+        kinds: ['navigation', 'opportunity'],
+        allowRefuelingStation: true,
+        maxSystemDistance: 1
+    }
+};
+
 function isPlainObject(value) {
     return !!value && typeof value === 'object' && !Array.isArray(value);
 }
@@ -322,6 +348,7 @@ export let DEEP_SPACE_POI_TEMPLATES = DEFAULT_DEEP_SPACE_POI_TEMPLATES;
 export let STAR_CLASS_ROLL_TABLE = DEFAULT_STAR_CLASS_ROLL_TABLE;
 export let STAR_COUNT_THRESHOLDS_BY_PROFILE = DEFAULT_STAR_COUNT_THRESHOLDS_BY_PROFILE;
 export let GENERATION_SETTINGS = DEFAULT_GENERATION_SETTINGS;
+export let FACTION_RULES = DEFAULT_FACTION_RULES;
 
 export function hydrateGenerationData(loadedData = {}) {
     STAR_CLASS_PLANET_WEIGHTS = loadedData.starClassPlanetWeights || DEFAULT_STAR_CLASS_PLANET_WEIGHTS;
@@ -338,6 +365,7 @@ export function hydrateGenerationData(loadedData = {}) {
     DEEP_SPACE_POI_TEMPLATES = loadedData.deepSpacePoiTemplates || DEFAULT_DEEP_SPACE_POI_TEMPLATES;
     STAR_CLASS_ROLL_TABLE = loadedData.starClassRollTable || DEFAULT_STAR_CLASS_ROLL_TABLE;
     STAR_COUNT_THRESHOLDS_BY_PROFILE = loadedData.starCountThresholdsByProfile || DEFAULT_STAR_COUNT_THRESHOLDS_BY_PROFILE;
+    FACTION_RULES = loadedData.factionRules || DEFAULT_FACTION_RULES;
     const legacySettings = {
         generationRolloutStage: loadedData.generationRolloutStage,
         clusterV2Enabled: loadedData.clusterV2Enabled,

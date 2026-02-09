@@ -216,6 +216,31 @@
       "context": 8
     }
   },
+  "factionRules": {
+    "count": {
+      "systemsPerFaction": 9,
+      "base": 1,
+      "min": 2,
+      "max": 6
+    },
+    "types": ["empire", "corporate", "coalition", "cult", "pirates", "machine"],
+    "doctrines": ["expansionist", "mercantile", "isolationist", "technocratic", "militarist", "zealous"],
+    "colors": ["#60a5fa", "#22d3ee", "#34d399", "#f59e0b", "#f472b6", "#a78bfa", "#f87171", "#facc15"],
+    "typeTagHints": {
+      "empire": ["capital", "fortress", "military", "command", "imperial", "garrison", "stronghold"],
+      "corporate": ["trade", "market", "commerce", "logistics", "shipping", "mining", "industry", "refinery"],
+      "coalition": ["alliance", "union", "federation", "diplom", "treaty", "cooperative", "concord"],
+      "cult": ["temple", "relic", "sacred", "faith", "occult", "shrine", "pilgrim"],
+      "pirates": ["pirate", "smuggl", "raider", "outlaw", "corsair", "black-market", "blackmarket"],
+      "machine": ["machine", "synthetic", "ai", "cyber", "drone", "automation", "datavault", "archive"]
+    },
+    "controllablePois": {
+      "categories": ["jump_gate"],
+      "kinds": ["navigation", "opportunity"],
+      "allowRefuelingStation": true,
+      "maxSystemDistance": 1
+    }
+  },
   "generationProfiles": {
     "cinematic": {
       "inhabitedChance": 0.45,
